@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace Heimdall.Sagas.Mod
 {
-    [BepInPlugin("gg.heimdall.sagas.client", "Heimdall Sagas Client", "0.1.1")]
+    [BepInPlugin("gg.heimdall.sagas.client", "Heimdall Sagas Client", "0.1.2")]
     public sealed class ClientPlugin : BaseUnityPlugin
     {
         private const string Rpc = "Heimdall.Sagas.V1";
@@ -28,6 +28,7 @@ namespace Heimdall.Sagas.Mod
         private float bridgeUntil;
         private bool bridgeGear;
         private bool bridgeEvents;
+        private string bridgeKillMode = "all";
         private float nextProbe;
         private float nextRetry;
         private bool lastProfile, lastMap, lastPosition;
@@ -93,6 +94,7 @@ namespace Heimdall.Sagas.Mod
             var server = ZNet.instance?.GetServerPeer();
             if (server == null || !server.IsReady()) {
                 registeredServer = null; bridgeUntil = 0; bridgeGear = bridgeEvents = false;
+                bridgeKillMode = "all";
                 sentPresence = false; return;
             }
             if (server.m_rpc != registeredServer) {
@@ -100,6 +102,7 @@ namespace Heimdall.Sagas.Mod
                 sentPresence = false;
                 bridgeUntil = 0;
                 bridgeGear = bridgeEvents = false;
+                bridgeKillMode = "all";
                 nextProbe = 0;
                 registeredServer.Register<string>(Hello, (rpc, version) => {
                     if (rpc == registeredServer && version != null && version.StartsWith("1:",
@@ -107,7 +110,12 @@ namespace Heimdall.Sagas.Mod
                         bridgeUntil = Time.unscaledTime + 45f;
                         bridgeGear = version.IndexOf('g') >= 0;
                         bridgeEvents = version.IndexOf('e') >= 0;
+                        var separator = version.LastIndexOf(':');
+                        bridgeKillMode = separator < 0 ? "all" :
+                            version.Substring(separator + 1) == "n" ? "notable" :
+                            version.Substring(separator + 1) == "b" ? "bosses" : "all";
                         if (!bridgeEvents) ClearPending();
+                        else RemoveFilteredPending();
                         nextPresence = 0;
                     }
                 });
@@ -132,7 +140,7 @@ namespace Heimdall.Sagas.Mod
                 }
             }
             if (Time.unscaledTime < nextPresence) return;
-            nextPresence = Time.unscaledTime + 10f;
+            nextPresence = Time.unscaledTime + 30f;
             var player = Player.m_localPlayer;
             if (player == null || ZNet.instance == null || ZNet.instance.IsServer() ||
                 Time.unscaledTime >= bridgeUntil) return;
@@ -204,6 +212,10 @@ namespace Heimdall.Sagas.Mod
             var zdo = view.GetZDO();
             var world = WorldId();
             if (zdo == null || world == "") return;
+            var boss = victim.IsBoss();
+            var elite = KillFilter.IsElite(view);
+            var stars = Math.Max(0, victim.GetLevel() - 1);
+            if (!KillFilter.Keep(plugin.bridgeKillMode, boss, elite, stars)) return;
             var id = KillId(world, zdo.m_uid);
             if (plugin.pending.ContainsKey(id) || plugin.pending.Count >= 256) return;
             var position = victim.transform.position;
@@ -211,7 +223,7 @@ namespace Heimdall.Sagas.Mod
                 Localization.instance.Localize(victim.m_name);
             var packet = new WirePacket { type = "event", kind = "kill", id = id,
                 world = world, name = player.GetPlayerName(), target = CleanText(target, 120),
-                stars = Math.Max(0, victim.GetLevel() - 1),
+                stars = stars, boss = boss, elite = elite,
                 utc = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 has_location = plugin.shareMap.Value,
                 x = plugin.shareMap.Value ? position.x : 0,
@@ -257,6 +269,16 @@ namespace Heimdall.Sagas.Mod
                 try { File.Delete(Path.Combine(outbox, id + ".json")); } catch (IOException) { }
             }
             pending.Clear();
+        }
+
+        private void RemoveFilteredPending()
+        {
+            foreach (var packet in pending.Values.Where(p => p.kind == "kill" &&
+                     !KillFilter.Keep(bridgeKillMode, p.boss, p.elite, p.stars)).ToArray()) {
+                pending.Remove(packet.id);
+                try { File.Delete(Path.Combine(outbox, packet.id + ".json")); }
+                catch (IOException) { }
+            }
         }
 
         private static string WorldId()

@@ -2015,10 +2015,14 @@ def v_sagas_settings_gravar(dados):
     if not state.is_dir() or not (state / 'settings.json').is_file():
         raise Recusa('instale a extensão antes de alterar suas opções')
     names = ('enabled', 'gear', 'events', 'clock')
-    if not isinstance(dados, dict) or set(dados) != set(names) or any(
+    if not isinstance(dados, dict) or set(dados) not in (set(names), set(names) | {'kill_mode'}) or any(
             not isinstance(dados[name], bool) for name in names):
         raise Recusa('opções da extensão inválidas')
-    settings = {'version': 1, **{name: dados[name] for name in names}}
+    kill_mode = dados.get('kill_mode', sagas.load_settings(state)['kill_mode'])
+    if not isinstance(kill_mode, str) or kill_mode not in sagas.KILL_MODES:
+        raise Recusa('filtro de abates inválido')
+    settings = {'version': 1, **{name: dados[name] for name in names},
+                'kill_mode': kill_mode}
     target = state / 'settings.json'
     temporary = state / ('.settings-' + uuid.uuid4().hex + '.tmp')
     descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o640)

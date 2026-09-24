@@ -59,7 +59,8 @@ for path, owner, group, mode in (
 settings = state / 'settings.json'
 if not settings.exists():
     settings.write_text(json.dumps({'version': 1, 'enabled': True, 'gear': True,
-                                    'events': True, 'clock': True}) + '\n')
+                                    'events': True, 'clock': True,
+                                    'kill_mode': 'all'}) + '\n')
 os.chown(settings, panel_id, sagas_group)
 os.chmod(settings, 0o640)
 target = game / 'current/BepInEx/plugins/HeimdallSagas/HeimdallSagas.Bridge.dll'

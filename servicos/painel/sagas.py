@@ -12,6 +12,7 @@ import re
 import sqlite3
 import stat
 import time
+from contextlib import nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -26,8 +27,9 @@ KINDS = {'kill', 'death', 'drop', 'collect', 'pickup', 'boss', 'bounty'}
 MAX_PACKET = 64 * 1024
 MAX_BATCH = 500
 MAX_EVENTS_STORED = 100000
+KILL_MODES = {'all', 'notable', 'bosses'}
 DEFAULT_SETTINGS = {'version': 1, 'enabled': False, 'gear': True,
-                    'events': True, 'clock': True}
+                    'events': True, 'clock': True, 'kill_mode': 'all'}
 
 
 class InvalidPacket(ValueError):
@@ -39,11 +41,22 @@ def load_settings(state: Path = STATE) -> dict:
         saved = json.loads((state / 'settings.json').read_text(encoding='utf-8'))
     except (OSError, ValueError):
         return DEFAULT_SETTINGS.copy()
-    if not isinstance(saved, dict) or set(saved) != set(DEFAULT_SETTINGS) or \
+    if not isinstance(saved, dict) or set(saved) not in (
+            set(DEFAULT_SETTINGS), set(DEFAULT_SETTINGS) - {'kill_mode'}) or \
             type(saved.get('version')) is not int or saved['version'] != 1 or any(
-                not isinstance(saved[key], bool) for key in DEFAULT_SETTINGS if key != 'version'):
+                not isinstance(saved[key], bool) for key in ('enabled', 'gear', 'events', 'clock')) or \
+            not isinstance(saved.get('kill_mode', 'all'), str) or \
+            saved.get('kill_mode', 'all') not in KILL_MODES:
         return DEFAULT_SETTINGS.copy()
-    return saved
+    return {**DEFAULT_SETTINGS, **saved}
+
+
+def keep_kill(packet: dict, mode: str) -> bool:
+    """Deaths are always kept; only credited creature kills use this filter."""
+    if packet['type'] != 'event' or packet['kind'] != 'kill':
+        return True
+    return mode == 'all' or packet['boss'] or mode == 'notable' and (
+        packet['elite'] or packet['stars'] >= 3)
 
 
 def _label(value: object, maximum: int) -> str:
@@ -117,6 +130,10 @@ def validate(raw: object) -> dict:
     if kind not in KINDS:
         raise InvalidPacket('unsupported event kind')
     out['kind'] = kind
+    for flag in ('boss', 'elite'):
+        if raw.get(flag, False) is not False and raw.get(flag) is not True:
+            raise InvalidPacket('invalid event classification')
+        out[flag] = bool(raw.get(flag, False)) if kind == 'kill' else False
     out['name'] = _label(raw.get('name'), 120)
     out['target'] = _label(raw.get('target', ''), 120)
     out['stars'] = int(_number(raw.get('stars', 0), 0, 100))
@@ -153,6 +170,7 @@ CREATE TABLE IF NOT EXISTS events (
   world TEXT NOT NULL, actor TEXT NOT NULL, id TEXT NOT NULL,
   kind TEXT NOT NULL, name TEXT NOT NULL, target TEXT NOT NULL,
   stars INTEGER NOT NULL, quantity INTEGER NOT NULL,
+  boss INTEGER NOT NULL DEFAULT 0, elite INTEGER NOT NULL DEFAULT 0,
   x REAL, z REAL, occurred_at INTEGER NOT NULL,
   PRIMARY KEY(world, actor, id), FOREIGN KEY(world) REFERENCES worlds(id)
 );
@@ -175,13 +193,18 @@ def connect(path: Path = DATABASE) -> sqlite3.Connection:
     world_columns = {row[1] for row in db.execute('PRAGMA table_info(worlds)')}
     if 'name' not in world_columns:
         db.execute("ALTER TABLE worlds ADD COLUMN name TEXT NOT NULL DEFAULT ''")
+    event_columns = {row[1] for row in db.execute('PRAGMA table_info(events)')}
+    for flag in ('boss', 'elite'):
+        if flag not in event_columns:
+            db.execute(f'ALTER TABLE events ADD COLUMN {flag} INTEGER NOT NULL DEFAULT 0')
     return db
 
 
-def ingest(db: sqlite3.Connection, packet: dict, now: int | None = None) -> None:
+def ingest(db: sqlite3.Connection, packet: dict, now: int | None = None,
+           commit: bool = True) -> None:
     now = now or int(time.time())
     world = packet['world']
-    with db:
+    with (db if commit else nullcontext()):
         db.execute('INSERT OR IGNORE INTO worlds(id) VALUES(?)', (world,))
         if packet['type'] == 'withdraw':
             db.execute('DELETE FROM events WHERE world=? AND actor=?',
@@ -217,11 +240,12 @@ def ingest(db: sqlite3.Connection, packet: dict, now: int | None = None) -> None
                 return
             x, z = (packet['x'], packet['z']) if consent['share_map'] else (None, None)
             db.execute('''INSERT OR IGNORE INTO events
-                          VALUES(?,?,?,?,?,?,?,?,?,?,?)''',
+                          (world,actor,id,kind,name,target,stars,quantity,x,z,occurred_at,boss,elite)
+                          VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                        (world, packet['actor'], packet['id'], packet['kind'],
                         packet['name'], packet['target'], packet['stars'],
                         packet['quantity'], x, z,
-                        packet['occurred_at'] or now))
+                        packet['occurred_at'] or now, int(packet['boss']), int(packet['elite'])))
 
 
 def maintain(db: sqlite3.Connection, now: int | None = None) -> None:
@@ -249,6 +273,8 @@ def process_inbox(state: Path = STATE, limit: int = MAX_BATCH) -> dict:
     with connect(state / 'sagas.sqlite3') as db:
         maintain(db)
         files = sorted(inbox.glob('*.json'))
+        accepted_paths = []
+        db.execute('BEGIN')
         for index, path in enumerate(files):
             if index >= limit:
                 break
@@ -272,18 +298,26 @@ def process_inbox(state: Path = STATE, limit: int = MAX_BATCH) -> dict:
             if packet['type'] != 'withdraw' and (
                     not settings['enabled'] or
                     packet['type'] == 'event' and not settings['events'] or
-                    packet['type'] == 'clock' and not settings['clock']):
+                    packet['type'] == 'clock' and not settings['clock'] or
+                    not keep_kill(packet, settings['kill_mode'])):
                 path.unlink()
                 counts['dropped'] += 1
                 continue
             if packet['type'] == 'presence' and not settings['gear']:
                 packet['gear'] = []
             try:
-                ingest(db, packet)
+                ingest(db, packet, commit=False)
             except sqlite3.Error:
                 break  # Keep valid packets in the inbox until storage recovers.
-            path.unlink()
-            counts['accepted'] += 1
+            accepted_paths.append(path)
+        try:
+            db.commit()
+        except sqlite3.Error:
+            db.rollback()
+        else:
+            for path in accepted_paths:
+                path.unlink()
+            counts['accepted'] = len(accepted_paths)
     return counts
 
 
@@ -311,13 +345,22 @@ def public_view(path: Path = DATABASE, world: str = '', limit: int = 50) -> dict
             if not player.pop('share_position') or not player['online']:
                 player['x'] = player['z'] = None
             players.append(player)
-        events = [dict(row) for row in db.execute('''SELECT e.id, e.actor, e.kind, e.name,
+        event_columns = {row[1] for row in db.execute('PRAGMA table_info(events)')}
+        boss = 'e.boss' if 'boss' in event_columns else '0'
+        elite = 'e.elite' if 'elite' in event_columns else '0'
+        events = [dict(row) for row in db.execute(f'''SELECT e.id, e.actor, e.kind, e.name,
                          e.target, e.stars, e.quantity, e.occurred_at,
+                         {boss} AS boss, {elite} AS elite,
                          CASE WHEN p.share_map=1 THEN e.x END AS x,
                          CASE WHEN p.share_map=1 THEN e.z END AS z
                          FROM events e JOIN players p ON p.world=e.world AND p.id=e.actor
-                         WHERE e.world=? AND p.share_profile=1
-                         ORDER BY e.occurred_at DESC LIMIT ?''', (selected, limit))]
+                         WHERE e.world=? AND p.share_profile=1 AND
+                           (?='all' OR e.kind!='kill' OR
+                            (?='bosses' AND {boss}=1) OR
+                            (?='notable' AND ({boss}=1 OR {elite}=1 OR e.stars>=3)))
+                         ORDER BY e.occurred_at DESC LIMIT ?''',
+                         (selected, settings['kill_mode'], settings['kill_mode'],
+                          settings['kill_mode'], limit))]
         if not settings['events']:
             events = []
         if not settings['clock']:

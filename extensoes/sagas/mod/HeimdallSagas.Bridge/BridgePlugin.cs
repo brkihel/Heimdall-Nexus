@@ -14,7 +14,7 @@ using UnityEngine;
 
 namespace Heimdall.Sagas.Mod
 {
-    [BepInPlugin("gg.heimdall.sagas.bridge", "Heimdall Sagas Bridge", "0.1.1")]
+    [BepInPlugin("gg.heimdall.sagas.bridge", "Heimdall Sagas Bridge", "0.1.2")]
     public sealed class BridgePlugin : BaseUnityPlugin
     {
         private const string Rpc = "Heimdall.Sagas.V1";
@@ -31,6 +31,7 @@ namespace Heimdall.Sagas.Mod
             public bool gear = true;
             public bool events = true;
             public bool clock = true;
+            public string kill_mode = "all";
         }
         private sealed class PendingWrite
         {
@@ -99,7 +100,9 @@ namespace Heimdall.Sagas.Mod
                     peer.m_rpc.Register<string>(Probe, (rpc, version) => {
                         if (rpc == owner.m_rpc && owner.IsReady() && version == "1")
                             rpc.Invoke(Hello, "1:" + (settings.gear ? "g" : "") +
-                                                (settings.events ? "e" : ""));
+                                                (settings.events ? "e" : "") + ":" +
+                                                (settings.kill_mode == "notable" ? "n" :
+                                                 settings.kill_mode == "bosses" ? "b" : "a"));
                     });
                 }
             }
@@ -181,9 +184,12 @@ namespace Heimdall.Sagas.Mod
                 if (packet.kind == "kill") {
                     packet.target = SafeText(packet.target, 120);
                     packet.stars = Math.Max(0, Math.Min(100, packet.stars));
+                    if (!KillFilter.Keep(settings.kill_mode, packet.boss, packet.elite,
+                                         packet.stars)) return;
                 } else {
                     packet.target = "";
                     packet.stars = 0;
+                    packet.boss = packet.elite = false;
                 }
                 packet.quantity = 1;
                 var received = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
@@ -218,6 +224,7 @@ namespace Heimdall.Sagas.Mod
                 var read = JsonUtility.FromJson<BridgeSettings>(File.ReadAllText(settingsPath));
                 settings = read != null && read.version == 1
                     ? read : new BridgeSettings { enabled = false };
+                settings.kill_mode = KillFilter.Normalize(settings.kill_mode);
             } catch { settings = new BridgeSettings { enabled = false }; }
         }
 
@@ -248,13 +255,17 @@ namespace Heimdall.Sagas.Mod
             if (consent == null) return;
             var zdo = view.GetZDO();
             if (zdo == null) return;
+            var boss = victim.IsBoss();
+            var elite = KillFilter.IsElite(view);
+            var stars = Math.Max(0, Math.Min(100, victim.GetLevel() - 1));
+            if (!KillFilter.Keep(settings.kill_mode, boss, elite, stars)) return;
             var location = victim.transform.position;
             var target = Localization.instance == null ? victim.m_name :
                 Localization.instance.Localize(victim.m_name);
             Enqueue(new WirePacket { type = "event", kind = "kill",
                 id = Digest("kill:" + world + ":" + zdo.m_uid), world = world, actor = actor,
                 name = SafeName(killer.GetPlayerName()), target = SafeText(target, 120),
-                stars = Math.Max(0, Math.Min(100, victim.GetLevel() - 1)),
+                stars = stars, boss = boss, elite = elite,
                 utc = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 has_location = consent.share_map,
                 x = consent.share_map ? location.x : 0,

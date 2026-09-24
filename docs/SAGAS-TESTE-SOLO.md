@@ -1,9 +1,8 @@
 # Testar Heimdall Sagas com um cliente
 
-Esta é uma prévia local. Use um servidor de teste e um personagem de teste.
-As alterações da extensão ainda não foram publicadas no repositório remoto:
-um `git clone` do `main` público, sozinho, não inclui estes arquivos. Na
-máquina de teste, use este checkout de trabalho ou uma cópia dele.
+Esta é uma prévia de desenvolvimento. Use um servidor e um personagem de teste.
+Na VM com o Nexus já instalado, atualize o branch `dev/sagas` antes de rodar
+`sudo ./deploy/update.sh`.
 
 ## Qual servidor usar?
 
@@ -33,13 +32,13 @@ também precisa de BepInEx e da DLL Client.
    ./extensoes/sagas/build.sh /caminho/valheim_Data/Managed /caminho/BepInEx/core
    ```
 
-   Se as DLLs deste checkout já foram compiladas, use as existentes em
-   `extensoes/sagas/mod/HeimdallSagas.{Client,Bridge}/bin/Release/net48/`.
+   Se as DLLs deste checkout já foram compiladas, use a Bridge em `dist/sagas/`
+   e o ZIP do Client no mesmo diretório.
    Não copie `assembly_valheim.dll` nem bibliotecas do jogo para os ZIPs.
 3. Na máquina do Nexus de teste, dentro deste checkout, instale a ponte:
 
    ```bash
-   sudo ./deploy/install-sagas-extension.sh "$(pwd)/extensoes/sagas/mod/HeimdallSagas.Bridge/bin/Release/net48/HeimdallSagas.Bridge.dll"
+   sudo ./deploy/install-sagas-extension.sh "$(pwd)/dist/sagas/HeimdallSagas.Bridge.dll"
    sudo systemctl restart heimdall-valheim.service
    systemctl is-active heimdall-sagas-ingest.timer
    ```
@@ -48,7 +47,7 @@ também precisa de BepInEx e da DLL Client.
    **Bridge**, não o ZIP. Ele cria a fila privada, configura o serviço de
    importação e a rota pública; o reinício carrega a DLL no Valheim.
 4. No computador do jogador, instale BepInEx para Valheim e extraia
-   `artifacts/sagas/HeimdallSagas.Client-0.1.1.zip` na pasta do jogo. O ZIP
+   `dist/sagas/HeimdallSagas.Client-0.1.2.zip` na pasta do jogo. O ZIP
    coloca `HeimdallSagas.Client.dll` em
    `BepInEx/plugins/HeimdallSagas/`. Não instale a Bridge no cliente.
 5. Abra o jogo uma vez para gerar
@@ -71,7 +70,7 @@ Instale BepInEx no servidor dedicado e coloque somente a DLL Bridge em
 usuário que executa o jogo e um arquivo `settings.json` legível por ele:
 
 ```json
-{"version":1,"enabled":true,"gear":true,"events":true,"clock":true}
+{"version":1,"enabled":true,"gear":true,"events":true,"clock":true,"kill_mode":"all"}
 ```
 
 No ambiente do **processo do servidor**, defina caminhos absolutos antes de

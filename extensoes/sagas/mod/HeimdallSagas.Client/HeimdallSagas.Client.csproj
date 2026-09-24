@@ -9,6 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="all" />
     <Compile Include="../WirePacket.cs" Link="WirePacket.cs" />
+    <Compile Include="../KillFilter.cs" Link="KillFilter.cs" />
     <Reference Include="BepInEx"><HintPath>$(BepInExRefDir)/BepInEx.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="0Harmony"><HintPath>$(BepInExRefDir)/0Harmony.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="assembly_valheim"><HintPath>$(GameRefDir)/assembly_valheim.dll</HintPath><Private>false</Private></Reference>

@@ -19,10 +19,22 @@
 .sagas-opcao input:checked+.sagas-trilho::after{transform:translateX(20px);background:var(--ouro-claro)}
 .sagas-opcao input:focus-visible+.sagas-trilho{outline:2px solid var(--ouro-claro);outline-offset:3px}
 .sagas-opcao input:disabled+.sagas-trilho{opacity:.5}
+.sagas-filtro{margin:-.35rem 0 .15rem;padding:.9rem 1rem 1rem;border:1px solid var(--borda);border-radius:10px;background:rgba(5,9,13,.22)}
+.sagas-filtro legend{padding:0 .35rem;color:var(--osso);font-family:'Cinzel',serif;font-size:.78rem}
+.sagas-filtro p{margin:.25rem 0 .8rem;color:var(--fraco);font-size:.84rem}
+.sagas-modos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.55rem}
+.sagas-modo{display:block;cursor:pointer}
+.sagas-modo input{position:absolute;opacity:0;width:1px;height:1px}
+.sagas-modo span{display:block;height:100%;padding:.7rem .8rem;border:1px solid var(--borda);border-radius:8px;background:rgba(5,9,13,.38)}
+.sagas-modo strong{display:block;color:var(--osso);font-size:.84rem}
+.sagas-modo small{display:block;margin-top:.25rem;color:var(--fraco);font-size:.79rem;line-height:1.35}
+.sagas-modo input:checked+span{border-color:var(--ouro);background:rgba(200,164,92,.12)}
+.sagas-modo input:focus-visible+span{outline:2px solid var(--ouro-claro);outline-offset:2px}
+.sagas-modo input:disabled+span{opacity:.5;cursor:default}
 .sagas-estado{color:var(--fraco);font-size:.86rem}
 .sagas-estado.erro{color:var(--ruim)}
 #feedback{margin-left:.7rem;font-size:.86rem}
-@media(max-width:520px){.sagas-opcao{gap:.7rem;padding:.8rem}}
+@media(max-width:520px){.sagas-opcao{gap:.7rem;padding:.8rem}.sagas-modos{grid-template-columns:1fr}}
 </style>
 {% endblock %}
 {% block corpo %}
@@ -47,6 +59,14 @@
     <label class="sagas-opcao principal"><span><strong>Extensão ativa</strong><small>Permite receber dados autorizados e exibir as Crônicas no site.</small></span><input type="checkbox" id="enabled"><span class="sagas-trilho" aria-hidden="true"></span></label>
     <label class="sagas-opcao"><span><strong>Equipamento nos perfis</strong><small>Mostra os itens equipados dos Vikings que compartilham o perfil.</small></span><input type="checkbox" id="gear"><span class="sagas-trilho" aria-hidden="true"></span></label>
     <label class="sagas-opcao"><span><strong>Abates e mortes</strong><small>Registra abates e mortes compartilhados e mostra o histórico nas Crônicas.</small></span><input type="checkbox" id="events"><span class="sagas-trilho" aria-hidden="true"></span></label>
+    <fieldset class="sagas-filtro" id="kill-filter"><legend>Quais abates mostrar?</legend>
+      <p>Mortes continuam visíveis em qualquer opção. O filtro também vale para novos registros.</p>
+      <div class="sagas-modos">
+        <label class="sagas-modo"><input type="radio" name="kill_mode" value="all"><span><strong>Todos</strong><small>Mostra cada criatura abatida.</small></span></label>
+        <label class="sagas-modo"><input type="radio" name="kill_mode" value="notable"><span><strong>Abates marcantes</strong><small>Chefes, tipos especiais como Brute e Draugr Elite, e criaturas de 3 estrelas ou mais.</small></span></label>
+        <label class="sagas-modo"><input type="radio" name="kill_mode" value="bosses"><span><strong>Só chefes</strong><small>Mostra apenas abates de chefes.</small></span></label>
+      </div>
+    </fieldset>
     <label class="sagas-opcao"><span><strong>Dia do mundo</strong><small>Mostra o dia e o horário do mundo informado pela ponte.</small></span><input type="checkbox" id="clock"><span class="sagas-trilho" aria-hidden="true"></span></label>
   </div>
   <button class="btn" id="save" type="button" disabled>Salvar opções</button>
@@ -63,6 +83,9 @@ function sagasShow(d){
   for(const k of ['worlds','players','events','queued'])
     document.getElementById(k==='events'?'events-count':k).textContent=d.storage_error&&k!=='queued'?'—':d[k];
   for(const k of sagasKeys)document.getElementById(k).checked=d.settings[k];
+  const mode=document.querySelector('input[name="kill_mode"][value="'+(d.settings.kill_mode||'all')+'"]');
+  if(mode)mode.checked=true;
+  sagasSyncFilter();
   const state=document.getElementById('state');
   state.textContent=!d.settings.enabled?'Extensão pausada':!d.bridge?'Ponte não encontrada':
     !d.importer_timer_active?'Importação parada':d.storage_error?'Banco indisponível':
@@ -76,6 +99,11 @@ function sagasShow(d){
   ingest.classList.toggle('erro',d.storage_error||!d.importer_timer_active);
   document.getElementById('save').disabled=false;
 }
+function sagasSyncFilter(){
+  const disabled=!document.getElementById('events').checked;
+  for(const radio of document.querySelectorAll('input[name="kill_mode"]'))radio.disabled=disabled;
+}
+document.getElementById('events').addEventListener('change',sagasSyncFilter);
 async function sagasLoad(){
   try{
     const response=await fetch(sagasGet,{cache:'no-store',credentials:'same-origin'});
@@ -94,6 +122,7 @@ async function sagasLoad(){
 sagasLoad();
 document.getElementById('save').addEventListener('click',async()=>{
   const data={};for(const k of sagasKeys)data[k]=document.getElementById(k).checked;
+  data.kill_mode=document.querySelector('input[name="kill_mode"]:checked')?.value||'all';
   const feedback=document.getElementById('feedback');feedback.textContent='Salvando…';
   const button=document.getElementById('save');button.disabled=true;
   try{
@@ -102,6 +131,8 @@ document.getElementById('save').addEventListener('click',async()=>{
     const result=await response.json();
     if(!response.ok||!result.ok)throw Error(result.erro||'Falha ao salvar');
     for(const k of sagasKeys)document.getElementById(k).checked=result.settings[k];
+    const mode=document.querySelector('input[name="kill_mode"][value="'+result.settings.kill_mode+'"]');
+    if(mode)mode.checked=true;
     feedback.textContent=await sagasLoad()?'Opções salvas.':'Opções salvas; não foi possível atualizar o estado.';
   }catch(error){feedback.textContent=error.message||'Falha ao salvar';}
   finally{button.disabled=false;}

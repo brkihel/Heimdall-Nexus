@@ -20,6 +20,12 @@ def enable(state):
         'version': 1, 'enabled': True, 'gear': True, 'events': True, 'clock': True}))
 
 
+def set_mode(state, mode):
+    settings = sagas.load_settings(state)
+    settings['kill_mode'] = mode
+    (state / 'settings.json').write_text(json.dumps(settings))
+
+
 def presence(**changes):
     return {'version': 1, 'type': 'presence', 'world': WORLD, 'actor': ACTOR,
             'name': 'Astrid', 'online': True, 'share_profile': True,
@@ -35,6 +41,52 @@ def event(**changes):
 
 
 class SagasContractTests(unittest.TestCase):
+    def test_legacy_settings_default_to_all_kills(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            state = Path(temporary)
+            enable(state)
+            self.assertEqual(sagas.load_settings(state)['kill_mode'], 'all')
+            settings = sagas.load_settings(state)
+            settings['kill_mode'] = ['bosses']
+            (state / 'settings.json').write_text(json.dumps(settings))
+            self.assertFalse(sagas.load_settings(state)['enabled'])
+
+    def test_kill_classification_requires_boolean_flags(self):
+        for changes in ({'boss': 1}, {'elite': 'true'}):
+            with self.subTest(changes=changes), self.assertRaises(sagas.InvalidPacket):
+                sagas.validate(event(kind='kill', **changes))
+
+    def test_kill_mode_filters_history_and_new_packets_without_hiding_deaths(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            state = Path(temporary)
+            enable(state)
+            inbox = state / 'inbox'
+            inbox.mkdir()
+            cases = [
+                ('ordinary', {'kind': 'kill', 'target': 'Boar'}),
+                ('elite', {'kind': 'kill', 'target': 'Draugr Elite', 'elite': True}),
+                ('stars', {'kind': 'kill', 'target': 'Boar', 'stars': 3}),
+                ('boss', {'kind': 'kill', 'target': 'Eikthyr', 'boss': True}),
+                ('death', {'kind': 'death'}),
+            ]
+            with sagas.connect(state / 'sagas.sqlite3') as db:
+                sagas.ingest(db, sagas.validate(presence()), now=100)
+                for index, (_, changes) in enumerate(cases):
+                    sagas.ingest(db, sagas.validate(event(id=f'history{index:09d}', **changes)), now=101 + index)
+            set_mode(state, 'bosses')
+            self.assertEqual({r['kind'] + ':' + r['target'] for r in
+                              sagas.public_view(state / 'sagas.sqlite3')['events']},
+                             {'kill:Eikthyr', 'death:'})
+            set_mode(state, 'notable')
+            self.assertEqual(len(sagas.public_view(state / 'sagas.sqlite3')['events']), 4)
+            for index, (_, changes) in enumerate(cases):
+                (inbox / f'{index:03d}.json').write_text(json.dumps(event(
+                    id=f'incoming{index:08d}', **changes)))
+            self.assertEqual(sagas.process_inbox(state),
+                             {'accepted': 4, 'rejected': 0, 'dropped': 1})
+            with sagas.connect(state / 'sagas.sqlite3') as db:
+                self.assertEqual(db.execute('SELECT count(*) FROM events').fetchone()[0], 9)
+
     def test_credited_kill_appears_once_after_profile_consent(self):
         with tempfile.TemporaryDirectory() as temporary:
             dbfile = Path(temporary) / 'sagas.sqlite3'
@@ -179,9 +231,14 @@ class SagasContractTests(unittest.TestCase):
                 db.execute('''CREATE TABLE players(world TEXT, id TEXT, name TEXT, online INTEGER,
                            share_profile INTEGER, share_map INTEGER, share_position INTEGER,
                            x REAL, z REAL, seen_at INTEGER, PRIMARY KEY(world,id))''')
+                db.execute('''CREATE TABLE events(world TEXT, actor TEXT, id TEXT, kind TEXT,
+                           name TEXT, target TEXT, stars INTEGER, quantity INTEGER,
+                           x REAL, z REAL, occurred_at INTEGER, PRIMARY KEY(world,actor,id))''')
             with sagas.connect(dbfile) as db:
                 self.assertIn('gear_json', {r[1] for r in db.execute('PRAGMA table_info(players)')})
                 self.assertIn('name', {r[1] for r in db.execute('PRAGMA table_info(worlds)')})
+                self.assertTrue({'boss', 'elite'}.issubset(
+                    {r[1] for r in db.execute('PRAGMA table_info(events)')}))
 
     def test_storage_failure_keeps_valid_packet_for_retry(self):
         with tempfile.TemporaryDirectory() as temporary:

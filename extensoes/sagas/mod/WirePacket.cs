@@ -27,6 +27,8 @@ namespace Heimdall.Sagas.Mod
         public string name = "";
         public string target = "";
         public int stars;
+        public bool boss;
+        public bool elite;
         public int quantity = 1;
         public bool online;
         public bool share_profile;

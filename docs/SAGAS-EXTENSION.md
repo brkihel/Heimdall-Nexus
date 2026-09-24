@@ -1,6 +1,6 @@
 # Heimdall Sagas extension
 
-Status: **0.1.1 development preview**. The extension is opt-in and separate
+Status: **0.1.2 development preview**. The extension is opt-in and separate
 from the existing `saga.json` skill ranking. It has not been installed on a live
 server or published to Hexium.
 
@@ -37,7 +37,15 @@ withdrawing map consent erases stored event coordinates. Position also requires
 Valheim's own public map setting. A missing or invalid settings file disables
 the extension until an administrator repairs it.
 The bridge checks a 10,000-packet spool limit every 30 seconds. The importer
-prunes SQLite to the 100,000 most recent events each hour.
+prunes SQLite to the 100,000 most recent events each hour and commits each
+five-second import batch in one transaction. The client sends presence every
+30 seconds while connected.
+
+The admin can show all kills, only bosses plus named elite creature types and
+creatures with at least three stars, or bosses only. Deaths remain visible in
+every mode. The client and bridge apply the filter before storage; the Nexus
+also filters pending packets and existing history. Older events without boss
+or elite classification remain visible in the all-kills mode.
 
 ## Feature inventory
 
@@ -45,8 +53,8 @@ prunes SQLite to the 100,000 most recent events each hour.
 |---|---|---|
 | Online presence and world day | Implemented in preview | Dedicated server playtest; pause/time-skip behavior |
 | Last equipped items | Implemented in preview | Verify modded inventory slots and item localization |
-| Kill and death events with local retry | Implemented in preview | One-client combat/reconnect playtest and automated retry/dedup tests |
-| Kills, boss credit, drops, rarity, bounty | Planned | Server-authoritative provenance and deduplication tests |
+| Kill and death events with local retry and admin kill filter | Implemented in preview | One-client combat/reconnect playtest and automated retry/dedup tests |
+| Advanced boss credit, drops, rarity, bounty | Planned | Server-authoritative provenance and deduplication tests |
 | Atlas terrain, fog, pins, activity layers | Planned | Consent-preserving capture, bounded transport, large-map tests |
 | Portraits, icons, effects, resistances | Planned | Frame-budgeted capture and media validation |
 | Rankings, comparisons, trophy hall | Planned | Credited fact ledger and time-window rules |
