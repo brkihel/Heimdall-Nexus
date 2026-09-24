@@ -29,6 +29,7 @@
     <button data-aba="vivo">Ao vivo</button>
     <button data-aba="estrutura">Estrutura</button>
     <button data-aba="pagina">Página</button>
+    <button data-aba="menu">Menu</button>
     <button data-aba="versoes">Versões</button>
   </nav>
 
@@ -58,6 +59,19 @@
     <p class="dica">Como a página aparece na aba do navegador, no Google e ao ser compartilhada.
       Salva e publica na hora, separado das edições da página.</p>
     <div id="cabeca"></div>
+  </section>
+
+  <section class="aba" data-aba="menu">
+    <p class="dica">Este menu aparece em todas as páginas públicas. Mude nomes, ordem e visibilidade; as cores seguem a Aparência do site. Salvar publica imediatamente.</p>
+    <label class="menu-estilo">Visual do menu<select id="menu-estilo"><option value="discreto">Discreto</option><option value="destaque">Destaque dourado</option><option value="personalizado">Cores próprias</option></select></label>
+    <div class="menu-cores" id="menu-cores" hidden>
+      <label>Fundo<input type="color" data-cor="background"></label>
+      <label>Texto<input type="color" data-cor="text"></label>
+      <label>Destaque<input type="color" data-cor="accent"></label>
+      <p class="dica">Confira o contraste das cores na página publicada, também no celular.</p>
+    </div>
+    <div id="menu-links" class="menu-links"></div>
+    <button class="jarl-btn jarl-primary" id="menu-salvar" type="button">Salvar menu</button>
   </section>
 
   <section class="aba" data-aba="versoes">
@@ -221,8 +235,52 @@ function trocaAba(nome) {
   document.querySelectorAll('.aba').forEach(s => s.classList.toggle('on', s.dataset.aba === nome));
   if (nome === 'vivo') desenhaVivo();
   if (nome === 'pagina') desenhaCabeca();
+  if (nome === 'menu') desenhaMenu();
   if (nome === 'versoes') desenhaVersoes();
 }
+
+// ---------------------------------------------------------------- shared public navigation
+let menuConfig = null;
+async function desenhaMenu() {
+  if (!menuConfig) {
+    const response = await api('/api/site/navegacao');
+    if (!response) return;
+    menuConfig = response.config;
+    $('#menu-estilo').value = menuConfig.style;
+    for (const input of document.querySelectorAll('[data-cor]')) input.value = menuConfig.palette[input.dataset.cor];
+  }
+  $('#menu-cores').hidden = menuConfig.style !== 'personalizado';
+  const box = $('#menu-links');box.replaceChildren();
+  for (const [index, link] of menuConfig.links.entries()) {
+    const row = document.createElement('div');row.className = 'menu-link';
+    const title = document.createElement('label');title.textContent = 'Nome no menu';
+    const input = document.createElement('input');input.value = link.label;input.maxLength = 28;
+    input.setAttribute('aria-label', `Nome da página ${link.id}`);
+    input.addEventListener('input', () => { link.label = input.value; });title.append(input);
+    const visible = document.createElement('label');visible.className = 'menu-visible';
+    const switcher = document.createElement('input');switcher.type = 'checkbox';switcher.checked = link.visible;
+    switcher.addEventListener('change', () => { link.visible = switcher.checked; });
+    visible.append(switcher,document.createTextNode('Mostrar'));
+    const up = document.createElement('button');up.type = 'button';up.className = 'jarl-btn';up.textContent = '↑';up.title = 'Mover para cima';up.disabled = index === 0;
+    up.addEventListener('click', () => { [menuConfig.links[index - 1],menuConfig.links[index]] = [menuConfig.links[index],menuConfig.links[index - 1]];desenhaMenu(); });
+    const down = document.createElement('button');down.type = 'button';down.className = 'jarl-btn';down.textContent = '↓';down.title = 'Mover para baixo';down.disabled = index === menuConfig.links.length - 1;
+    down.addEventListener('click', () => { [menuConfig.links[index + 1],menuConfig.links[index]] = [menuConfig.links[index],menuConfig.links[index + 1]];desenhaMenu(); });
+    row.append(title,visible,up,down);box.append(row);
+  }
+}
+$('#menu-estilo').addEventListener('change', event => {
+  if (menuConfig) menuConfig.style = event.target.value;
+  $('#menu-cores').hidden = event.target.value !== 'personalizado';
+});
+document.querySelectorAll('[data-cor]').forEach(input => input.addEventListener('input', () => {
+  if (menuConfig) menuConfig.palette[input.dataset.cor] = input.value;
+}));
+$('#menu-salvar').addEventListener('click', async () => {
+  if (!menuConfig) return;
+  menuConfig.style = $('#menu-estilo').value;
+  const response = await api('/api/site/navegacao', menuConfig);
+  if (response) { menuConfig = response.config;aviso('Menu publicado em todas as páginas.'); }
+});
 
 // ---------------------------------------------------------------- versions
 function quando(iso) {
@@ -350,6 +408,7 @@ async function desenhaCabeca() {
   const pedida = paginas.find(p => p.id === q.get('pagina')) ||
                  paginas.find(p => p.url === q.get('url')) || paginas[0];
   abrePagina(pedida);
+  if (q.get('aba') === 'menu') trocaAba('menu');
 })();
 </script>
 </body>

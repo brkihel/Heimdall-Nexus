@@ -98,10 +98,10 @@ fi
 
 step 4 site-helpers HN-UPD-104
 echo "Updating site helpers (your pages and identity stay as they are)…"
-for helper in publicar.py values.py sync_modpack.py identidade.py; do
+for helper in publicar.py values.py sync_modpack.py identidade.py navegacao.py; do
   install -D -m 0640 -o root -g "$PANEL_OS_USER" "$RUNTIME/site/web/$helper" "$SITE_DIR/$helper"
 done
-for asset in vivo.js modpack.js mod-placeholder.svg; do
+for asset in vivo.js modpack.js mod-placeholder.svg navegacao.js navegacao.css sagas-resumo.js sagas-resumo.css sagas-halls.js sagas-halls.css historias-bg.webp; do
   install -D -m 0640 -o root -g "$PANEL_OS_USER" "$RUNTIME/site/web/assets/$asset" "$SITE_DIR/assets/$asset"
 done
 for font in "$RUNTIME"/site/web/assets/fontes/*; do
@@ -116,11 +116,12 @@ done
 [[ -e "$SITE_DIR/identidade.json" ]] || \
   install -D -m 0640 -o root -g "$PANEL_OS_USER" "$RUNTIME/site/web/identidade.json" "$SITE_DIR/identidade.json"
 install -D -m 0640 -o root -g "$PANEL_OS_USER" "$RUNTIME/site/web/cronicas.html" "$SITE_DIR/cronicas.html"
+python3 "$RUNTIME/site/web/migrar-paginas.py" "$RUNTIME/site/web" "$SITE_DIR"
 
 step 5 publish HN-UPD-105
 echo "Publishing the site…"
 HEIMDALL_WEB_DIR="$WEB_ROOT" HEIMDALL_WEB_USER=www-data HEIMDALL_WEB_BACKUP_DIR=/var/backups/heimdall-web \
-  HEIMDALL_SITE_DIR="$SITE_DIR" python3 "$SITE_DIR/publicar.py" vivo modpack-ui fontes cronicas tema marca sitemap robots
+  HEIMDALL_SITE_DIR="$SITE_DIR" python3 "$SITE_DIR/publicar.py"
 
 step 6 bridge-and-version HN-UPD-106
 GAME_DIR="$(sed -n 's/^HEIMDALL_VALHEIM_DIR=//p' "$ENV_FILE" | tail -n1)"

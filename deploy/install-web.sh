@@ -197,12 +197,14 @@ install -D -m 0640 "$ROOT/site/web/publicar.py" "$SITE_DIR/publicar.py"
 install -D -m 0640 "$ROOT/site/web/values.py" "$SITE_DIR/values.py"
 install -D -m 0640 "$ROOT/site/web/sync_modpack.py" "$SITE_DIR/sync_modpack.py"
 install -D -m 0640 "$ROOT/site/web/identidade.py" "$SITE_DIR/identidade.py"
+install -D -m 0640 "$ROOT/site/web/navegacao.py" "$SITE_DIR/navegacao.py"
+python3 "$ROOT/site/web/migrar-paginas.py" "$ROOT/site/web" "$SITE_DIR"
 for template in "$ROOT"/site/web/modelos-pagina/*.html; do
   [[ -e "$SITE_DIR/modelos-pagina/$(basename "$template")" ]] || \
     install -D -m 0640 "$template" "$SITE_DIR/modelos-pagina/$(basename "$template")"
 done
 [[ -e "$SITE_DIR/marca/favicon.svg" ]] || install -D -m 0640 "$ROOT/site/web/marca/favicon.svg" "$SITE_DIR/marca/favicon.svg"
-for asset in vivo.js modpack.js mod-placeholder.svg; do
+for asset in vivo.js modpack.js mod-placeholder.svg navegacao.js navegacao.css sagas-resumo.js sagas-resumo.css sagas-halls.js sagas-halls.css historias-bg.webp; do
   install -D -m 0644 "$ROOT/site/web/assets/$asset" "$SITE_DIR/assets/$asset"
 done
 for catalog in hexium thunderstore; do

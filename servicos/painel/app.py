@@ -54,7 +54,7 @@ portaria = nucleo.Portaria()
 
 
 @app.get('/api/sagas/v1/overview')
-async def sagas_public_overview(world: str = '', limit: int = 50):
+async def sagas_public_overview(world: str = '', limit: int = 50, story_limit: int = 6):
     """Public data is filtered again from the latest sharing choices on read."""
     try:
         data = sagas.public_view(world=world, limit=limit)
@@ -67,7 +67,8 @@ async def sagas_public_overview(world: str = '', limit: int = 50):
     except (OSError, ValueError, sagas.sqlite3.Error):
         data['atlas'] = None
     try:
-        data['stories'] = stories.public_list(sagas.DATABASE, data.get('world', '')) \
+        data['stories'] = stories.public_list(sagas.DATABASE, data.get('world', ''),
+                                             limit=min(20, max(1, story_limit))) \
             if data.get('available') else []
         data['stories_enabled'] = bool(data.get('available') and
             sagas.load_settings(sagas.STATE)['events'] and
@@ -623,6 +624,27 @@ async def api_site_paginas(pedido: Request):
     try:
         return {'ok': True, **await nucleo.pede_async('site.paginas', {}, usuario)}
     except nucleo.Erro as erro:
+        return JSONResponse({'ok': False, 'erro': str(erro)}, status_code=400)
+
+
+@app.get(f'{RAIZ_URL}/api/site/navegacao')
+async def api_site_navegacao(pedido: Request):
+    usuario = exige(pedido)
+    try:
+        return {'ok': True, **await nucleo.pede_async('site.navegacao', {}, usuario)}
+    except nucleo.Erro as erro:
+        return JSONResponse({'ok': False, 'erro': str(erro)}, status_code=400)
+
+
+@app.post(f'{RAIZ_URL}/api/site/navegacao')
+async def api_site_navegacao_gravar(pedido: Request):
+    usuario = exige(pedido)
+    if not pedido.headers.get('content-type', '').startswith('application/json'):
+        return JSONResponse({'ok': False, 'erro': 'pedido inválido'}, status_code=400)
+    try:
+        corpo = await pedido.json()
+        return {'ok': True, **await nucleo.pede_async('site.navegacao.gravar', corpo, usuario)}
+    except (ValueError, nucleo.Erro) as erro:
         return JSONResponse({'ok': False, 'erro': str(erro)}, status_code=400)
 
 

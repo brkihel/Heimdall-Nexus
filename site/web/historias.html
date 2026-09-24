@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05090d"><title>Histórias — Heimdall Nexus</title>
+<meta name="description" content="Capítulos inspirados nos feitos compartilhados pelos Vikings.">
+<meta property="og:site_name" data-identidade="nome" content="Seu Servidor">
+<link rel="icon" data-identidade="favicon" href="/marca/favicon.svg" type="image/svg+xml">
+<link rel="canonical" data-identidade="url" data-caminho="/historias/" href="/historias/">
+<link rel="stylesheet" href="/assets/fontes/fontes.css"><link rel="stylesheet" href="/assets/tema.css">
+<style>
+:root{--breu:#05090d;--noite:#080e14;--carvao:#0d151d;--ardosia:#152029;--borda:#22313d;--borda-viva:#33475a;--osso:#e6e0d2;--texto:#b4bec7;--fraco:#78848f;--ouro:#c8a45c;--ouro-fundo:#7d6331;--ouro-claro:#eeddb0;--brasa:#ff8b3d;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--breu);color:var(--texto);font:16px/1.65 Spectral,Georgia,serif}[hidden]{display:none!important}a{color:var(--ouro-claro)}button,select{font:inherit}.shell{width:min(1160px,calc(100% - 2rem));margin:auto}
+.stage{position:relative;isolation:isolate;min-height:calc(100vh - 58px);overflow:hidden;background:var(--breu)}
+.stage-art{position:absolute;inset:0;width:calc(100% + 250px);height:min(940px,100vh);object-fit:cover;object-position:center 30%;transform:translateX(-400px);z-index:-3;opacity:.9}
+.stage::before{content:"";position:absolute;inset:0;z-index:-2;background:linear-gradient(90deg,rgba(5,9,13,.08) 0%,rgba(5,9,13,.25) 48%,rgba(5,9,13,.86) 77%,rgba(5,9,13,.97) 100%),linear-gradient(0deg,var(--breu) 0%,transparent 54%,rgba(5,9,13,.12) 100%)}
+.stage::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(circle at 40% 76%,rgba(255,139,61,.09),transparent 20%)}
+.intro{padding:clamp(3rem,8vw,7rem) 0 1.6rem;max-width:680px;margin-left:auto}.eyebrow{font:600 .62rem Cinzel,Georgia,serif;letter-spacing:.23em;text-transform:uppercase;color:var(--ouro)}h1,h2,h3{font-family:Cinzel,Georgia,serif;line-height:1.24;color:var(--osso)}h1{font-size:clamp(2.4rem,6vw,5.3rem);margin:.35rem 0 .65rem}.intro p{max-width:60ch;font-size:1.06rem;margin:.4rem 0}.intro .disclaimer{font-size:.88rem;color:var(--fraco)}
+.divisor{display:flex;align-items:center;gap:14px;max-width:350px;margin:1.35rem 0}.divisor i{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--ouro-fundo))}.divisor i:last-child{background:linear-gradient(270deg,transparent,var(--ouro-fundo))}.divisor b{width:7px;height:7px;transform:rotate(45deg);border:1px solid var(--ouro)}
+.controls{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin:0 0 1.25rem auto;max-width:680px}.controls label{font:.68rem Cinzel,Georgia,serif;letter-spacing:.12em;text-transform:uppercase;color:var(--ouro-claro)}.controls select{display:block;margin-top:.35rem;min-width:220px;background:rgba(8,14,20,.9);color:var(--osso);border:1px solid var(--borda-viva);border-radius:3px;padding:.6rem .75rem}.controls small{color:var(--fraco)}.status{padding:1.1rem;border:1px solid var(--borda);background:rgba(8,14,20,.84);max-width:680px;margin-left:auto}
+.chapters{display:grid;gap:1.05rem;max-width:680px;margin-left:auto;padding:0 0 6rem}.chapter{position:relative;border:1px solid rgba(200,164,92,.34);border-radius:3px;background:linear-gradient(168deg,rgba(21,32,41,.92),rgba(5,9,13,.91));box-shadow:0 22px 60px rgba(0,0,0,.5);backdrop-filter:blur(8px)}.chapter::before,.chapter::after{content:"";position:absolute;width:17px;height:17px;pointer-events:none;border-color:var(--ouro)}.chapter::before{left:6px;top:6px;border-left:1px solid;border-top:1px solid}.chapter::after{right:6px;bottom:6px;border-right:1px solid;border-bottom:1px solid}.chapter summary{cursor:pointer;list-style:none;padding:1.5rem 1.7rem}.chapter summary::-webkit-details-marker{display:none}.chapter summary::after{content:"⌄";position:absolute;right:1.5rem;top:1.8rem;font:1.4rem Spectral,serif;color:var(--ouro)}.chapter[open] summary::after{content:"⌃"}.chapter h2{font-size:clamp(1.15rem,2.5vw,1.6rem);margin:.4rem 2rem .35rem 0}.chapter small{color:var(--fraco)}.chapter-body{padding:.05rem 1.7rem 1.7rem}.chapter-body p{color:var(--osso);font-size:1.06rem;line-height:1.75;max-width:65ch}.chapter-proof{margin-top:1.4rem;padding-top:1rem;border-top:1px solid var(--borda);font-size:.86rem;color:var(--fraco)}.chapter-proof strong{color:var(--ouro-claro);font:.68rem Cinzel,Georgia,serif;letter-spacing:.1em;text-transform:uppercase}.chapter-proof ul{margin:.65rem 0 0;padding-left:1.2rem}.chapter-proof li{margin:.35rem 0}.chapter:focus-within{border-color:var(--ouro)}:focus-visible{outline:2px solid var(--ouro-claro);outline-offset:3px}
+.embers{position:absolute;inset:0 0 auto;height:min(940px,100vh);pointer-events:none;overflow:hidden;z-index:-1}.ember{position:absolute;bottom:21%;left:var(--x);width:3px;height:3px;border-radius:50%;background:var(--brasa);box-shadow:0 0 10px var(--brasa);opacity:0;animation:rise var(--dur) linear infinite;animation-delay:var(--delay)}@keyframes rise{15%{opacity:.75}85%{opacity:.25}100%{transform:translate(var(--drift),-48vh);opacity:0}}footer{padding:2rem 0;border-top:1px solid var(--borda);color:var(--fraco);font-size:.82rem}
+@media(max-width:700px){.stage-art{width:100%;height:620px;object-position:54% top;transform:none;opacity:.72}.stage::before{background:linear-gradient(0deg,var(--breu) 0%,rgba(5,9,13,.72) 54%,rgba(5,9,13,.34) 100%)}.intro{padding-top:2.6rem}.embers{height:620px;opacity:.6}.ember{left:calc(var(--x) + 19%)}.chapter summary,.chapter-body{padding-left:1.15rem;padding-right:1.15rem}}
+@media(prefers-reduced-motion:reduce){.ember{animation:none!important;display:none}}
+</style>
+</head>
+<body>
+<main class="stage"><img class="stage-art" src="/assets/historias-bg.webp" alt="" decoding="async">
+<div class="embers" aria-hidden="true"><i class="ember" style="--x:39%;--dur:8s;--delay:0s;--drift:-35px"></i><i class="ember" style="--x:43%;--dur:6s;--delay:2s;--drift:38px"></i><i class="ember" style="--x:36%;--dur:9s;--delay:4s;--drift:22px"></i><i class="ember" style="--x:45%;--dur:7s;--delay:1s;--drift:-29px"></i><i class="ember" style="--x:41%;--dur:10s;--delay:5s;--drift:18px"></i></div>
+<div class="shell"><header class="intro"><div class="eyebrow">Ao redor da fogueira</div><h1>Histórias dos Vikings</h1><p>Odin guarda os ecos dos feitos compartilhados neste mundo. Cada capítulo nasce de registros reais e ganha voz de lenda.</p><p class="disclaimer">Ficção criada por IA. Os fatos que inspiraram cada capítulo aparecem no fim da história.</p><div class="divisor" aria-hidden="true"><i></i><b></b><i></i></div></header>
+<div class="controls"><label for="world">Mundo<select id="world"></select></label><small>Capítulos atualizados a cada 30 segundos</small></div>
+<p class="status" id="status" role="status">Carregando histórias…</p><div class="chapters" id="chapters" hidden></div>
+</div></main><footer><div class="shell"><span data-identidade="rodape">Servidor comunitário de Valheim. Não somos afiliados à Iron Gate AB nem à Coffee Stain.</span></div></footer>
+<script>
+(() => {'use strict';
+const $=id=>document.getElementById(id), words={death:'caiu em batalha',kill:'derrotou',boss:'venceu',discover:'descobriu',drop:'encontrou',collect:'coletou',pickup:'recolheu',bounty:'concluiu uma recompensa'};
+const landmarks={Eikthyrnir:'o altar de Eikthyr',GDKing:'o altar do Ancião',Bonemass:'o altar de Bonemass',Dragonqueen:'o altar de Moder',GoblinKing:'o altar de Yagluth',Mistlands_DvergrBossEntrance1:'a entrada do covil da Rainha',FaderLocation:'o altar de Fader',Vendor_BlackForest:'o acampamento de Haldor',Hildir_camp:'o acampamento de Hildir',BogWitch_Camp:'a cabana da Bruxa do Pântano'};
+const node=(tag,text,className)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e};
+const when=seconds=>new Date(Number(seconds)*1000).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
+function target(item){const t=item.target||'';return t.startsWith('vegvisir:')?'um Vegvisir que aponta para '+(landmarks[t.slice(9)]||t.slice(9)):landmarks[t]||t}
+let world='',requestId=0;
+function render(data){
+  const select=$('world');select.replaceChildren();for(const entry of data.worlds){const opt=node('option',entry.name||'Mundo');opt.value=entry.id;opt.selected=entry.id===data.world;select.append(opt)}select.disabled=data.worlds.length<2;
+  const list=$('chapters');list.replaceChildren();const stories=Array.isArray(data.stories)?data.stories:[];
+  if(!data.stories_enabled){$('status').textContent='As histórias estão desativadas neste servidor. O administrador pode ativá-las no Jarl → Sagas.';$('status').hidden=false;list.hidden=true;return}
+  if(!stories.length){$('status').textContent='Ainda não há capítulos compartilhados neste mundo. Eles aparecem depois que um Viking autoriza as histórias e seus feitos são registrados.';$('status').hidden=false;list.hidden=true;return}
+  for(const [index,story] of stories.entries()){
+    const card=node('details',undefined,'chapter');card.open=index===0;
+    const summary=node('summary');const who=story.scope==='server'?'Saga do servidor':'Saga de '+(story.evidence?.find(item=>item.actor===story.actor)?.name||'um Viking');
+    summary.append(node('span',who,'eyebrow'),node('h2',story.title||'Capítulo sem título'),node('small',when(story.created_at)+' · Ficção criada por IA'+(story.auto?' · escrita após um grande feito':'')));
+    const body=node('div',undefined,'chapter-body');for(const paragraph of String(story.text||'').split(/\n\s*\n/))if(paragraph.trim())body.append(node('p',paragraph.trim()));
+    const proof=node('div',undefined,'chapter-proof');proof.append(node('strong','Registros que inspiraram este capítulo'));const facts=node('ul');
+    for(const item of story.evidence||[])facts.append(node('li',(item.name||'Viking')+' '+(words[item.kind]||'registrou')+(item.target?' '+target(item):'')+' · '+when(item.occurred_at)));
+    proof.append(facts);body.append(proof);card.append(summary,body);list.append(card);
+  }
+  list.hidden=false;$('status').hidden=true;
+}
+async function load(){const id=++requestId;try{const response=await fetch('/api/sagas/v1/overview?limit=20&story_limit=20'+(world?'&world='+encodeURIComponent(world):''),{cache:'no-store'});if(!response.ok)throw Error();const data=await response.json();if(id!==requestId)return;if(!data.available){$('status').textContent='Sagas ainda não está ativa neste servidor.';$('status').hidden=false;$('chapters').hidden=true;return}world=data.world||'';render(data)}catch(_){if(id!==requestId)return;$('status').textContent='Não foi possível carregar as histórias agora. Tente novamente em instantes.';$('status').hidden=false}}
+$('world').addEventListener('change',event=>{world=event.target.value;load()});load();setInterval(load,30000);
+})();
+</script>
+</body></html>

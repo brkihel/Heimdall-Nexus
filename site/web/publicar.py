@@ -13,6 +13,7 @@ under HEIMDALL_WEB_BACKUP_DIR.
 from __future__ import annotations
 
 import datetime
+import hashlib
 import json
 import os
 import pwd
@@ -24,6 +25,7 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0, str(BASE))
 import identidade  # noqa: E402
+import navegacao  # noqa: E402
 
 DESTINO = Path(os.environ.get('HEIMDALL_WEB_DIR', '/srv/heimdall-web'))
 BACKUP = Path(os.environ.get('HEIMDALL_WEB_BACKUP_DIR', '/var/backups/heimdall-web'))
@@ -34,6 +36,20 @@ FIXOS = {
     'mods': ('mods.json', 'mods.json'),
     'cronicas': ('cronicas.html', 'cronicas/index.html'),
 }
+
+
+def public_html(source: str, path: str) -> str:
+    """Add the shared menu without changing the instance's editable source."""
+    def asset(name: str) -> str:
+        digest = hashlib.sha256((BASE / 'assets' / name).read_bytes()).hexdigest()[:10]
+        return f'/assets/{name}?v={digest}'
+    if '/assets/navegacao.js' not in source:
+        source = source.replace('</head>', f'<link rel="stylesheet" href="{asset("navegacao.css")}">\n'
+                                f'<script src="{asset("navegacao.js")}" defer></script>\n</head>', 1)
+    if path == 'index.html' and '/assets/sagas-resumo.js' not in source:
+        source = source.replace('</head>', f'<link rel="stylesheet" href="{asset("sagas-resumo.css")}">\n'
+                                f'<script src="{asset("sagas-resumo.js")}" defer></script>\n</head>', 1)
+    return source
 
 
 def saida_da_url(url: str) -> str:
@@ -136,7 +152,7 @@ def main(argv: list[str]) -> int:
         pub.retirar(argv[1])
         return 0
     lista = paginas()
-    conhecidos = [*lista, *FIXOS, 'tema', 'marca', 'fontes', 'assets', 'sitemap', 'robots']
+    conhecidos = [*lista, *FIXOS, 'tema', 'marca', 'fontes', 'assets', 'navegacao', 'sitemap', 'robots']
     alvos = argv or conhecidos
     desconhecidos = [a for a in alvos if a not in conhecidos]
     if desconhecidos:
@@ -151,8 +167,9 @@ def main(argv: list[str]) -> int:
                 print(f'!! {origem} não existe — pulei {alvo}')
                 continue
             dados = fonte.read_bytes()
-            if alvo == 'cronicas':
-                dados = identidade.aplicar(dados.decode('utf-8'), ident).encode('utf-8')
+            if origem.endswith('.html'):
+                source = identidade.aplicar(dados.decode('utf-8'), ident)
+                dados = public_html(source, caminho).encode('utf-8')
             if origem.endswith('.html') and b'@@' in dados:
                 print(f'!! {origem} ainda tem marcador @@ — não publiquei')
                 return 1
@@ -165,6 +182,11 @@ def main(argv: list[str]) -> int:
             pub.copiar_pasta(BASE / 'assets/fontes', 'assets/fontes', alvo)
         elif alvo == 'assets':
             pub.copiar_pasta(BASE / 'assets', 'assets', alvo)
+        elif alvo == 'navegacao':
+            manifest = json.loads((BASE / 'site-pages.json').read_text(encoding='utf-8'))
+            config = navegacao.public(navegacao.load(BASE, manifest), manifest)
+            pub.escrever('assets/navegacao.json',
+                         (json.dumps(config, ensure_ascii=False, separators=(',', ':')) + '\n').encode(), alvo)
         elif alvo == 'sitemap':
             pub.escrever('sitemap.xml', sitemap(ident, lista), alvo)
         elif alvo == 'robots':

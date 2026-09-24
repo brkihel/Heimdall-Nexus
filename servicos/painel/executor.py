@@ -1755,7 +1755,8 @@ def v_site_previa_ler(dados):
 IDENTITY_FILES = {'logo': (5 * 1024 * 1024, {'png', 'jpg', 'webp', 'svg'}),
                   'favicon': (512 * 1024, {'png', 'ico', 'svg'}),
                   'fundo': (8 * 1024 * 1024, {'png', 'jpg', 'webp'})}
-RESERVED_SLUGS = {'jarl', 'api', 'assets', 'marca', 'mapa', 'wiki', 'index', 'favicon', 'robots', 'sitemap'}
+RESERVED_SLUGS = {'jarl', 'api', 'assets', 'marca', 'mapa', 'historias', 'armaria',
+                  'rankings', 'wiki', 'index', 'favicon', 'robots', 'sitemap'}
 SLUG = re.compile(r'^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$')
 TOKEN = re.compile(r'^[0-9a-f]{32}$')
 
@@ -1766,6 +1767,49 @@ def _identity_module():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def _navigation_module():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('navegacao_site', SITE_DIR / 'navegacao.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def v_site_navegacao(_):
+    manifest = sitetext.load_manifest(SITE_DIR)
+    module = _navigation_module()
+    return {'config': module.load(SITE_DIR, manifest),
+            'paginas': [{'id': p['id'], 'titulo': p['titulo'], 'url': p['url']}
+                        for p in manifest['paginas'] if p.get('url')]}
+
+
+def v_site_navegacao_gravar(dados):
+    with SITE_LOCK:
+        manifest = sitetext.load_manifest(SITE_DIR)
+        module = _navigation_module()
+        try:
+            clean = module.validate(dados, manifest)
+        except (ValueError, TypeError) as error:
+            raise Recusa(str(error)) from error
+        path = SITE_DIR / module.FILE
+        before = path.read_bytes() if path.is_file() else None
+        content = (json.dumps(clean, ensure_ascii=False, indent=2) + '\n').encode('utf-8')
+        if path.is_file():
+            guarda_copia(path)
+            _write_as_owner(path, content.decode('utf-8'))
+        else:
+            _new_site_file(path, content)
+        try:
+            _publish(['navegacao'])
+        except Exception:
+            if before is None:
+                path.unlink(missing_ok=True)
+            else:
+                _write_as_owner(path, before.decode('utf-8'))
+            raise
+        return {'config': clean}
 
 
 def _image_kind(data: bytes) -> str | None:
@@ -1925,7 +1969,7 @@ def v_site_pagina_criar(dados):
         guarda_copia(manifest_path)
         _write_as_owner(manifest_path, json.dumps(manifest, ensure_ascii=False, indent=2) + '\n')
         try:
-            output = _publish([slug, 'sitemap'])
+            output = _publish([slug, 'sitemap', 'navegacao'])
         except Recusa:
             manifest['paginas'].remove(page)
             _write_as_owner(manifest_path, json.dumps(manifest, ensure_ascii=False, indent=2) + '\n')
@@ -1943,6 +1987,8 @@ def v_site_pagina_remover(dados):
             raise Recusa('página não encontrada')
         if page.get('url') == '/':
             raise Recusa('a página inicial não pode ser removida')
+        if page_id in {'wiki', 'mapa', 'historias', 'armaria', 'rankings'}:
+            raise Recusa('esta página faz parte do site; oculte-a no menu se desejar')
         manifest['paginas'].remove(page)
         manifest_path = SITE_DIR / sitetext.MANIFEST
         guarda_copia(manifest_path)
@@ -1952,7 +1998,7 @@ def v_site_pagina_remover(dados):
         source.unlink(missing_ok=True)
         output = []
         if page.get('url'):
-            output = _publish(['--retirar', page['url']]) + _publish(['sitemap'])
+            output = _publish(['--retirar', page['url']]) + _publish(['sitemap', 'navegacao'])
     return {'removida': page_id, 'copia': copy, 'saida': output}
 
 
@@ -2238,6 +2284,8 @@ VERBOS = {
     'site.paginas': v_site_paginas,
     'site.identidade': v_site_identidade,
     'site.identidade.gravar': v_site_identidade_gravar,
+    'site.navegacao': v_site_navegacao,
+    'site.navegacao.gravar': v_site_navegacao_gravar,
     'site.pagina.criar': v_site_pagina_criar,
     'site.pagina.remover': v_site_pagina_remover,
     'site.campos': v_site_campos,
@@ -2333,7 +2381,8 @@ class Atendente(socketserver.StreamRequestHandler):
                            'mods.instalados', 'mods.procurar', 'mods.tarefa', 'mods.tarefas',
                            'cronica.sessoes', 'cronica.ler', 'mundo.estado', 'mundo.seed', 'config.listar',
                            'arquivo.preparar_download', 'site.paginas', 'site.campos',
-                           'site.versoes', 'site.versao.ver', 'site.previa.ler', 'site.identidade')
+                           'site.versoes', 'site.versao.ver', 'site.previa.ler', 'site.identidade',
+                           'site.navegacao')
             silenciosos += ('sagas.settings', 'sagas.status', 'sagas.story.status', 'sistema.estado')
             if verbo not in silenciosos and not (
                 verbo in ('server.config', 'server.acesso') and not dados.get('gravar') or

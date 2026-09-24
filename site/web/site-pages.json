@@ -110,6 +110,58 @@
       },
       "tipo": "wiki",
       "saida": "wiki.html"
+    },
+    {
+      "id": "mapa",
+      "titulo": "Mapa",
+      "url": "/mapa/",
+      "fonte": "mapa.html",
+      "saida": "mapa/index.html",
+      "publicar": [
+        "mapa",
+        "tema",
+        "marca"
+      ],
+      "modelos": {}
+    },
+    {
+      "id": "historias",
+      "titulo": "Histórias",
+      "url": "/historias/",
+      "fonte": "historias.html",
+      "saida": "historias/index.html",
+      "publicar": [
+        "historias",
+        "tema",
+        "marca"
+      ],
+      "modelos": {}
+    },
+    {
+      "id": "armaria",
+      "titulo": "Armaria",
+      "url": "/armaria/",
+      "fonte": "armaria.html",
+      "saida": "armaria/index.html",
+      "publicar": [
+        "armaria",
+        "tema",
+        "marca"
+      ],
+      "modelos": {}
+    },
+    {
+      "id": "rankings",
+      "titulo": "Rankings",
+      "url": "/rankings/",
+      "fonte": "rankings.html",
+      "saida": "rankings/index.html",
+      "publicar": [
+        "rankings",
+        "tema",
+        "marca"
+      ],
+      "modelos": {}
     }
   ],
   "tipos": {

@@ -49,9 +49,9 @@ also filters pending packets and existing history. Older events without boss
 or elite classification remain visible in the all-kills mode.
 When map sharing is enabled, new kill and death events also carry the game's
 biome name. Turning map sharing off clears stored biome names along with event
-coordinates. The public Crônicas page marks bosses, elites, and high-star
-kills, offers matching filters, and builds a recent-feats panel from visible
-events. The panel only summarizes the latest events returned by the API.
+coordinates. The public map marks bosses, elites, and high-star kills and
+offers matching filters. The home page's Saga section summarizes recent
+moments and feats from visible events only.
 
 Stories require a separate `ShareStories` client consent, off by default.
 Only players who also share their profile can be included in Viking or server
@@ -111,6 +111,20 @@ cited in a chapter do not start their own. Automatic chapters are labeled on
 the public page.
 
 ## Feature inventory
+
+The public site has separate `/mapa/`, `/historias/`, `/armaria/`, and
+`/rankings/` pages. The old `/cronicas/` address redirects to the map. The
+story page uses the project owner's supplied campfire illustration, served
+locally as WebP. Armaria displays the latest consented equipment; Rankings is
+currently an explicit recency-based preview using at most 100 public events
+(5 points per boss, 2 per discovery, 1 per other kill). The complete rankings
+feature still requires a credited fact ledger and time-window rules.
+
+The sitewide menu is configured in Jarl → Site → Editor → Menu. Admins can
+rename, reorder, hide, and style links; the colors can inherit the site theme
+or be set explicitly. Publishing adds the menu without rewriting editable
+page sources. An update adds these built-in pages to an existing installation
+without replacing its home, Wiki, appearance, or other custom pages.
 
 | Capability | State | Completion requirement |
 |---|---|---|

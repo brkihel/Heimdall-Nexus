@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080e14">
+<title>Mapa — Heimdall Nexus</title>
+<meta property="og:site_name" data-identidade="nome" content="Seu Servidor">
+<link rel="icon" data-identidade="favicon" href="/marca/favicon.svg" type="image/svg+xml">
+<link rel="canonical" data-identidade="url" data-caminho="/mapa/" href="/mapa/">
+<link rel="stylesheet" href="/assets/fontes/fontes.css">
+<style>
+:root{--breu:#05090d;--noite:#080e14;--carvao:#0d151d;--ardosia:#152029;--borda:#22313d;--borda-viva:#33475a;--osso:#e6e0d2;--texto:#b4bec7;--fraco:#78848f;--ouro:#c8a45c;--ouro-fundo:#7d6331;--ouro-claro:#eeddb0;--brasa:#ff8b3d;--verde:#90c8a2;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--breu);color:var(--texto);font:16px/1.55 Spectral,Georgia,serif}
+a{color:var(--ouro-claro)}
+button,select{font:inherit}
+[hidden]{display:none!important}
+.shell{width:min(1220px,calc(100% - 2rem));margin:auto}
+header{border-bottom:1px solid var(--borda);background:var(--noite)}
+header .shell{display:flex;align-items:center;justify-content:space-between;gap:1rem;min-height:72px}
+header a{text-decoration:none}
+header strong{font:600 1.2rem Cinzel,Georgia,serif;color:var(--osso)}
+nav{display:flex;gap:1.25rem;flex-wrap:wrap}
+nav a{font-size:.88rem}
+.hero{border-bottom:1px solid var(--borda);background:radial-gradient(ellipse at 73% 17%,color-mix(in srgb,var(--ouro) 15%,transparent),transparent 54%),linear-gradient(90deg,rgba(5,9,13,.94),rgba(5,9,13,.7)),var(--imagem-fundo,none);background-size:cover;background-position:center}
+.hero .shell{display:grid;grid-template-columns:1fr auto;align-items:center;gap:2rem;padding:clamp(2.5rem,6vw,5rem) 0}
+.eyebrow{font:600 .63rem Cinzel,Georgia,serif;letter-spacing:.25em;text-transform:uppercase;color:var(--ouro)}
+h1,h2,h3{font-family:Cinzel,Georgia,serif;color:var(--osso);line-height:1.24}
+h1{font-size:clamp(2.15rem,5vw,4.2rem);margin:.4rem 0 .65rem}
+.hero p{max-width:610px;margin:0;color:var(--texto)}
+.hero-numbers{display:flex;gap:1.5rem;flex-wrap:wrap;margin-top:1.45rem}
+.hero-numbers span{display:flex;align-items:baseline;gap:.4rem;color:var(--fraco);font-size:.83rem}
+.hero-numbers strong{color:var(--ouro-claro);font:600 1.35rem Cinzel,Georgia,serif}
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding:1.1rem 0}
+.toolbar label{display:flex;align-items:center;gap:.6rem;color:var(--fraco);font-size:.85rem}
+select{background:var(--carvao);color:var(--osso);border:1px solid var(--borda-viva);border-radius:3px;padding:.52rem .8rem;min-width:190px}
+.toolbar-note{color:var(--fraco);font-size:.79rem}
+main{padding-bottom:5rem}
+.dashboard{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(300px,1fr);gap:1rem}
+.panel{position:relative;min-width:0;background:linear-gradient(168deg,rgba(21,32,41,.94),rgba(8,14,20,.97));border:1px solid var(--borda);border-radius:3px;padding:1.35rem;box-shadow:0 22px 60px rgba(0,0,0,.45)}
+/* Gold corner ornaments only on highlight panels (docs/PADROES-GENESISMODS.md) */
+.panel.ornado::before,.panel.ornado::after{content:"";position:absolute;width:16px;height:16px;border-color:var(--ouro);pointer-events:none}
+.panel.ornado::before{left:6px;top:6px;border-left:1px solid;border-top:1px solid}
+.panel.ornado::after{right:6px;bottom:6px;border-right:1px solid;border-bottom:1px solid}
+.divisor{display:flex;align-items:center;gap:14px;max-width:320px;margin:1.3rem 0 0}
+.divisor i{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--ouro-fundo))}
+.divisor i:last-child{background:linear-gradient(270deg,transparent,var(--ouro-fundo))}
+.divisor b{width:7px;height:7px;transform:rotate(45deg);border:1px solid var(--ouro)}
+/* ---- World atlas: the map is the protagonist ---- */
+.map-panel{grid-column:1/-1;padding:1.1rem}
+.map-head{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin:0 .25rem .9rem}
+.map-head h2{font-size:clamp(1.3rem,2.4vw,1.8rem);margin:.25rem 0 0}
+.map-mode{border:1px solid rgba(200,164,92,.45);color:var(--ouro-claro);font:600 .62rem Cinzel,Georgia,serif;letter-spacing:.16em;text-transform:uppercase;padding:.4rem .7rem;border-radius:3px}
+.atlas{position:relative;height:clamp(360px,62vh,720px);border:1px solid var(--borda-viva);border-radius:3px;overflow:hidden;background:#070d12;touch-action:none;user-select:none}
+.atlas svg{display:block;width:100%;height:100%;cursor:grab}
+.atlas svg.arrastando{cursor:grabbing}
+.atlas-image{image-rendering:auto}
+.world-disc{fill:#0b1117;stroke:var(--borda-viva);stroke-width:.6}
+.world-ring{fill:none;stroke:rgba(200,164,92,.12);stroke-width:.4;stroke-dasharray:2 3}
+.world-label{fill:var(--fraco);font:600 7px Cinzel,Georgia,serif;letter-spacing:.2em;text-anchor:middle}
+.atlas-float{position:absolute;background:rgba(8,14,20,.86);border:1px solid var(--borda-viva);border-radius:3px;backdrop-filter:blur(6px);box-shadow:0 10px 30px rgba(0,0,0,.45)}
+.atlas-bar{left:12px;top:12px;display:flex;flex-wrap:wrap;gap:.1rem;padding:.25rem;max-width:calc(100% - 150px)}
+.atlas-bar button,.atlas-zoom button{display:inline-flex;align-items:center;gap:.45rem;border:1px solid transparent;border-radius:3px;background:transparent;color:var(--fraco);padding:.45rem .65rem;cursor:pointer;font-size:.82rem}
+.atlas-bar button[aria-pressed=true]{color:var(--osso)}
+.atlas-bar button[aria-pressed=true] svg{color:var(--ouro)}
+.atlas-bar button:hover,.atlas-zoom button:hover{border-color:var(--borda-viva);color:var(--osso)}
+.atlas-bar svg{width:17px;height:17px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.atlas-clock{right:12px;top:12px;display:grid;justify-items:center;gap:.3rem;padding:.7rem .8rem .6rem;min-width:118px;text-align:center}
+.clock-ring{--cycle:0;width:70px;height:70px;display:grid;place-items:center;border-radius:50%;background:conic-gradient(var(--ouro) calc(var(--cycle)*1%),#3a4f63 0);padding:4px}
+.clock-ring-inner{width:100%;height:100%;border-radius:50%;display:grid;place-items:center;align-content:center;background:var(--noite);font:600 .6rem Cinzel,Georgia,serif;color:var(--ouro-claro);letter-spacing:.08em}
+.clock-ring-inner svg{width:18px;height:18px;fill:none;stroke:var(--ouro-claro);stroke-width:1.6;stroke-linecap:round}
+.atlas-clock strong{color:var(--osso);font-size:.82rem;font-weight:600}
+.atlas-clock small{color:var(--fraco);font-size:.7rem;line-height:1.3;max-width:120px}
+.atlas-zoom{right:12px;bottom:12px;display:flex;gap:.2rem;padding:.25rem}
+.atlas-zoom button{min-width:40px;min-height:40px;justify-content:center;color:var(--osso);font:600 .95rem Spectral,Georgia,serif}
+.atlas-scale{position:absolute;left:14px;bottom:14px;color:var(--osso);font-size:.72rem;text-shadow:0 1px 3px #000}
+.atlas-scale i{display:block;height:2px;background:var(--osso);box-shadow:0 1px 3px #000;margin-top:3px}
+.atlas-info{left:12px;bottom:46px;max-width:min(360px,calc(100% - 24px));padding:.75rem .9rem}
+.atlas-info .eyebrow{margin-bottom:.2rem}
+.atlas-info strong{display:block;color:var(--osso);font:600 .95rem Cinzel,Georgia,serif}
+.atlas-info small{display:block;color:var(--fraco);font-size:.76rem;margin-top:.2rem}
+.atlas-info button{position:absolute;right:.35rem;top:.3rem;border:0;background:none;color:var(--fraco);font-size:1.1rem;cursor:pointer;min-width:32px;min-height:32px}
+.map-note{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;color:var(--fraco);font-size:.78rem;margin:.6rem .25rem 0}
+.marker{cursor:pointer}
+.marker .base{fill:#0d151d;stroke-width:2}
+.marker use{color:var(--osso)}
+.marker.kill .base{stroke:var(--verde)}.marker.death .base{stroke:var(--brasa)}
+.marker.discover .base{stroke:#7fb6e0}.marker.other .base{stroke:var(--ouro)}
+.marker.boss .base{stroke:var(--ouro);stroke-width:2.4}.marker.boss use{color:var(--ouro-claro)}
+.marker.player .base{fill:var(--ouro-claro);stroke:var(--ouro)}.marker.player use{color:#1c1407}
+.marker:hover .base,.marker:focus .base,.marker.escolhido .base{stroke:var(--ouro-claro);stroke-width:3}
+.marker:focus{outline:none}
+.marker text{fill:var(--osso);font:600 9px Spectral,Georgia,serif;text-anchor:middle;paint-order:stroke;stroke:#05090d;stroke-width:3px}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem}
+.section-head h2{font-size:1rem;margin:0}
+.section-head small{color:var(--fraco);font-size:.75rem}
+.filters{display:flex;gap:.35rem;flex-wrap:wrap}
+.filter{border:1px solid var(--borda);border-radius:99px;background:transparent;color:var(--fraco);padding:.3rem .7rem;cursor:pointer;font-size:.75rem}
+.filter:hover,.filter[aria-pressed=true]{border-color:var(--ouro);color:var(--ouro-claro);background:rgba(200,164,92,.09)}
+.filter:focus-visible,.viking:focus-visible{outline:2px solid var(--ouro-claro);outline-offset:2px}
+.feat:focus-visible{outline:2px solid var(--ouro-claro);outline-offset:3px}
+.timeline,.viking-list,.gear-list,.map-list{list-style:none;margin:0;padding:0}
+.timeline{max-height:610px;overflow:auto;padding-right:.2rem}
+.timeline li{position:relative;margin-left:.7rem;padding:0 0 1.05rem 1.45rem;border-left:1px solid var(--borda-viva)}
+.timeline li:last-child{border-left-color:transparent;padding-bottom:0}
+.timeline li::before{content:"";position:absolute;left:-5px;top:.22rem;width:9px;height:9px;border-radius:50%;background:var(--ouro);box-shadow:0 0 0 4px rgba(200,164,92,.1)}
+.timeline li.death::before{background:var(--brasa);box-shadow:0 0 0 4px rgba(255,139,61,.1)}
+.timeline li.kill::before{background:var(--verde);box-shadow:0 0 0 4px rgba(144,200,162,.1)}
+.timeline li.boss::before{background:var(--ouro-claro);box-shadow:0 0 0 4px rgba(200,164,92,.17)}
+.event-type{color:var(--ouro);font:600 .6rem Cinzel,Georgia,serif;letter-spacing:.12em;text-transform:uppercase}
+.timeline .death .event-type{color:var(--brasa)}
+.timeline .kill .event-type{color:var(--verde)}
+.timeline .boss .event-type{color:var(--ouro-claro)}
+.event-title{display:block;color:var(--osso);font-size:1.02rem;margin:.14rem 0}
+.event-meta{color:var(--fraco);font-size:.78rem}
+.event-badges{display:flex;gap:.35rem;flex-wrap:wrap;margin:.25rem 0}
+.badge{display:inline-block;border:1px solid var(--borda-viva);border-radius:99px;padding:.1rem .48rem;color:var(--ouro-claro);font:600 .64rem Cinzel,Georgia,serif;letter-spacing:.05em}
+.badge.boss{border-color:var(--ouro);background:rgba(200,164,92,.1)}
+.badge.elite{border-color:#9780b2;color:#d4c2ef;background:rgba(151,128,178,.11)}
+.badge.stars{border-color:var(--verde);color:var(--verde);background:rgba(144,200,162,.09)}
+.feats-panel{grid-column:1/-1}
+.feats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.7rem}
+.feat{display:block;text-align:left;border:1px solid rgba(200,164,92,.25);border-radius:3px;background:radial-gradient(circle at 95% 0,rgba(200,164,92,.12),transparent 55%),rgba(5,9,13,.5);color:var(--texto);padding:1rem;cursor:pointer}
+.feat:hover{border-color:var(--ouro)}
+.feat strong{display:block;margin:.5rem 0 .2rem;color:var(--osso);font:600 .98rem Cinzel,Georgia,serif;overflow-wrap:anywhere}
+.feat small{display:block;color:var(--fraco);font-size:.76rem;line-height:1.35}
+.stories-panel{grid-column:1/-1}
+.story-list{display:grid;gap:.8rem}
+.story-card{border:1px solid rgba(200,164,92,.3);border-radius:3px;background:linear-gradient(135deg,rgba(200,164,92,.07),rgba(5,9,13,.4));padding:1rem 1.15rem}
+.story-card summary{cursor:pointer;list-style:none}
+.story-card summary::-webkit-details-marker{display:none}
+.story-card summary:focus-visible{outline:2px solid var(--ouro-claro);outline-offset:4px}
+.story-card h3{font-size:1.12rem;margin:.32rem 0}
+.story-card small{color:var(--fraco);font-size:.77rem}
+.story-card p{max-width:78ch;margin:.9rem 0 0;color:var(--texto);line-height:1.75}
+.story-evidence{margin-top:1.1rem;padding-top:.8rem;border-top:1px solid var(--borda)}
+.story-evidence strong{color:var(--ouro-claro);font:600 .71rem Cinzel,Georgia,serif}
+.story-evidence ul{margin:.5rem 0 0;padding-left:1.25rem;color:var(--fraco);font-size:.82rem}
+.viking-list{display:grid;gap:.55rem}
+.viking{display:flex;align-items:center;gap:.75rem;width:100%;text-align:left;border:1px solid var(--borda);border-radius:3px;background:rgba(5,9,13,.45);padding:.65rem .75rem;color:var(--texto);cursor:pointer}
+.viking:hover,.viking[aria-pressed=true]{border-color:var(--ouro);background:rgba(200,164,92,.07)}
+.portrait{display:grid;place-items:center;flex:none;width:44px;height:44px;border:1px solid var(--ouro);border-radius:50%;font:600 1.05rem Cinzel,Georgia,serif;color:var(--ouro-claro);background:rgba(200,164,92,.08)}
+.viking strong{display:block;color:var(--osso)}
+.viking small{display:block;color:var(--fraco);font-size:.77rem}
+.viking .online{color:var(--verde)}
+.profile{margin-top:1rem;padding-top:1rem;border-top:1px solid var(--borda)}
+.profile h3{font-size:.93rem;margin:0 0 .45rem}
+.profile p{color:var(--fraco);font-size:.84rem;margin:.3rem 0}
+.profile-stats{display:flex;gap:.5rem;flex-wrap:wrap;margin:.8rem 0}
+.profile-stats span{border:1px solid var(--borda);border-radius:3px;padding:.35rem .6rem;color:var(--fraco);font-size:.74rem}
+.profile-stats b{color:var(--osso)}
+.gear-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.45rem;margin-top:.7rem}
+.gear-list li{border:1px solid var(--borda);border-radius:3px;background:rgba(5,9,13,.35);padding:.55rem .65rem;min-width:0}
+.gear-list strong{display:block;color:var(--osso);font-size:.8rem;overflow-wrap:anywhere}
+.gear-list small{color:var(--fraco);font-size:.72rem}
+.timeline li.discover::before{background:#7fb6e0;box-shadow:0 0 0 4px rgba(127,182,224,.12)}
+.timeline .discover .event-type{color:#7fb6e0}
+.badge.discover{border-color:#7fb6e0;color:#bfe0f7;background:rgba(127,182,224,.1)}
+.badge.auto{border-color:var(--borda-viva);color:var(--fraco)}
+.intro-texto{color:var(--fraco);font-size:.83rem;margin:-.3rem 0 1rem;max-width:75ch}
+.empty{color:var(--fraco);font-size:.84rem;padding:.6rem 0}
+#status{color:var(--fraco);font-size:.9rem}
+footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-size:.82rem}
+@media(max-width:820px){.dashboard{grid-template-columns:1fr}.hero .shell{grid-template-columns:1fr}.feats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:540px){header .shell{padding:1rem 0;align-items:flex-start;flex-direction:column}.hero-numbers{gap:.8rem 1rem}.panel{padding:1rem}.feats{grid-template-columns:1fr}.atlas{height:72vh}.atlas-bar{max-width:calc(100% - 24px)}.atlas-bar span{display:none}.atlas-clock{top:auto;bottom:62px;min-width:0;padding:.5rem}.atlas-clock small{display:none}.clock-ring{width:52px;height:52px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+
+.atlas{height:clamp(500px,76vh,980px)}
+.dashboard{display:block}
+@media(max-width:700px){.hero .shell{padding:1.3rem 0}.atlas{height:calc(100svh - 290px);min-height:480px}}
+</style>
+<link rel="stylesheet" href="/assets/tema.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-kill" viewBox="0 0 24 24"><path d="M5 5l12 12M19 5L7 17M4 16l4 4M20 16l-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="i-death" viewBox="0 0 24 24"><path d="M12 4a7 7 0 0 0-7 7c0 2.4 1 3.7 2.5 4.6V19h9v-3.4C18 14.7 19 13.4 19 11a7 7 0 0 0-7-7zM10 19v-2M14 19v-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="9.3" cy="11.5" r="1.4" fill="currentColor"/><circle cx="14.7" cy="11.5" r="1.4" fill="currentColor"/></symbol>
+<symbol id="i-boss" viewBox="0 0 24 24"><path d="M12 21v-9M12 12L6 6M12 12l6-6M6 6V3M6 6H3M18 6V3M18 6h3M9 15l-4-2M15 15l4-2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+<symbol id="i-discover" viewBox="0 0 24 24"><path d="M12 3l2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></symbol>
+<symbol id="i-player" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6" fill="currentColor"/><path d="M5 20c.8-4 3.4-6 7-6s6.2 2 7 6" fill="currentColor"/></symbol>
+<symbol id="i-other" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="currentColor"/></symbol>
+</defs></svg>
+
+<section class="hero"><div class="shell"><div><div class="eyebrow">Heimdall Nexus · Aventuras registradas</div><h1>Atlas dos Vikings</h1><p>O mundo visto pelos relatos que os jogadores escolheram compartilhar.</p><div class="divisor" aria-hidden="true"><i></i><b></b><i></i></div></div></div></section>
+<div class="shell toolbar"><label for="world">Mundo <select id="world"></select></label><span class="toolbar-note">Atualização automática a cada 30 segundos</span></div>
+<main class="shell"><p id="status" role="status">Carregando o mapa…</p><div id="dashboard" class="dashboard" hidden>
+  <section class="panel map-panel" id="map-panel"><div class="map-head"><div><div class="eyebrow">Além da fogueira</div><h2>O mundo conhecido</h2></div><span class="map-mode" id="map-mode">Pontos registrados</span></div>
+  <div class="atlas" id="atlas">
+    <svg id="map" role="img" aria-labelledby="map-title"><title id="map-title">Mapa do mundo com locais compartilhados</title>
+      <g id="map-base"><circle class="world-disc" cx="256" cy="256" r="219"/><circle class="world-ring" cx="256" cy="256" r="49"/><circle class="world-ring" cx="256" cy="256" r="122"/><circle class="world-ring" cx="256" cy="256" r="195"/><text class="world-label" x="256" y="14">NORTE</text></g>
+      <g id="map-tiles" class="atlas-image"></g>
+      <g id="map-pins"></g>
+    </svg>
+    <div class="atlas-float atlas-bar" role="toolbar" aria-label="Camadas do mapa">
+      <button type="button" data-layer="terrain" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14"/></svg><span>Terreno</span></button>
+      <button type="button" data-layer="vikings" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-4 3.4-6 7-6s6.2 2 7 6"/></svg><span>Vikings</span></button>
+      <button type="button" data-layer="moments" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21c-4 0-6-2.7-6-5.8 0-3.6 3-5.4 3.6-9.2 2.3 1.5 3.4 3.4 3.4 5.3 1-.7 1.7-1.8 1.9-3.2C17 10 18 12.4 18 15.2 18 18.3 16 21 12 21z"/></svg><span>Momentos</span></button>
+      <button type="button" data-layer="discoveries" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg><span>Descobertas</span></button>
+    </div>
+    <div class="atlas-float atlas-clock" id="clock"><div class="clock-ring" id="clock-ring" role="progressbar" aria-label="Progresso do ciclo do dia" aria-valuemin="0" aria-valuemax="100"><div class="clock-ring-inner"><svg viewBox="0 0 24 24" aria-hidden="true" id="clock-icon"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></svg><span id="clock-day">DIA —</span></div></div><strong id="clock-phase">Aguardando</strong><small id="clock-note">Relógio do mundo</small></div>
+    <div class="atlas-float atlas-info" id="atlas-info" role="status" hidden><button type="button" id="atlas-info-close" aria-label="Fechar detalhes">×</button><div class="eyebrow" id="atlas-info-kind"></div><strong id="atlas-info-title"></strong><small id="atlas-info-meta"></small></div>
+    <div class="atlas-float atlas-zoom"><button type="button" id="zoom-in" aria-label="Aproximar">+</button><button type="button" id="zoom-out" aria-label="Afastar">−</button><button type="button" id="zoom-fit">Ajustar</button></div>
+    <div class="atlas-scale" id="atlas-scale" aria-hidden="true"><span id="atlas-scale-label">1 km</span><i id="atlas-scale-bar"></i></div>
+  </div>
+  <div class="map-note"><span>Arraste para mover · role ou use + e − para aproximar · toque num marcador para ver o momento.</span><span id="map-intro">Pontos autorizados pelos jogadores.</span></div>
+  </section>
+</div></main>
+<footer><div class="shell"><span data-identidade="rodape">Servidor comunitário de Valheim. Não somos afiliados à Iron Gate AB nem à Coffee Stain.</span></div></footer>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const labels = {death:'caiu em batalha',kill:'derrotou',boss:'venceu',drop:'encontrou',
+    collect:'coletou',pickup:'recolheu',bounty:'concluiu uma recompensa',discover:'descobriu'};
+  const landmarks = {Eikthyrnir:'o altar de Eikthyr',GDKing:'o altar do Ancião',
+    Bonemass:'o altar de Bonemass',Dragonqueen:'o altar de Moder',GoblinKing:'o altar de Yagluth',
+    Mistlands_DvergrBossEntrance1:'a entrada do covil da Rainha',FaderLocation:'o altar de Fader',
+    Vendor_BlackForest:'o acampamento de Haldor',Hildir_camp:'o acampamento de Hildir',
+    BogWitch_Camp:'a cabana da Bruxa do Pântano'};
+  function placeName(target) {
+    if (target.startsWith('vegvisir:'))
+      return 'um Vegvisir que aponta para ' + (landmarks[target.slice(9)] || target.slice(9));
+    return landmarks[target] || target;
+  }
+  function friendly(event) {
+    if (event.kind === 'discover' && event.target && !event.friendly) {
+      event.target = placeName(event.target);
+      event.friendly = true;
+    }
+    return event;
+  }
+  const biomes = {Meadows:'Pradarias',BlackForest:'Floresta Negra',Swamp:'Pântano',
+    Mountain:'Montanhas',Plains:'Planícies',Mistlands:'Terras Nebulosas',
+    AshLands:'Terras das Cinzas',DeepNorth:'Norte Profundo',Ocean:'Oceano'};
+  let world = '', chosen = '', filter = 'all', payload = null, requestId = 0;
+
+  function element(tag, value, className) {
+    const node = document.createElement(tag);
+    if (value !== undefined) node.textContent = value;
+    if (className) node.className = className;
+    return node;
+  }
+  function when(seconds) {
+    const date = new Date(Number(seconds) * 1000);
+    return Number.isNaN(date.getTime()) ? 'Horário indisponível' :
+      date.toLocaleString('pt-BR', {dateStyle:'short',timeStyle:'short'});
+  }
+  function hasLocation(entry) {
+    return Number.isFinite(entry.x) && Number.isFinite(entry.z);
+  }
+  function coords(entry) {
+    return 'X ' + Math.round(entry.x) + ' · Z ' + Math.round(entry.z);
+  }
+  function biomeName(event) {
+    return event.biome ? (biomes[event.biome] || event.biome) : '';
+  }
+  function notable(event) {
+    return event.kind === 'discover' ||
+      event.kind === 'kill' && (event.boss || event.elite || event.stars >= 3);
+  }
+  function badges(event) {
+    const group = element('span', undefined, 'event-badges');
+    if (event.kind === 'discover') group.append(element('span', 'Descoberta', 'badge discover'));
+    else if (event.boss) group.append(element('span', 'Chefe', 'badge boss'));
+    else if (event.elite) group.append(element('span', 'Elite', 'badge elite'));
+    if (event.kind === 'kill' && event.stars >= 3)
+      group.append(element('span', event.stars + ' estrelas', 'badge stars'));
+    return group;
+  }
+  function renderClock(data) {
+    const current = data.worlds.find(entry => entry.id === data.world);
+    const fraction = Number(current && current.fraction);
+    const known = current && current.day != null && current.fraction != null &&
+      Number.isFinite(fraction);
+    const percent = known ? Math.max(0, Math.min(100, Math.round(fraction * 100))) : 0;
+    $('clock').hidden = !known;
+    if (!known) return;
+    $('clock-ring').style.setProperty('--cycle', percent);
+    $('clock-ring').setAttribute('aria-valuenow', String(percent));
+    // Valheim daylight runs from about a quarter to three quarters of the cycle.
+    const daylight = fraction >= 0.25 && fraction < 0.75;
+    $('clock-ring').setAttribute('aria-valuetext', percent + '% do ciclo, ' + (daylight ? 'de dia' : 'à noite'));
+    $('clock-day').textContent = 'DIA ' + current.day;
+    $('clock-phase').textContent = daylight ? 'Sol sobre Midgard' : 'Noite em Midgard';
+    const stale = current.clock_at && Date.now() / 1000 - current.clock_at > 120;
+    $('clock-note').textContent = stale ? 'Última leitura: ' + when(current.clock_at) :
+      daylight ? 'Anoitece aos 75% do ciclo' : 'Amanhece aos 25% do ciclo';
+  }
+  function renderWorlds(data) {
+    const select = $('world');
+    select.replaceChildren();
+    data.worlds.forEach((entry, index) => {
+      const option = element('option', entry.name || 'Mundo ' + (index + 1));
+      option.value = entry.id;
+      option.selected = entry.id === data.world;
+      select.append(option);
+    });
+    select.disabled = data.worlds.length < 2;
+  }
+  function visibleEvents() {
+    const events = payload ? payload.events : [];
+    return events.filter(event => filter === 'all' || filter === 'other' &&
+      event.kind !== 'kill' && event.kind !== 'death' && event.kind !== 'discover' || filter === 'boss' &&
+      event.kind === 'kill' && event.boss || filter === 'notable' && notable(event) ||
+      event.kind === filter);
+  }
+  function renderTimeline() {
+    const list = $('timeline');
+    list.replaceChildren();
+    const events = visibleEvents();
+    if (!events.length) {
+      list.append(element('li', 'Nenhum momento neste filtro.', 'empty'));
+      return;
+    }
+    for (const event of events) {
+      const row = element('li', undefined, event.kind === 'discover' ? 'discover' : event.boss ? 'boss' :
+        event.kind === 'kill' || event.kind === 'death' ? event.kind : 'other');
+      row.append(element('span', event.kind === 'discover' ? 'Descoberta' :
+        event.boss ? 'Chefe derrotado' : event.kind === 'kill' ? 'Abate' :
+        event.kind === 'death' ? 'Morte' : 'Momento', 'event-type'));
+      const title = (event.name || 'Viking') + ' ' + (labels[event.kind] || 'registrou') +
+        (event.target ? ' ' + event.target : '');
+      row.append(element('strong', title, 'event-title'));
+      if (notable(event)) row.append(badges(event));
+      row.append(element('span', when(event.occurred_at) +
+        (biomeName(event) ? ' · ' + biomeName(event) : '') +
+        (hasLocation(event) ? ' · Local compartilhado' : ''), 'event-meta'));
+      list.append(row);
+    }
+  }
+  function renderProfile() {
+    const box = $('profile');
+    box.replaceChildren();
+    const player = payload && payload.players.find(entry => entry.id === chosen);
+    box.hidden = !player;
+    if (!player) return;
+    box.append(element('h3', player.name));
+    box.append(element('p', player.online ? 'Online agora' :
+      'Último registro: ' + when(player.seen_at)));
+    box.append(element('p', hasLocation(player) ?
+      'Posição compartilhada · ' + coords(player) : 'Posição privada ou offline'));
+    const events = payload.events.filter(event => event.actor === player.id);
+    const stats = element('div', undefined, 'profile-stats');
+    for (const entry of [
+      [events.filter(event => event.kind === 'kill').length, 'abates recentes'],
+      [events.filter(event => event.kind === 'kill' && event.boss).length, 'chefes recentes'],
+      [events.filter(event => event.kind === 'death').length, 'mortes recentes'],
+      [(payload.stories||[]).filter(story => story.scope === 'viking' && story.actor === player.id).length, 'histórias'],
+      [player.gear.length, 'itens equipados']
+    ]) {
+      const chip = element('span');
+      chip.append(element('b', String(entry[0])), document.createTextNode(' ' + entry[1]));
+      stats.append(chip);
+    }
+    box.append(stats);
+    box.append(element('h3', 'Equipamento'));
+    if (!player.gear.length) {
+      box.append(element('p', 'Nenhum equipamento compartilhado.'));
+      return;
+    }
+    const gear = element('ul', undefined, 'gear-list');
+    for (const item of player.gear) {
+      const row = element('li');
+      row.append(element('strong', item.name || 'Item'));
+      row.append(element('small', 'Q' + item.quality + ' · ' + (item.slot || 'Equipamento')));
+      gear.append(row);
+    }
+    box.append(gear);
+  }
+  function renderVikings() {
+    const list = $('vikings');
+    list.replaceChildren();
+    $('viking-empty').hidden = payload.players.length > 0;
+    if (!payload.players.some(player => player.id === chosen))
+      chosen = payload.players.length ? payload.players[0].id : '';
+    for (const player of payload.players) {
+      const row = element('li');
+      const button = element('button', undefined, 'viking');
+      button.type = 'button';
+      button.setAttribute('aria-pressed', String(player.id === chosen));
+      const portrait = element('span', (player.name || '?').slice(0, 1).toUpperCase(), 'portrait');
+      const name = element('span');
+      name.append(element('strong', player.name || 'Viking'));
+      name.append(element('small', player.online ? '● Online' : 'Último registro ' +
+        when(player.seen_at), player.online ? 'online' : ''));
+      button.append(portrait, name);
+      button.addEventListener('click', () => {
+        chosen = player.id;
+        renderVikings();
+      });
+      row.append(button);
+      list.append(row);
+    }
+    renderProfile();
+  }
+  function renderFeats() {
+    const box = $('feats');
+    box.replaceChildren();
+    const feats = payload.events.filter(notable).slice(0, 6);
+    $('feats-empty').hidden = feats.length > 0;
+    for (const event of feats) {
+      const card = element('button', undefined, 'feat');
+      card.type = 'button';
+      card.append(badges(event));
+      card.append(element('strong', event.target || 'Criatura desconhecida'));
+      card.append(element('small', (event.name || 'Viking') + ' · ' +
+        when(event.occurred_at) + (biomeName(event) ? ' · ' + biomeName(event) : '')));
+      card.addEventListener('click', () => {
+        chosen = event.actor;
+        renderVikings();
+        $('profile').scrollIntoView({behavior:'smooth',block:'nearest'});
+      });
+      box.append(card);
+    }
+  }
+  function renderStories() {
+    const panel=$('stories-panel'),box=$('stories');
+    panel.hidden=!payload.stories_enabled;
+    box.replaceChildren();
+    if(panel.hidden)return;
+    const chapters=payload.stories||[];
+    $('stories-empty').hidden=chapters.length>0;
+    for(const [index,story] of chapters.entries()){
+      const card=element('details',undefined,'story-card');
+      if(index===0)card.open=true;
+      const head=element('summary');
+      head.append(element('span',story.scope==='server'?'Saga do servidor':'Saga de '+
+        (story.evidence.find(item=>item.actor===story.actor)?.name||'um Viking'),'eyebrow'));
+      head.append(element('h3',story.title));
+      head.append(element('small',when(story.created_at)+' · Ficção criada por IA'+
+        (story.auto?' · escrita após um grande feito':'')));
+      card.append(head);
+      for(const paragraph of story.text.split(/\n\s*\n/))if(paragraph.trim())
+        card.append(element('p',paragraph.trim()));
+      const proof=element('div',undefined,'story-evidence');
+      proof.append(element('strong','Registros que inspiraram este capítulo'));
+      const list=element('ul');
+      for(const item of story.evidence.map(friendly)){
+        list.append(element('li',(item.name||'Viking')+' '+
+          (labels[item.kind]||'registrou')+(item.target?' '+item.target:'')+
+          ' · '+when(item.occurred_at)));
+      }
+      proof.append(list);card.append(proof);box.append(card);
+    }
+  }
+  const WORLD = 512, METERS = 24576;
+  const layers = {terrain:true, vikings:true, moments:true, discoveries:true};
+  let view = null, fitted = false, selected = '';
+  function toMap(point) {
+    return [(point.x + METERS / 2) / METERS * WORLD, (METERS / 2 - point.z) / METERS * WORLD];
+  }
+  function mapPoints() {
+    const points = [];
+    for (const event of payload.events) if (hasLocation(event)) {
+      const kind = event.kind === 'discover' ? 'discover' : event.boss ? 'boss' :
+        event.kind === 'kill' || event.kind === 'death' ? event.kind : 'other';
+      if (kind === 'discover' ? !layers.discoveries : !layers.moments) continue;
+      points.push({x:event.x, z:event.z, kind, id:'e' + event.id,
+        type:{discover:'Descoberta', boss:'Chefe derrotado', kill:'Abate', death:'Morte', other:'Momento'}[kind],
+        title:(event.name || 'Viking') + ' ' + (labels[event.kind] || 'registrou') +
+          (event.target ? ' ' + event.target : ''),
+        meta:when(event.occurred_at) + (biomeName(event) ? ' · ' + biomeName(event) : '')});
+    }
+    if (layers.vikings) for (const player of payload.players) if (player.online && hasLocation(player)) {
+      points.push({x:player.x, z:player.z, kind:'player', id:'p' + player.id, type:'Viking online',
+        title:player.name || 'Viking', meta:'Posição compartilhada agora', label:player.name});
+    }
+    return points;
+  }
+  function currentAtlas() {
+    return payload && payload.atlas ? payload.atlas : null;
+  }
+  let visibleTiles = '';
+  function renderTiles() {
+    const group = $('map-tiles'), atlas = currentAtlas();
+    if (!view || !atlas || !layers.terrain) {
+      if (visibleTiles) { group.replaceChildren(); visibleTiles = ''; }
+      return;
+    }
+    const svg = $('map'), box = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+    if (!box.width || !box.height || !vb.width) return;
+    const zoom = Math.max(0, Math.min(atlas.maxNativeZoom,
+      Math.ceil(Math.log2(box.width * WORLD / (vb.width * 256)))));
+    const count = 2 ** zoom, step = WORLD / count;
+    const left = Math.max(0, Math.floor(vb.x / step));
+    const top = Math.max(0, Math.floor(vb.y / step));
+    const right = Math.min(count - 1, Math.floor((vb.x + vb.width) / step));
+    const bottom = Math.min(count - 1, Math.floor((vb.y + vb.height) / step));
+    const key = [atlas.tiles, zoom, left, top, right, bottom].join(':');
+    if (key === visibleTiles) return;
+    visibleTiles = key;
+    group.replaceChildren();
+    for (let y = top; y <= bottom; y++) for (let x = left; x <= right; x++) {
+      const image = document.createElementNS(svgNS, 'image');
+      image.setAttribute('x', x * step); image.setAttribute('y', y * step);
+      image.setAttribute('width', step); image.setAttribute('height', step);
+      image.setAttribute('href', atlas.tiles.replace('{z}', zoom).replace('{x}', x).replace('{y}', y));
+      group.append(image);
+    }
+  }
+  function fitView(points) {
+    if (!points.length) return {cx:WORLD / 2, cy:WORLD / 2, size:WORLD};
+    const xy = points.map(toMap), xs = xy.map(p => p[0]), ys = xy.map(p => p[1]);
+    return {cx:(Math.min(...xs) + Math.max(...xs)) / 2, cy:(Math.min(...ys) + Math.max(...ys)) / 2,
+      size:Math.max(24, Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) * 1.6};
+  }
+  function applyView() {
+    const svg = $('map'), box = svg.getBoundingClientRect();
+    const aspect = box.width && box.height ? box.width / box.height : 1.6;
+    view.size = Math.max(6, Math.min(WORLD * 1.4, view.size));
+    const height = aspect >= 1 ? view.size : view.size / aspect;
+    const width = height * aspect;
+    svg.setAttribute('viewBox', [view.cx - width / 2, view.cy - height / 2, width, height].join(' '));
+    renderTiles();
+    // Markers keep a constant on-screen size; 1 screen px = unit world units.
+    const unit = box.width ? width / box.width : width / 800;
+    for (const marker of $('map-pins').children)
+      marker.setAttribute('transform', 'translate(' + marker.dataset.x + ' ' + marker.dataset.y + ') scale(' + unit + ')');
+    const metersPerPixel = unit * METERS / WORLD;
+    const nice = [50, 100, 200, 500, 1000, 2000, 5000].find(m => m / metersPerPixel >= 70) || 5000;
+    $('atlas-scale-bar').style.width = Math.round(nice / metersPerPixel) + 'px';
+    $('atlas-scale-label').textContent = nice >= 1000 ? nice / 1000 + ' km' : nice + ' m';
+  }
+  function showInfo(point) {
+    selected = point ? point.id : '';
+    $('atlas-info').hidden = !point;
+    for (const marker of $('map-pins').children)
+      marker.classList.toggle('escolhido', marker.dataset.id === selected);
+    if (!point) return;
+    $('atlas-info-kind').textContent = point.type;
+    $('atlas-info-title').textContent = point.title;
+    $('atlas-info-meta').textContent = point.meta + ' · ' + coords(point);
+  }
+  function renderMap() {
+    const pins = $('map-pins');
+    pins.replaceChildren();
+    const points = mapPoints();
+    const atlas = currentAtlas();
+    $('map-base').style.display = atlas && layers.terrain ? 'none' : '';
+    $('map-mode').textContent = !atlas ? 'Pontos registrados' :
+      atlas.mode === 'full' ? 'Mundo inteiro' : 'Terras conhecidas';
+    $('map-intro').textContent = !atlas ?
+      'O terreno aparece quando a ponte gerar o mapa e o admin escolher um modo no Jarl.' :
+      atlas.mode === 'full' ? 'Mapa Birds Eye do mundo inteiro.' :
+      'O terreno aparece em volta dos locais compartilhados; o resto segue sob névoa.';
+    for (const point of points) {
+      const [x, y] = toMap(point);
+      const marker = document.createElementNS(svgNS, 'g');
+      marker.setAttribute('class', 'marker ' + point.kind);
+      marker.setAttribute('tabindex', '0');
+      marker.setAttribute('role', 'button');
+      marker.setAttribute('aria-label', point.type + ': ' + point.title);
+      marker.dataset.x = x; marker.dataset.y = y; marker.dataset.id = point.id;
+      const base = document.createElementNS(svgNS, point.kind === 'boss' ? 'rect' : 'circle');
+      base.setAttribute('class', 'base');
+      if (point.kind === 'boss') {
+        for (const [k, v] of [['x', -13], ['y', -13], ['width', 26], ['height', 26], ['rx', 3]]) base.setAttribute(k, v);
+      } else base.setAttribute('r', point.kind === 'player' ? 12 : 11);
+      const icon = document.createElementNS(svgNS, 'use');
+      icon.setAttribute('href', '#i-' + point.kind);
+      for (const [k, v] of [['x', -7], ['y', -7], ['width', 14], ['height', 14]]) icon.setAttribute(k, v);
+      const title = document.createElementNS(svgNS, 'title');
+      title.textContent = point.title;
+      marker.append(base, icon, title);
+      if (point.label) {
+        const text = document.createElementNS(svgNS, 'text');
+        text.setAttribute('y', 24); text.textContent = point.label;
+        marker.append(text);
+      }
+      const open = () => showInfo(point);
+      marker.addEventListener('click', event => { event.stopPropagation(); open(); });
+      marker.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); }
+      });
+      pins.append(marker);
+    }
+    if (!view || !fitted) {
+      view = fitView(points);
+      fitted = points.length > 0 || !!atlas;
+    }
+    applyView();
+    const still = points.find(point => point.id === selected);
+    showInfo(still || null);
+  }
+  function zoomAt(factor, cx, cy) {
+    if (!view) return;
+    if (cx != null) {
+      view.cx = cx + (view.cx - cx) * factor;
+      view.cy = cy + (view.cy - cy) * factor;
+    }
+    view.size *= factor;
+    applyView();
+  }
+  function svgPoint(event) {
+    const svg = $('map'), box = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+    return [vb.x + (event.clientX - box.left) / box.width * vb.width,
+      vb.y + (event.clientY - box.top) / box.height * vb.height];
+  }
+  (() => {
+    const svg = $('map');
+    let drag = null;
+    svg.addEventListener('pointerdown', event => {
+      if (!view || event.target.closest('.marker')) return;
+      drag = {x:event.clientX, y:event.clientY, cx:view.cx, cy:view.cy, moved:false};
+      svg.setPointerCapture(event.pointerId);
+      svg.classList.add('arrastando');
+    });
+    svg.addEventListener('pointermove', event => {
+      if (!drag) return;
+      const vb = svg.viewBox.baseVal, box = svg.getBoundingClientRect();
+      const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
+      if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
+      view.cx = drag.cx - dx * vb.width / box.width;
+      view.cy = drag.cy - dy * vb.height / box.height;
+      applyView();
+    });
+    const end = () => {
+      if (drag && !drag.moved) showInfo(null);
+      drag = null; svg.classList.remove('arrastando');
+    };
+    svg.addEventListener('pointerup', end);
+    svg.addEventListener('pointercancel', end);
+    svg.addEventListener('wheel', event => {
+      if (!view) return;
+      event.preventDefault();
+      const [x, y] = svgPoint(event);
+      zoomAt(event.deltaY > 0 ? 1.25 : 0.8, x, y);
+    }, {passive:false});
+    $('zoom-in').addEventListener('click', () => zoomAt(0.7));
+    $('zoom-out').addEventListener('click', () => zoomAt(1.4));
+    $('zoom-fit').addEventListener('click', () => {
+      if (!payload) return;
+      const points = mapPoints();
+      view = points.length ? fitView(points) : {cx:WORLD / 2, cy:WORLD / 2, size:WORLD};
+      applyView();
+    });
+    $('atlas-info-close').addEventListener('click', () => showInfo(null));
+    // Re-measure when the map first becomes visible or changes size.
+    if (window.ResizeObserver) new ResizeObserver(() => { if (view) applyView(); }).observe($('atlas'));
+    else window.addEventListener('resize', () => { if (view) applyView(); });
+    for (const button of document.querySelectorAll('[data-layer]')) {
+      button.addEventListener('click', () => {
+        layers[button.dataset.layer] = !layers[button.dataset.layer];
+        button.setAttribute('aria-pressed', String(layers[button.dataset.layer]));
+        if (payload) renderMap();
+      });
+    }
+  })();
+  function render(data) {
+    data.events.forEach(friendly);
+    payload = data;
+    if (data.atlas && data.atlas.mode === 'explored') {
+      visibleTiles = '';
+      $('map-tiles').replaceChildren();
+    }
+    world = data.world || '';
+    renderClock(data);
+    renderWorlds(data);
+    $('dashboard').hidden = false;
+    renderMap();
+    $('dashboard').hidden = false;
+    $('status').hidden = true;
+  }
+  async function load() {
+    const current = ++requestId;
+    try {
+      const url = '/api/sagas/v1/overview?limit=100' +
+        (world ? '&world=' + encodeURIComponent(world) : '');
+      const response = await fetch(url, {cache:'no-store'});
+      if (!response.ok) throw Error('HTTP ' + response.status);
+      const data = await response.json();
+      if (current !== requestId) return;
+      if (!data.available) {
+        $('status').textContent = 'O mapa ainda não está ativo neste servidor.';
+        $('status').hidden = false;
+        $('dashboard').hidden = true;
+        return;
+      }
+      render(data);
+    } catch {
+      if (current !== requestId) return;
+      $('status').textContent = payload ?
+        'Não foi possível atualizar. Exibindo os últimos dados recebidos.' :
+        'Não foi possível carregar o mapa agora.';
+      $('status').hidden = false;
+      if (!payload) $('dashboard').hidden = true;
+    }
+  }
+  $('world').addEventListener('change', event => {
+    world = event.target.value;
+    chosen = '';
+    view = null; fitted = false; visibleTiles = '';
+    $('map-tiles').replaceChildren();
+    load();
+  });
+  load();
+  setInterval(load, 30000);
+})();
+</script>
+</body>
+</html>

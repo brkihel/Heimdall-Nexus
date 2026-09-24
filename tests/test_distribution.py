@@ -59,7 +59,7 @@ class DistributionConfigTests(unittest.TestCase):
     def test_site_manifest_has_home_wiki_and_page_templates(self):
         manifest = json.loads((ROOT / "site/web/site-pages.json").read_text())
         pages = {page["id"]: page for page in manifest["paginas"]}
-        self.assertEqual(set(pages), {"inicio", "wiki"})
+        self.assertTrue({"inicio", "wiki", "mapa", "historias", "armaria", "rankings"} <= set(pages))
         for page in pages.values():
             self.assertTrue((ROOT / "site/web" / page["fonte"]).is_file())
             self.assertNotIn("somente_leitura", page)
