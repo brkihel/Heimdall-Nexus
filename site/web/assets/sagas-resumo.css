@@ -2,6 +2,8 @@
 #cronicas-link{display:none!important}
 .sagas-resumo{width:min(100%,980px);margin:1.6rem auto 0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.9rem}
 .sagas-resumo section{border:1px solid var(--borda,#22313d);border-radius:3px;background:linear-gradient(168deg,rgba(21,32,41,.88),rgba(5,9,13,.94));padding:1.1rem 1.2rem;min-width:0}
+.sagas-resumo section:only-child{grid-column:1/-1}
+.sagas-resumo section:only-child li.boss-fight{min-height:160px}
 .sagas-resumo h3{font:600 .9rem Cinzel,Georgia,serif;color:var(--osso,#e6e0d2);margin:0 0 .8rem}
 .sagas-resumo ol{list-style:none;margin:0;padding:0;display:grid;gap:.65rem}.sagas-resumo li{padding-left:.8rem;border-left:2px solid var(--ouro-fundo,#7d6331);min-width:0}
 .sagas-resumo strong{display:block;color:var(--osso,#e6e0d2);font-size:.9rem;font-weight:600;overflow-wrap:anywhere}.sagas-resumo small{color:var(--fraco,#78848f);font-size:.74rem}

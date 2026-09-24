@@ -1,0 +1,19 @@
+/* Boss battles use the owner's illustrations, with a dark reading area. */
+.boss-fight{--boss-tint:linear-gradient(90deg,rgba(5,9,13,.98),rgba(5,9,13,.86) 42%,rgba(5,9,13,.27));}
+.boss-fight[data-text-side="right"]{--boss-tint:linear-gradient(270deg,rgba(5,9,13,.98),rgba(5,9,13,.86) 42%,rgba(5,9,13,.27));}
+.chapter.boss-fight{isolation:isolate;overflow:hidden;background:var(--carvao,#0d151d)}
+.chapter.boss-fight .boss-art{position:absolute;inset:0 0 auto;height:370px;z-index:0;pointer-events:none;background-image:var(--boss-tint),linear-gradient(0deg,var(--carvao,#0d151d),transparent 48%),var(--boss-image);background-size:cover;background-position:center,center,var(--boss-position,center)}
+.chapter.boss-fight summary,.chapter.boss-fight .chapter-body{position:relative;z-index:1}
+.chapter.boss-fight summary{min-height:205px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end}
+.chapter.boss-fight[data-text-side="right"] summary{align-items:flex-end;text-align:right}
+.chapter.boss-fight[data-text-side="right"] summary h2{margin-left:2rem;margin-right:0}
+.chapter.boss-fight[data-text-side="right"] summary::after{right:auto;left:1.5rem}
+.chapter.boss-fight .chapter-body{background:linear-gradient(180deg,rgba(5,9,13,.72),rgba(5,9,13,.97) 160px)}
+.chapter .boss-label{font:600 .6rem Cinzel,Georgia,serif;letter-spacing:.1em;text-transform:uppercase;color:var(--ouro-claro,#eeddb0);margin:.45rem 0 0}
+.sagas-resumo li.boss-fight{min-height:110px;display:flex;flex-direction:column;justify-content:flex-end;padding:.8rem 1rem;border:1px solid rgba(200,164,92,.48);border-radius:3px;background-image:var(--boss-tint),linear-gradient(0deg,rgba(5,9,13,.76),transparent 70%),var(--boss-image);background-size:cover;background-position:center,center,var(--boss-banner-position,center);box-shadow:inset 0 0 0 1px rgba(5,9,13,.35)}
+.sagas-resumo li.boss-fight[data-text-side="right"]{text-align:right}
+.sagas-resumo li.boss-fight strong,.sagas-resumo li.boss-fight small{color:#f1eee7;text-shadow:0 1px 4px #000}
+.atlas-info.boss-fight{min-height:170px;display:flex;flex-direction:column;justify-content:flex-end;padding:1rem;background-image:var(--boss-tint),linear-gradient(0deg,rgba(5,9,13,.78),transparent 72%),var(--boss-image);background-size:cover;background-position:center,center,var(--boss-position,center)}
+.atlas-info.boss-fight[data-text-side="right"]{text-align:right}
+.atlas-info.boss-fight .eyebrow,.atlas-info.boss-fight strong,.atlas-info.boss-fight small{color:#f1eee7;text-shadow:0 1px 4px #000}
+@media(max-width:700px){.chapter.boss-fight summary{min-height:195px}.chapter.boss-fight .boss-art{height:340px}.atlas-info.boss-fight{min-height:145px}}

@@ -70,8 +70,15 @@ class NavigationTests(unittest.TestCase):
         published = publicar.public_html(source, 'index.html')
         self.assertIn('/assets/navegacao.js?v=', published)
         self.assertIn('/assets/sagas-resumo.js?v=', published)
+        self.assertIn('/assets/boss-fights.js?v=', published)
         self.assertEqual(publicar.public_html(published, 'index.html'), published)
         self.assertNotIn('navegacao.js', source)
+
+    def test_battle_art_loads_on_story_and_map_pages_only(self):
+        source = '<html><head></head><body></body></html>'
+        for path in ('historias/index.html', 'mapa/index.html'):
+            self.assertIn('/assets/boss-fights.css?v=', publicar.public_html(source, path))
+        self.assertNotIn('/assets/boss-fights.js', publicar.public_html(source, 'wiki/index.html'))
 
     def test_new_page_identity_is_resolved_when_published(self):
         import identidade

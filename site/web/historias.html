@@ -37,7 +37,7 @@ const $=id=>document.getElementById(id), words={death:'caiu em batalha',kill:'de
 const landmarks={Eikthyrnir:'o altar de Eikthyr',GDKing:'o altar do Ancião',Bonemass:'o altar de Bonemass',Dragonqueen:'o altar de Moder',GoblinKing:'o altar de Yagluth',Mistlands_DvergrBossEntrance1:'a entrada do covil da Rainha',FaderLocation:'o altar de Fader',Vendor_BlackForest:'o acampamento de Haldor',Hildir_camp:'o acampamento de Hildir',BogWitch_Camp:'a cabana da Bruxa do Pântano'};
 const node=(tag,text,className)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e};
 const when=seconds=>new Date(Number(seconds)*1000).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
-function target(item){const t=item.target||'';return t.startsWith('vegvisir:')?'um Vegvisir que aponta para '+(landmarks[t.slice(9)]||t.slice(9)):landmarks[t]||t}
+function target(item){const t=item.target||'';if(item.kind!=='discover')return t;return t.startsWith('vegvisir:')?'um Vegvisir que aponta para '+(landmarks[t.slice(9)]||t.slice(9)):landmarks[t]||t}
 let world='',requestId=0;
 function render(data){
   const select=$('world');select.replaceChildren();for(const entry of data.worlds){const opt=node('option',entry.name||'Mundo');opt.value=entry.id;opt.selected=entry.id===data.world;select.append(opt)}select.disabled=data.worlds.length<2;

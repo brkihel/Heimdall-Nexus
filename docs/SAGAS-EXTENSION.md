@@ -120,6 +120,15 @@ currently an explicit recency-based preview using at most 100 public events
 (5 points per boss, 2 per discovery, 1 per other kill). The complete rankings
 feature still requires a credited fact ledger and time-window rules.
 
+Known boss kills and chapters that cite them use the owner's seven battle
+illustrations (Eikthyr, Elder, Bonemass, Moder, Yagluth, Queen, and Kall
+Fimbulbringer). The shared renderer matches a fixed list of names and requires
+the public fact to be a boss **kill**; an altar discovery or an unrelated
+chapter never receives battle art. Bosses without a supplied image retain the
+normal card. The images are served locally as compressed WebP, with a dark
+overlay and a gradient on the text side. Existing editable page sources need
+no replacement for this decoration.
+
 The sitewide menu is configured in Jarl → Site → Editor → Menu. Admins can
 rename, reorder, hide, and style links; the colors can inherit the site theme
 or be set explicitly. Publishing adds the menu without rewriting editable

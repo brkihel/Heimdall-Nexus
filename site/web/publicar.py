@@ -43,6 +43,10 @@ def public_html(source: str, path: str) -> str:
     def asset(name: str) -> str:
         digest = hashlib.sha256((BASE / 'assets' / name).read_bytes()).hexdigest()[:10]
         return f'/assets/{name}?v={digest}'
+    if path in {'index.html', 'mapa/index.html', 'historias/index.html'} and \
+            '/assets/boss-fights.js' not in source:
+        source = source.replace('</head>', f'<link rel="stylesheet" href="{asset("boss-fights.css")}">\n'
+                                f'<script src="{asset("boss-fights.js")}"></script>\n</head>', 1)
     if '/assets/navegacao.js' not in source:
         source = source.replace('</head>', f'<link rel="stylesheet" href="{asset("navegacao.css")}">\n'
                                 f'<script src="{asset("navegacao.js")}" defer></script>\n</head>', 1)

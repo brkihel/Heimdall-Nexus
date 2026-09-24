@@ -101,8 +101,11 @@ echo "Updating site helpers (your pages and identity stay as they are)…"
 for helper in publicar.py values.py sync_modpack.py identidade.py navegacao.py; do
   install -D -m 0640 -o root -g "$PANEL_OS_USER" "$RUNTIME/site/web/$helper" "$SITE_DIR/$helper"
 done
-for asset in vivo.js modpack.js mod-placeholder.svg navegacao.js navegacao.css sagas-resumo.js sagas-resumo.css sagas-halls.js sagas-halls.css historias-bg.webp; do
+for asset in vivo.js modpack.js mod-placeholder.svg navegacao.js navegacao.css sagas-resumo.js sagas-resumo.css sagas-halls.js sagas-halls.css historias-bg.webp boss-fights.js boss-fights.css; do
   install -D -m 0640 -o root -g "$PANEL_OS_USER" "$RUNTIME/site/web/assets/$asset" "$SITE_DIR/assets/$asset"
+done
+for art in "$RUNTIME"/site/web/assets/boss-fights/*.webp; do
+  install -D -m 0640 -o root -g "$PANEL_OS_USER" "$art" "$SITE_DIR/assets/boss-fights/$(basename "$art")"
 done
 for font in "$RUNTIME"/site/web/assets/fontes/*; do
   install -D -m 0640 -o root -g "$PANEL_OS_USER" "$font" "$SITE_DIR/assets/fontes/$(basename "$font")"
