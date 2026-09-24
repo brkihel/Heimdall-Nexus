@@ -53,9 +53,9 @@ O terminal mostra um link privado para o instalador. Abra no seu navegador e sig
 
 | Como abrir o instalador | Quando usar |
 |---|---|
-| `sudo ./deploy/install.sh` | Padrão. Link HTTPS temporário pela Cloudflare, conferido antes de aparecer. |
-| `sudo ./deploy/install.sh --direct` | Máquina numa rede de confiança, como uma VM da sua rede local. Link HTTP para o IP dela. |
-| `sudo ./deploy/install.sh --local-only` | Sem serviço externo. Encaminhe a porta com `ssh -L 8765:127.0.0.1:8765 usuario@servidor`. |
+| `install.sh` | Padrão. Link HTTPS temporário pela Cloudflare, conferido antes de aparecer. |
+| `install.sh --direct` | Máquina numa rede de confiança, como uma VM da sua rede local. Link HTTP para o IP dela. |
+| `install.sh --local-only` | Sem serviço externo. Encaminhe a porta com `ssh -L 8765:127.0.0.1:8765 usuario@servidor`. |
 
 Depois entre em `https://seu-dominio/jarl/entrar`. Passo a passo completo: [**Instalação**](https://github.com/brkihel/Heimdall-Nexus/wiki/Instalacao).
 

@@ -53,9 +53,9 @@ The terminal prints a private link to the installer. Open it in your browser and
 
 | How to open the installer | When to use it |
 |---|---|
-| `sudo ./deploy/install.sh` | Default. A temporary HTTPS link through Cloudflare, checked before it is shown. |
-| `sudo ./deploy/install.sh --direct` | A machine on a network you trust, such as a VM on your LAN. Plain HTTP link to its IP. |
-| `sudo ./deploy/install.sh --local-only` | No external service. Forward the port with `ssh -L 8765:127.0.0.1:8765 user@server`. |
+| `install.sh` | Default. A temporary HTTPS link through Cloudflare, checked before it is shown. |
+| `install.sh --direct` | A machine on a network you trust, such as a VM on your LAN. Plain HTTP link to its IP. |
+| `install.sh --local-only` | No external service. Forward the port with `ssh -L 8765:127.0.0.1:8765 user@server`. |
 
 Then sign in at `https://your-domain/jarl/entrar`. Full walkthrough: [**Installation**](https://github.com/brkihel/Heimdall-Nexus/wiki/Installation).
 
