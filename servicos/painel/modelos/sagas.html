@@ -39,6 +39,13 @@
 .story-field input,.story-field select{width:100%;min-width:0;padding:.65rem .75rem;border:1px solid var(--borda-viva);border-radius:3px;background:rgba(5,9,13,.55);color:var(--osso)}
 .story-actions{display:flex;gap:.55rem;align-items:center;flex-wrap:wrap;margin:.75rem 0}
 .story-note{color:var(--fraco);font-size:.84rem;line-height:1.5}
+.story-sub{font-size:.8rem;margin:1rem 0 .4rem;color:var(--osso)}
+.story-historico{list-style:none;margin:0;padding:0;display:grid;gap:.35rem}
+.story-historico li{display:grid;grid-template-columns:1fr auto;gap:.1rem .7rem;padding:.55rem .75rem;border:1px solid var(--borda);border-left:3px solid var(--bom);border-radius:3px;background:rgba(5,9,13,.35)}
+.story-historico li.falha{border-left-color:var(--ruim)}
+.story-historico strong{color:var(--osso);font-weight:600;font-size:.86rem}
+.story-historico span{grid-column:1/-1;color:var(--fraco);font-size:.8rem}
+.story-historico code{grid-row:1;grid-column:2;color:var(--ruim);font-size:.72rem}
 .story-check{display:flex;align-items:center;gap:.55rem;color:var(--texto);font-size:.85rem}
 .story-check input{accent-color:var(--ouro)}
 @media(max-width:520px){.sagas-opcao{gap:.7rem;padding:.8rem}.sagas-modos{grid-template-columns:1fr}}
@@ -120,6 +127,7 @@
   <p class="story-note" id="story-key-state">Chave: verificando…</p>
   <div class="story-actions"><button class="btn" id="story-key-save" type="button">Guardar chave</button><button class="btn" id="story-key-clear" type="button">Remover chave</button><button class="btn" id="story-generate" type="button">Gerar história</button></div>
   <p class="story-note" id="story-last" role="status">Verificando histórias…</p>
+  <div id="story-historico-box" hidden><h3 class="story-sub">Últimas tentativas</h3><ul class="story-historico" id="story-historico"></ul></div>
 </div>
 <div class="cartao"><h2>Privacidade</h2><p>Perfil, mapa e posição têm permissões separadas. Retirar o perfil apaga os eventos guardados desse Viking; retirar o mapa apaga coordenadas antigas. Posição também depende da visibilidade do mapa dentro do Valheim.</p></div>
 {% endblock %}
@@ -255,7 +263,7 @@ let storyKeys={};
 function storyRequirements(){
   const data=storyData,provider=storyProviders[data.config.provider];
   const sharers=data.worlds.reduce((total,world)=>total+world.players.length,0);
-  requirements('req-historias',[
+  const itens=[
     [data.config.enabled,'Histórias ligadas',data.config.enabled?'':'Ligue “Histórias ativas” abaixo e clique em Salvar histórias.'],
     [!!(sagasStatus&&sagasStatus.settings.enabled&&sagasStatus.settings.events),'Crônicas e “Abates e mortes” ligados',
       sagasStatus&&sagasStatus.settings.enabled&&sagasStatus.settings.events?'':'As histórias nascem dos momentos registrados. Ligue “Extensão ativa” e “Abates e mortes” em Módulos.'],
@@ -265,7 +273,34 @@ function storyRequirements(){
       'sudo ./deploy/install-sagas-extension.sh "$PWD/dist/sagas/HeimdallSagas.Bridge.dll"'],
     [sharers>0,'Vikings que autorizaram histórias',sharers>0?sharers+' Viking(s) autorizaram.':
       'Cada jogador liga ShareProfile e ShareStories em BepInEx/config/gg.heimdall.sagas.client.cfg. Sem isso, nenhum nome ou feito dele vai para a IA.'],
-  ]);
+  ];
+  const diag=data.diagnostics||{};
+  if(data.config.auto){
+    const desde=diag.auto_since?new Date(diag.auto_since*1000).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'';
+    itens.push([!!diag.auto_since,'Escrita automática ligada',diag.auto_since?'Conta os grandes feitos desde '+desde+'.':
+      'Ligue “Escrever sozinho nos grandes feitos” e clique em Salvar histórias. Só contam feitos depois disso.']);
+    itens.push([true,'Grandes feitos desde que ligou',(diag.feats_since||0)+' registrado(s) · '+(diag.waiting||0)+' aguardando capítulo'+
+      (diag.retrying?' · '+diag.retrying+' vão tentar de novo em até 10 min':'')+
+      ((diag.feats_since||0)>(diag.waiting||0)+0&&!sharers?' · feitos de quem não autorizou histórias são ignorados':'')]);
+  }
+  requirements('req-historias',itens);
+  desenhaHistorico(data.history||[]);
+}
+const CATALOGO={{ (codigos or {})|tojson }};
+function desenhaHistorico(lista){
+  const ul=document.getElementById('story-historico');ul.replaceChildren();
+  document.getElementById('story-historico-box').hidden=!lista.length;
+  for(const item of [...lista].reverse()){
+    const li=document.createElement('li');li.className=item.ok?'ok':'falha';
+    const quando=new Date((item.at||0)*1000).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
+    const titulo=document.createElement('strong');
+    const m=/^(HN-[A-Z]{3,5}-\d{3}): ([\s\S]*)$/.exec(item.message||'');
+    titulo.textContent=item.ok?('Capítulo escrito'+(item.title?': '+item.title:'')):((CATALOGO[item.code]||{}).titulo||'Falhou');
+    const detalhe=document.createElement('span');
+    detalhe.textContent=quando+(item.auto?' · automático':' · pedido no Jarl')+(item.ok?'':' · '+(m?m[2]:item.message||'')+(item.retry?' · vai tentar de novo':''));
+    if(!item.ok&&item.code){const c=document.createElement('code');c.textContent=item.code;li.append(c);}
+    li.prepend(titulo);li.append(detalhe);ul.append(li);
+  }
 }
 function storyProviderView(changed){
   const provider=storyProviders[document.getElementById('story-provider').value];

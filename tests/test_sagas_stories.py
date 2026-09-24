@@ -275,3 +275,67 @@ class StoryTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class ProviderRobustnessTests(unittest.TestCase):
+    def reply(self, status, body):
+        class Reply:
+            def __init__(self):
+                self.status = status
+            def read(self, _maximum):
+                return body if isinstance(body, bytes) else json.dumps(body).encode()
+        class Connection:
+            def request(self, *_a, **_k):
+                pass
+            def getresponse(self):
+                return Reply()
+            def close(self):
+                pass
+        return patch.object(stories.http.client, 'HTTPSConnection', return_value=Connection())
+
+    def test_rate_limit_is_reported_as_such_and_retryable(self):
+        with self.reply(429, {'error': {'message': 'Rate limit exceeded: free-models-per-day'}}), \
+                self.assertRaises(stories.StoryError) as caught:
+            stories._request('k', 'openrouter/free', 'viking', [], 'openrouter_free')
+        self.assertEqual(caught.exception.code, 'HN-STO-009')
+        self.assertTrue(caught.exception.transient)
+        self.assertIn('free-models-per-day', str(caught.exception))
+
+    def test_no_credit_is_not_retried(self):
+        with self.reply(402, {'error': {'message': 'Insufficient credits'}}), \
+                self.assertRaises(stories.StoryError) as caught:
+            stories._request('k', 'vendor/x', 'viking', [], 'openrouter')
+        self.assertEqual((caught.exception.code, caught.exception.transient), ('HN-STO-017', False))
+
+    def test_json_wrapped_in_prose_or_fences_is_accepted(self):
+        wrapped = 'Claro! Aqui está:\n```json\n' + json.dumps(response()) + '\n```\nBoa leitura.'
+        with self.reply(200, {'model': 'meta/llama:free',
+                              'choices': [{'message': {'content': wrapped}}]}):
+            result = stories._request('k', 'openrouter/free', 'viking', [], 'openrouter_free')
+        self.assertEqual(result['title'], response()['title'])
+        self.assertEqual(result['_model'], 'meta/llama:free')
+        self.assertIsNone(stories.extract_json('sem json aqui'))
+        self.assertIsNone(stories.extract_json(None))
+
+    def test_transient_failure_retries_a_feat_three_times_then_stops(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            state = Path(temporary)
+            state_ready(state, limit=20)
+            config = {**stories.DEFAULT, 'enabled': True, 'auto': True, 'auto_since': 50}
+            (state / 'story-settings.json').write_text(json.dumps(config))
+            with sagas.connect(state / 'sagas.sqlite3') as db:
+                db.execute('''INSERT INTO events(world,actor,id,kind,name,target,stars,
+                              quantity,occurred_at,boss,elite) VALUES(?,?,?,?,?,?,?,?,?,?,?)''',
+                           (WORLD, ACTOR, 'boss00000001', 'kill', 'Astrid', 'Eikthyr', 0, 1, 90, 1, 0))
+            failing = stories.StoryError('HN-STO-011', 'fora do formato', transient=True)
+            for attempt in range(3):
+                trigger = stories.next_trigger(state)
+                self.assertIsNotNone(trigger, attempt)
+                with patch.object(stories, '_request', side_effect=failing), \
+                        self.assertRaises(stories.StoryError):
+                    stories.generate_triggered(state, trigger)
+                # Skip the ten-minute wait.
+                with sagas.connect(state / 'sagas.sqlite3') as db, db:
+                    db.execute('UPDATE story_trigger_tries SET next_at=0')
+            self.assertIsNone(stories.next_trigger(state))
+            self.assertEqual(stories.diagnostics(state)['feats_since'], 1)

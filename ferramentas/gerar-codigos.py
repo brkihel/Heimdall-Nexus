@@ -9,7 +9,8 @@ import codigos  # noqa: E402
 
 AREAS = {'UPD': 'Atualizações pelo Jarl e `deploy/update.sh`',
          'CFG': 'Server Config: admins, whitelist, banidos e modificadores de mundo',
-         'MOD': 'Instalar, atualizar e remover mods pelo Jarl'}
+         'MOD': 'Instalar, atualizar e remover mods pelo Jarl',
+         'STO': 'Histórias das Sagas (OpenRouter, OpenAI, Anthropic)'}
 
 
 def render() -> str:

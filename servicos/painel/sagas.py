@@ -213,6 +213,10 @@ CREATE TABLE IF NOT EXISTS story_triggers (
   world TEXT NOT NULL, actor TEXT NOT NULL, event_id TEXT NOT NULL,
   created_at INTEGER NOT NULL, PRIMARY KEY(world, actor, event_id)
 );
+CREATE TABLE IF NOT EXISTS story_trigger_tries (
+  world TEXT NOT NULL, actor TEXT NOT NULL, event_id TEXT NOT NULL,
+  count INTEGER NOT NULL, next_at INTEGER NOT NULL, PRIMARY KEY(world, actor, event_id)
+);
 CREATE TABLE IF NOT EXISTS story_attempts (
   day TEXT PRIMARY KEY, count INTEGER NOT NULL
 );

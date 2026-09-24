@@ -21,16 +21,15 @@ def main(state: Path = sagas.STATE) -> dict | None:
         with os.fdopen(fd, 'rb') as source:
             raw = source.read(1025)
         if len(raw) > 1024:
-            raise stories.StoryError('solicitação de história inválida')
+            raise stories.StoryError('HN-STO-016', 'solicitação de história inválida')
         job = json.loads(raw)
         if not isinstance(job, dict) or set(job) != {'world', 'actor'} or \
                 not isinstance(job['world'], str) or not isinstance(job['actor'], str):
-            raise stories.StoryError('solicitação de história inválida')
+            raise stories.StoryError('HN-STO-016', 'solicitação de história inválida')
         result = stories.generate(state, job['world'], job['actor'])
-        status = {'ok': True, 'scope': result['scope']}
+        status = {'ok': True, 'scope': result['scope'], 'title': result['title']}
     except (OSError, ValueError, sqlite3.Error) as error:
-        status = {'ok': False, 'message': str(error) if isinstance(error, stories.StoryError)
-                  else 'não foi possível gerar a história'}
+        status = failure(error)
     record(state, status)
     path.unlink(missing_ok=True)
     return status
@@ -43,17 +42,31 @@ def automatic(state: Path) -> dict | None:
         if trigger is None:
             return None
         result = stories.generate_triggered(state, trigger)
-        status = {'ok': True, 'scope': result['scope'], 'auto': True}
+        status = {'ok': True, 'scope': result['scope'], 'auto': True, 'title': result['title']}
     except (OSError, ValueError, sqlite3.Error) as error:
-        status = {'ok': False, 'auto': True,
-                  'message': str(error) if isinstance(error, stories.StoryError)
-                  else 'não foi possível gerar a história'}
+        status = {**failure(error), 'auto': True}
     record(state, status)
     return status
 
 
+def failure(error: Exception) -> dict:
+    if isinstance(error, stories.StoryError):
+        return {'ok': False, 'code': error.code, 'message': str(error),
+                'retry': error.transient}
+    return {'ok': False, 'code': 'HN-STO-018', 'message': 'HN-STO-018: erro interno ao gerar a história'}
+
+
 def record(state: Path, status: dict) -> None:
     status['at'] = int(time.time())
+    try:
+        history = json.loads((state / 'story-history.json').read_text(encoding='utf-8'))
+        history = history if isinstance(history, list) else []
+    except (OSError, ValueError):
+        history = []
+    history = (history + [status])[-10:]
+    temporary = state / '.story-history.tmp'
+    temporary.write_text(json.dumps(history, ensure_ascii=False), encoding='utf-8')
+    os.replace(temporary, state / 'story-history.json')
     temp = state / '.story-last.tmp'
     with temp.open('w', encoding='utf-8') as file:
         json.dump(status, file, ensure_ascii=False)

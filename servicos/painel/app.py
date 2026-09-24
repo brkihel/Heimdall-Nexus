@@ -218,7 +218,7 @@ async def cronica(pedido: Request):
 @app.get(f'{RAIZ_URL}/sagas', response_class=HTMLResponse)
 async def sagas_admin(pedido: Request):
     exige(pedido)
-    return pagina(pedido, 'sagas.html', aba='sagas')
+    return pagina(pedido, 'sagas.html', aba='sagas', codigos=codigos.CATALOGO)
 
 
 @app.get(f'{RAIZ_URL}/api/sagas/estado')

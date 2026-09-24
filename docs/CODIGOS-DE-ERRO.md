@@ -12,6 +12,7 @@ dele (`python3 ferramentas/gerar-codigos.py`) e um teste confere que as duas bat
 | UPD | Atualizações pelo Jarl e `deploy/update.sh` |
 | CFG | Server Config: admins, whitelist, banidos e modificadores de mundo |
 | MOD | Instalar, atualizar e remover mods pelo Jarl |
+| STO | Histórias das Sagas (OpenRouter, OpenAI, Anthropic) |
 
 | Código | O que houve | Como resolver |
 |---|---|---|
@@ -39,6 +40,24 @@ dele (`python3 ferramentas/gerar-codigos.py`) e um teste confere que as duas bat
 | `HN-UPD-108` | O painel não voltou depois de reiniciar | Veja: sudo journalctl -u heimdall-panel -n 80. Pelo terminal: cd ~/Heimdall-Nexus && sudo ./deploy/update.sh |
 | `HN-UPD-120` | A atualização terminou sem trocar a versão | Veja o registro técnico. Se não houver erro nele, procure atualizações de novo. |
 | `HN-UPD-121` | A atualização foi interrompida | O processo parou sem concluir (reinício da máquina ou falta de memória). Rode a atualização de novo. |
+| `HN-STO-001` | Opções das histórias inválidas | Recarregue a página e salve as histórias de novo. |
+| `HN-STO-002` | Histórias desligadas | Ligue "Extensão ativa" e "Abates e mortes" em Módulos e "Histórias ativas" no cartão de histórias. |
+| `HN-STO-003` | Mundo ou Viking inválido | Recarregue a página e escolha de novo. |
+| `HN-STO-004` | Chave de API não configurada | Cole a chave do provedor escolhido e clique em Guardar chave. |
+| `HN-STO-005` | Chave de API inválida | Confira se a chave é do provedor escolhido (OpenRouter sk-or-…, OpenAI sk-…, Anthropic sk-ant-…). |
+| `HN-STO-006` | Nenhum evento autorizado | O jogador precisa de ShareProfile e ShareStories como true no BepInEx e de ao menos um momento registrado. |
+| `HN-STO-007` | Já existe uma história para esses momentos | Espere novos momentos serem registrados. |
+| `HN-STO-008` | Limite diário de histórias atingido | O limite volta à meia-noite UTC. Aumente "Capítulos por dia" se quiser mais. |
+| `HN-STO-009` | O provedor recusou o pedido | Se for limite de uso (HTTP 429) dos modelos grátis, o Nexus tenta de novo sozinho em 10 minutos. Veja a mensagem do provedor. |
+| `HN-STO-010` | Sem conexão com o provedor | Confira a internet do servidor. O Nexus tenta de novo em 10 minutos. |
+| `HN-STO-011` | O modelo respondeu fora do formato | Comum em modelos grátis. O Nexus tenta de novo em 10 minutos; se repetir, escolha um modelo específico. |
+| `HN-STO-012` | A resposta não citou os registros | O Nexus tenta de novo em 10 minutos. |
+| `HN-STO-013` | O compartilhamento mudou durante a geração | Um jogador retirou a permissão enquanto a história era escrita. Nada foi publicado. |
+| `HN-STO-014` | O feito não está mais disponível | O registro foi apagado ou ocultado pelo filtro de abates. |
+| `HN-STO-015` | Resposta grande demais do provedor | O Nexus tenta de novo em 10 minutos. |
+| `HN-STO-016` | Pedido de história inválido | Peça de novo pelo botão Gerar história. |
+| `HN-STO-017` | Sem créditos no provedor | Adicione créditos ou aumente o limite de gasto na conta do provedor. |
+| `HN-STO-018` | Erro interno ao gerar a história | Veja: sudo journalctl -u heimdall-sagas-story -n 50 |
 | `HN-MOD-001` | A instalação do mod falhou | Os arquivos novos foram revertidos. Veja o registro técnico; se o download falhou, tente de novo em alguns minutos. |
 | `HN-MOD-002` | A atualização do mod falhou | A versão anterior foi mantida. Veja o registro técnico e tente de novo. |
 | `HN-MOD-003` | A remoção do mod falhou | Veja o registro técnico. A pasta do mod fica guardada nas cópias antes de sair. |
