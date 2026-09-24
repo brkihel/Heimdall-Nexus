@@ -106,7 +106,8 @@ finally:
     if os.path.exists(temporary):
         os.unlink(temporary)
 for name in ('heimdall-sagas-ingest.service', 'heimdall-sagas-ingest.timer',
-             'heimdall-sagas-story.service', 'heimdall-sagas-story.timer'):
+             'heimdall-sagas-story.service', 'heimdall-sagas-story.timer',
+             'heimdall-sagas-atlas.service', 'heimdall-sagas-atlas.timer'):
     content = (root / 'deploy/systemd' / name).read_text()
     content = content.replace('@ROOT@', str(root)).replace('@PANEL_OS_USER@', panel)
     destination = pathlib.Path('/etc/systemd/system') / name
@@ -120,6 +121,14 @@ python3 - <<'PY'
 from pathlib import Path
 path = Path('/etc/nginx/sites-available/heimdall-nexus')
 text = path.read_text()
+atlas_route = '''    location ^~ /api/sagas/v1/atlas/ {
+        limit_except GET { deny all; }
+        proxy_pass http://127.0.0.1:8791;
+        proxy_set_header Host $host;
+        add_header Cache-Control "no-store" always;
+    }
+
+'''
 if 'location = /api/sagas/v1/overview' not in text:
     marker = '    location / {\n'
     if marker not in text:
@@ -137,6 +146,15 @@ if 'location = /api/sagas/v1/overview' not in text:
     backup = path.with_suffix('.pre-sagas')
     backup.write_text(text)
     path.write_text(text.replace(marker, route + marker, 1))
+    text = path.read_text()
+if 'location ^~ /api/sagas/v1/atlas/' not in text:
+    marker = '    location = /api/sagas/v1/overview {'
+    if marker not in text:
+        raise SystemExit('The Nexus Nginx configuration has an unexpected layout.')
+    backup = path.with_suffix('.pre-sagas')
+    if not backup.exists():
+        backup.write_text(text)
+    path.write_text(text.replace(marker, atlas_route + marker, 1))
 PY
 if ! nginx -t; then
   if [[ -f /etc/nginx/sites-available/heimdall-nexus.pre-sagas ]]; then
@@ -148,5 +166,5 @@ fi
 systemctl reload nginx
 systemctl daemon-reload
 systemctl enable --now heimdall-sagas-ingest.timer
-systemctl enable --now heimdall-sagas-story.timer
+systemctl enable --now heimdall-sagas-story.timer heimdall-sagas-atlas.timer
 echo "Heimdall Sagas extension installed. Restart Valheim when convenient to load the bridge."

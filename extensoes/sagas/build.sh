@@ -25,7 +25,8 @@ artifacts = root / 'artifacts/sagas'
 artifacts.mkdir(parents=True, exist_ok=True)
 for kind in ('Client', 'Bridge'):
     dll = root / f'extensoes/sagas/mod/HeimdallSagas.{kind}/bin/Release/net48/HeimdallSagas.{kind}.dll'
-    output = artifacts / f'HeimdallSagas.{kind}-0.1.4.zip'
+    version = '0.1.4' if kind == 'Client' else '0.1.6'
+    output = artifacts / f'HeimdallSagas.{kind}-{version}.zip'
     with ZipFile(output, 'w', ZIP_DEFLATED) as archive:
         archive.write(dll, f'BepInEx/plugins/HeimdallSagas/HeimdallSagas.{kind}.dll')
         archive.write(root / 'extensoes/sagas/mod/README.md', 'README.md')

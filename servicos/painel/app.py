@@ -14,7 +14,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import FastAPI, Form, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from starlette.background import BackgroundTask
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -54,7 +54,7 @@ portaria = nucleo.Portaria()
 
 
 @app.get('/api/sagas/v1/overview')
-async def sagas_public_overview(world: str = '', limit: int = 50, atlas_image: str = ''):
+async def sagas_public_overview(world: str = '', limit: int = 50):
     """Public data is filtered again from the latest sharing choices on read."""
     try:
         data = sagas.public_view(world=world, limit=limit)
@@ -63,12 +63,7 @@ async def sagas_public_overview(world: str = '', limit: int = 50, atlas_image: s
     data['atlas'] = None
     try:
         if data.get('available') and data.get('world'):
-            info = atlas.summary(sagas.STATE, data['world'])
-            if info is not None:
-                if atlas_image == info['key']:
-                    info['image'] = atlas.image(sagas.STATE, data['world'], info)
-                info.pop('points')
-                data['atlas'] = info
+            data['atlas'] = atlas.summary(sagas.STATE, data['world'])
     except (OSError, ValueError, sagas.sqlite3.Error):
         data['atlas'] = None
     try:
@@ -81,6 +76,17 @@ async def sagas_public_overview(world: str = '', limit: int = 50, atlas_image: s
         data['stories'] = []
         data['stories_enabled'] = False
     return JSONResponse(data, headers={'Cache-Control': 'no-store'})
+
+
+@app.get('/api/sagas/v1/atlas/{world}/{revision}/{z}/{x}/{y}.webp')
+async def sagas_public_atlas(world: str, revision: str, z: int, x: int, y: int):
+    try:
+        content = atlas.tile(sagas.STATE, world, revision, z, x, y)
+    except (OSError, ValueError, sagas.sqlite3.Error):
+        content = None
+    if content is None:
+        return Response(status_code=404, headers={'Cache-Control': 'no-store'})
+    return Response(content, media_type='image/webp', headers={'Cache-Control': 'no-store'})
 
 
 def assinador():

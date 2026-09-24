@@ -11,6 +11,8 @@ CODE = re.compile(r'^HN-[A-Z]{3,5}-\d{3}$')
 PREFIXED = re.compile(r'^(HN-[A-Z]{3,5}-\d{3}): (.*)$', re.S)
 
 CATALOGO: dict[str, dict[str, str]] = {
+    'HN-ATL-001': {'titulo': 'O mapa Birds Eye não pôde ser gerado',
+                   'solucao': 'Confira o erro no servidor: sudo journalctl -u heimdall-sagas-atlas -n 50 --no-pager. Após corrigir a causa, o Nexus tenta de novo em até 10 minutos.'},
     # --- Updates: checking and starting (executor) ---
     'HN-UPD-001': {'titulo': 'Git não instalado',
                    'solucao': 'Na máquina do Nexus, rode: sudo apt install git'},

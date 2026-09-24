@@ -1,9 +1,9 @@
-# Heimdall Sagas 0.1.4 preview
+# Heimdall Sagas preview (Client 0.1.4, Bridge 0.1.6)
 
 This is an original optional companion to Heimdall Nexus. It currently records
 player presence, last known equipped items, opted-in live position, kills, deaths,
 and the world day. The Nexus can create optional AI stories from consented
-events. It does not yet include the full atlas, armory or leaderboards.
+events and generate a Birds Eye world map. Armory and leaderboards are planned.
 
 The Client DLL is installed with BepInEx on each participating Valheim client.
 The Bridge DLL is installed only on the Heimdall Nexus dedicated server. The
@@ -12,8 +12,8 @@ serves the public pages.
 
 All four client sharing settings default to false. A player can independently
 enable profile, map, position and story sharing in the BepInEx config. Story
-sharing also requires profile sharing and allows OpenRouter and its selected
-model provider to receive the Viking name and selected shared event facts for public
+sharing also requires profile sharing and allows the administrator's selected
+AI provider to receive the Viking name and selected shared event facts for public
 AI stories. A live position
 also requires Valheim's own map visibility. Events are recorded only while
 profile sharing is enabled; locations require map sharing. Disabling profile

@@ -14,7 +14,7 @@ using UnityEngine;
 
 namespace Heimdall.Sagas.Mod
 {
-    [BepInPlugin("gg.heimdall.sagas.bridge", "Heimdall Sagas Bridge", "0.1.5")]
+    [BepInPlugin("gg.heimdall.sagas.bridge", "Heimdall Sagas Bridge", "0.1.6")]
     public sealed class BridgePlugin : BaseUnityPlugin
     {
         private const string Rpc = "Heimdall.Sagas.V1";
@@ -32,6 +32,7 @@ namespace Heimdall.Sagas.Mod
             public bool events = true;
             public bool clock = true;
             public string kill_mode = "all";
+            public string map_mode = "off";
         }
         private sealed class PendingWrite
         {
@@ -60,8 +61,6 @@ namespace Heimdall.Sagas.Mod
         private string atlasWorld = "";
         private bool landmarksLogged;
         private readonly HashSet<string> landmarkSeen = new HashSet<string>();
-        private const int AtlasSize = 512;
-        private const float WorldEdge = 10500f;
         // Location prefab names; true marks a boss altar. Vegvisir boss hints
         // add their target names at runtime, so modded bosses are learned too.
         private static readonly Dictionary<string, bool> Landmarks = new Dictionary<string, bool> {
@@ -146,10 +145,11 @@ namespace Heimdall.Sagas.Mod
                 nextLandmarkScan = Time.unscaledTime + 5f;
                 ScanLandmarks(peers);
             }
-            if (settings.enabled && atlasWorld != WorldId() && WorldGenerator.instance != null &&
+            if (settings.enabled && (settings.map_mode == "explored" || settings.map_mode == "full") &&
+                atlasWorld != WorldId() && WorldGenerator.instance != null &&
                 WorldId() != "") {
                 atlasWorld = WorldId();
-                StartCoroutine(BuildAtlas(atlasWorld));
+                ExportCartography(atlasWorld, WorldGenerator.instance);
             }
             var failures = Interlocked.Exchange(ref writeFailures, 0);
             if (failures > 0) Logger.LogWarning("Heimdall Sagas could not store " + failures + " packet(s).");
@@ -370,53 +370,34 @@ namespace Heimdall.Sagas.Mod
                             "vegvisir:" + location, boss, point);
         }
 
-        private System.Collections.IEnumerator BuildAtlas(string world)
+        // Once per world: cartography layers for the Birds Eye map. The Nexus
+        // renders and tiles them; a marker in BepInEx/config avoids redoing it.
+        private void ExportCartography(string world, WorldGenerator generator)
         {
-            // Biomes come from the world seed, so no client map data is needed.
-            var grid = new byte[AtlasSize * AtlasSize];
-            var step = WorldEdge * 2f / AtlasSize;
-            for (var row = 0; row < AtlasSize; row++) {
-                var wz = WorldEdge - (row + .5f) * step;
-                for (var column = 0; column < AtlasSize; column++) {
-                    var wx = -WorldEdge + (column + .5f) * step;
-                    var generator = WorldGenerator.instance;
-                    if (generator == null || WorldId() != world) yield break;
-                    grid[row * AtlasSize + column] = wx * wx + wz * wz > WorldEdge * WorldEdge
-                        ? (byte)0 : BiomeCode(generator.GetBiome(wx, wz));
+            // Flat files in the inbox: the importer may rename files there, but not
+            // a folder created by the game's user. The .meta file is written last.
+            var markers = Path.Combine(Paths.ConfigPath, "HeimdallSagas");
+            var marker = Path.Combine(markers, "cartography-" + world + ".done");
+            var prefix = Path.Combine(inbox, "cartography-" + world + ".");
+            if (File.Exists(marker) || File.Exists(prefix + "meta")) return;
+            Task.Run(() => {
+                var clock = System.Diagnostics.Stopwatch.StartNew();
+                try {
+                    Cartography.Export(generator, prefix);
+                    var temporary = Path.Combine(inbox, ".cartography-" + world + ".meta.tmp");
+                    File.WriteAllText(temporary, "{\"version\":1,\"world\":\"" + world + "\",\"size\":" +
+                                      Cartography.Size + ",\"pixelSize\":" + (int)Cartography.PixelSize + "}");
+                    File.Move(temporary, prefix + "meta");
+                    Directory.CreateDirectory(markers);
+                    File.WriteAllText(marker, DateTime.UtcNow.ToString("o"));
+                    Logger.LogInfo("Heimdall Sagas exported the world map layers in " +
+                                   clock.Elapsed.TotalSeconds.ToString("0") + " s.");
+                } catch (Exception error) {
+                    foreach (var layer in Cartography.Layers)
+                        try { File.Delete(prefix + layer); } catch { }
+                    Logger.LogWarning("Heimdall Sagas could not export the world map: " + error.Message);
                 }
-                if (row % 4 == 3) yield return null;
-            }
-            var data = new byte[8 + grid.Length];
-            data[0] = (byte)'H'; data[1] = (byte)'S'; data[2] = (byte)'B'; data[3] = (byte)'1';
-            data[4] = AtlasSize & 0xff; data[5] = AtlasSize >> 8;
-            Buffer.BlockCopy(grid, 0, data, 8, grid.Length);
-            var path = Path.Combine(inbox, "atlas-" + world + ".biomes");
-            var temporary = Path.Combine(inbox, ".atlas-" + Guid.NewGuid().ToString("N") + ".tmp");
-            try {
-                File.WriteAllBytes(temporary, data);
-                if (File.Exists(path)) File.Delete(path);
-                File.Move(temporary, path);
-                Logger.LogInfo("Heimdall Sagas wrote the world biome atlas.");
-            } catch (Exception error) {
-                try { File.Delete(temporary); } catch { }
-                Logger.LogWarning("Heimdall Sagas could not write the biome atlas: " + error.Message);
-            }
-        }
-
-        private static byte BiomeCode(Heightmap.Biome biome)
-        {
-            switch (biome) {
-                case Heightmap.Biome.Meadows: return 1;
-                case Heightmap.Biome.BlackForest: return 2;
-                case Heightmap.Biome.Swamp: return 3;
-                case Heightmap.Biome.Mountain: return 4;
-                case Heightmap.Biome.Plains: return 5;
-                case Heightmap.Biome.Mistlands: return 6;
-                case Heightmap.Biome.AshLands: return 7;
-                case Heightmap.Biome.DeepNorth: return 8;
-                case Heightmap.Biome.Ocean: return 9;
-                default: return 0;
-            }
+            });
         }
 
         [HarmonyPatch(typeof(Game), "RPC_DiscoverClosestLocation")]

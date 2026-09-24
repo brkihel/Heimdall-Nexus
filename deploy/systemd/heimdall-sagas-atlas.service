@@ -1,0 +1,20 @@
+[Unit]
+Description=Render the optional Heimdall Sagas world map
+
+[Service]
+Type=oneshot
+User=@PANEL_OS_USER@
+Group=@PANEL_OS_USER@
+SupplementaryGroups=heimdall-sagas
+UMask=0022
+EnvironmentFile=/etc/heimdall-nexus/heimdall.env
+WorkingDirectory=@ROOT@/servicos/painel
+ExecStart=@ROOT@/servicos/painel/.venv/bin/python @ROOT@/servicos/painel/atlas-worker.py
+TimeoutStartSec=15min
+Nice=15
+MemoryMax=2G
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/heimdall-nexus/sagas

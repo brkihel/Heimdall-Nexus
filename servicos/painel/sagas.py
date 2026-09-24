@@ -9,6 +9,7 @@ import json
 import math
 import os
 import re
+import shutil
 import sqlite3
 import stat
 import time
@@ -329,32 +330,62 @@ def maintain(db: sqlite3.Connection, now: int | None = None) -> None:
                       ON CONFLICT(key) DO UPDATE SET value=excluded.value''', (now,))
 
 
-ATLAS_NAME = re.compile(r'^atlas-([a-f0-9]{64})\.biomes$')
-ATLAS_SIZE = 512
+CARTOGRAPHY_META = re.compile(r'^cartography-([a-f0-9]{64})\.meta$')
+CARTOGRAPHY_SIZE = 4096
+CARTOGRAPHY_LAYERS = {'base.rgb': 3, 'height.rg': 2, 'abyss.r8': 1, 'paper.r8': 1}
 
 
-def import_atlases(state: Path) -> None:
-    """Move complete biome grids written by the bridge into private storage."""
-    target = state / 'atlas'
-    for path in (state / 'inbox').glob('atlas-*.biomes'):
-        match = ATLAS_NAME.fullmatch(path.name)
+def import_cartography(state: Path) -> None:
+    """Move complete world-map layers written by the bridge into private storage."""
+    inbox = state / 'inbox'
+    for legacy in inbox.glob('atlas-*.biomes'):
+        legacy.unlink(missing_ok=True)  # replaced by the cartography layers
+    for meta_path in inbox.glob('cartography-*.meta'):
+        match = CARTOGRAPHY_META.fullmatch(meta_path.name)
+        world = match.group(1) if match else ''
+        layers = {layer: inbox / f'cartography-{world}.{layer}' for layer in CARTOGRAPHY_LAYERS}
         try:
-            descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            if not match:
+                raise ValueError('invalid meta')
+            descriptor = os.open(meta_path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
             with os.fdopen(descriptor, 'rb') as source:
-                if not stat.S_ISREG(os.fstat(source.fileno()).st_mode):
-                    raise ValueError('not a regular file')
-                data = source.read(8 + ATLAS_SIZE * ATLAS_SIZE + 1)
-            if not match or len(data) != 8 + ATLAS_SIZE * ATLAS_SIZE or \
-                    data[:4] != b'HSB1' or int.from_bytes(data[4:6], 'little') != ATLAS_SIZE or \
-                    max(data[8:]) > 9:
-                raise ValueError('invalid atlas')
-            target.mkdir(mode=0o750, exist_ok=True)
-            temporary = target / ('.' + match.group(1) + '.tmp')
-            temporary.write_bytes(data[8:])
-            os.replace(temporary, target / (match.group(1) + '.biomes'))
-        except (OSError, ValueError):
-            pass
-        path.unlink(missing_ok=True)
+                info = os.fstat(source.fileno())
+                if not stat.S_ISREG(info.st_mode) or info.st_size > 1024:
+                    raise ValueError('invalid meta')
+                meta = json.loads(source.read(1025).decode('utf-8'))
+            if meta != {'version': 1, 'world': world, 'size': CARTOGRAPHY_SIZE, 'pixelSize': 6}:
+                raise ValueError('unexpected meta')
+            n = CARTOGRAPHY_SIZE * CARTOGRAPHY_SIZE
+            target = state / 'cartography' / world
+            target.mkdir(parents=True, mode=0o750, exist_ok=True)
+            for layer, path in layers.items():
+                expected = n * CARTOGRAPHY_LAYERS[layer]
+                descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+                with os.fdopen(descriptor, 'rb') as source:
+                    info = os.fstat(source.fileno())
+                    if not stat.S_ISREG(info.st_mode) or info.st_size != expected:
+                        raise ValueError('invalid layer')
+                    temporary = target / ('.' + layer + '.tmp')
+                    with temporary.open('wb') as output:
+                        shutil.copyfileobj(source, output, length=1024 * 1024)
+                        output.flush()
+                        os.fsync(output.fileno())
+                    if temporary.stat().st_size != expected:
+                        raise ValueError('short layer')
+            for layer in layers:
+                os.replace(target / ('.' + layer + '.tmp'), target / layer)
+            with (target / '.meta.tmp').open('w', encoding='utf-8') as output:
+                json.dump(meta, output)
+                output.flush()
+                os.fsync(output.fileno())
+            os.replace(target / '.meta.tmp', target / 'meta.json')
+        except (OSError, ValueError, UnicodeError):
+            if match:
+                for layer in layers:
+                    (state / 'cartography' / world / ('.' + layer + '.tmp')).unlink(missing_ok=True)
+        for path in layers.values():
+            path.unlink(missing_ok=True)
+        meta_path.unlink(missing_ok=True)
 
 
 def process_inbox(state: Path = STATE, limit: int = MAX_BATCH) -> dict:
@@ -367,7 +398,7 @@ def process_inbox(state: Path = STATE, limit: int = MAX_BATCH) -> dict:
     rejected_count = sum(1 for _ in rejected.glob('*.json'))
     with connect(state / 'sagas.sqlite3') as db:
         maintain(db)
-        import_atlases(state)
+        import_cartography(state)
         files = sorted(inbox.glob('*.json'))
         accepted_paths = []
         db.execute('BEGIN')
@@ -476,8 +507,12 @@ def admin_status(state: Path = STATE, game: Path | None = None) -> dict:
               'worlds': 0, 'players': 0, 'events': 0, 'bridge': False,
               'storage_error': False, 'settings': load_settings(state),
               'profiles': 0, 'map_players': 0, 'last_data_at': None,
-              'atlas': sum(1 for _ in (state / 'atlas').glob('*.biomes'))
-              if (state / 'atlas').is_dir() else 0}
+              'atlas': sum(1 for _ in (state / 'cartography').glob('*/published.json'))
+              if (state / 'cartography').is_dir() else 0,
+              'atlas_waiting': sum(1 for _ in (state / 'cartography').glob('*/meta.json'))
+              if (state / 'cartography').is_dir() else 0,
+              'atlas_error': sum(1 for _ in (state / 'cartography').glob('*/failed.json'))
+              if (state / 'cartography').is_dir() else 0}
     for key, folder in (('queued', 'inbox'), ('rejected', 'rejected')):
         path = state / folder
         if path.is_dir():

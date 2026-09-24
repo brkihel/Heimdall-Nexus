@@ -184,8 +184,8 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
   <section class="panel map-panel" id="map-panel"><div class="map-head"><div><div class="eyebrow">Além da fogueira</div><h2>O mundo conhecido</h2></div><span class="map-mode" id="map-mode">Pontos registrados</span></div>
   <div class="atlas" id="atlas">
     <svg id="map" role="img" aria-labelledby="map-title"><title id="map-title">Mapa do mundo com locais compartilhados</title>
-      <g id="map-base"><circle class="world-disc" cx="256" cy="256" r="256"/><circle class="world-ring" cx="256" cy="256" r="48.8"/><circle class="world-ring" cx="256" cy="256" r="122"/><circle class="world-ring" cx="256" cy="256" r="195"/><text class="world-label" x="256" y="14">NORTE</text></g>
-      <image id="map-image" class="atlas-image" x="0" y="0" width="512" height="512" preserveAspectRatio="none" style="display:none"/>
+      <g id="map-base"><circle class="world-disc" cx="256" cy="256" r="219"/><circle class="world-ring" cx="256" cy="256" r="49"/><circle class="world-ring" cx="256" cy="256" r="122"/><circle class="world-ring" cx="256" cy="256" r="195"/><text class="world-label" x="256" y="14">NORTE</text></g>
+      <g id="map-tiles" class="atlas-image"></g>
       <g id="map-pins"></g>
     </svg>
     <div class="atlas-float atlas-bar" role="toolbar" aria-label="Camadas do mapa">
@@ -231,7 +231,6 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
     }
     return event;
   }
-  let atlasKey = '', atlasImage = '';
   const biomes = {Meadows:'Pradarias',BlackForest:'Floresta Negra',Swamp:'Pântano',
     Mountain:'Montanhas',Plains:'Planícies',Mistlands:'Terras Nebulosas',
     AshLands:'Terras das Cinzas',DeepNorth:'Norte Profundo',Ocean:'Oceano'};
@@ -446,7 +445,7 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
       proof.append(list);card.append(proof);box.append(card);
     }
   }
-  const WORLD = 512, METERS = 21000;
+  const WORLD = 512, METERS = 24576;
   const layers = {terrain:true, vikings:true, moments:true, discoveries:true};
   let view = null, fitted = false, selected = '';
   function toMap(point) {
@@ -471,7 +470,35 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
     return points;
   }
   function currentAtlas() {
-    return payload.atlas && atlasImage && atlasKey === payload.atlas.key ? payload.atlas : null;
+    return payload && payload.atlas ? payload.atlas : null;
+  }
+  let visibleTiles = '';
+  function renderTiles() {
+    const group = $('map-tiles'), atlas = currentAtlas();
+    if (!view || !atlas || !layers.terrain) {
+      if (visibleTiles) { group.replaceChildren(); visibleTiles = ''; }
+      return;
+    }
+    const svg = $('map'), box = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+    if (!box.width || !box.height || !vb.width) return;
+    const zoom = Math.max(0, Math.min(atlas.maxNativeZoom,
+      Math.ceil(Math.log2(box.width * WORLD / (vb.width * 256)))));
+    const count = 2 ** zoom, step = WORLD / count;
+    const left = Math.max(0, Math.floor(vb.x / step));
+    const top = Math.max(0, Math.floor(vb.y / step));
+    const right = Math.min(count - 1, Math.floor((vb.x + vb.width) / step));
+    const bottom = Math.min(count - 1, Math.floor((vb.y + vb.height) / step));
+    const key = [atlas.tiles, zoom, left, top, right, bottom].join(':');
+    if (key === visibleTiles) return;
+    visibleTiles = key;
+    group.replaceChildren();
+    for (let y = top; y <= bottom; y++) for (let x = left; x <= right; x++) {
+      const image = document.createElementNS(svgNS, 'image');
+      image.setAttribute('x', x * step); image.setAttribute('y', y * step);
+      image.setAttribute('width', step); image.setAttribute('height', step);
+      image.setAttribute('href', atlas.tiles.replace('{z}', zoom).replace('{x}', x).replace('{y}', y));
+      group.append(image);
+    }
   }
   function fitView(points) {
     if (!points.length) return {cx:WORLD / 2, cy:WORLD / 2, size:WORLD};
@@ -486,6 +513,7 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
     const height = aspect >= 1 ? view.size : view.size / aspect;
     const width = height * aspect;
     svg.setAttribute('viewBox', [view.cx - width / 2, view.cy - height / 2, width, height].join(' '));
+    renderTiles();
     // Markers keep a constant on-screen size; 1 screen px = unit world units.
     const unit = box.width ? width / box.width : width / 800;
     for (const marker of $('map-pins').children)
@@ -510,15 +538,12 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
     pins.replaceChildren();
     const points = mapPoints();
     const atlas = currentAtlas();
-    const image = $('map-image');
-    // SVG elements ignore the HTML hidden property; toggle display instead.
-    image.style.display = atlas && layers.terrain ? '' : 'none';
-    if (atlas && image.getAttribute('href') !== atlasImage) image.setAttribute('href', atlasImage);
+    $('map-base').style.display = atlas && layers.terrain ? 'none' : '';
     $('map-mode').textContent = !atlas ? 'Pontos registrados' :
       atlas.mode === 'full' ? 'Mundo inteiro' : 'Terras conhecidas';
     $('map-intro').textContent = !atlas ?
       'O terreno aparece quando a ponte gerar o mapa e o admin escolher um modo no Jarl.' :
-      atlas.mode === 'full' ? 'Biomas calculados a partir da semente do mundo.' :
+      atlas.mode === 'full' ? 'Mapa Birds Eye do mundo inteiro.' :
       'O terreno aparece em volta dos locais compartilhados; o resto segue sob névoa.';
     for (const point of points) {
       const [x, y] = toMap(point);
@@ -626,6 +651,10 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
   function render(data) {
     data.events.forEach(friendly);
     payload = data;
+    if (data.atlas && data.atlas.mode === 'explored') {
+      visibleTiles = '';
+      $('map-tiles').replaceChildren();
+    }
     world = data.world || '';
     $('count-vikings').textContent = data.players.length;
     $('count-online').textContent = data.players.filter(player => player.online).length;
@@ -650,17 +679,6 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
       if (!response.ok) throw Error('HTTP ' + response.status);
       const data = await response.json();
       if (current !== requestId) return;
-      if (data.atlas && data.atlas.key !== atlasKey) {
-        // The biome image is large; fetch it only when its content changes.
-        const second = await fetch(url + '&atlas_image=' + encodeURIComponent(data.atlas.key),
-          {cache:'no-store'});
-        const withImage = second.ok ? await second.json() : null;
-        if (current !== requestId) return;
-        if (withImage && withImage.atlas && withImage.atlas.image) {
-          atlasKey = withImage.atlas.key;
-          atlasImage = withImage.atlas.image;
-        }
-      }
       if (!data.available) {
         $('status').textContent = 'As Crônicas ainda não estão ativas neste servidor.';
         $('status').hidden = false;
@@ -680,6 +698,8 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
   $('world').addEventListener('change', event => {
     world = event.target.value;
     chosen = '';
+    view = null; fitted = false; visibleTiles = '';
+    $('map-tiles').replaceChildren();
     load();
   });
   for (const button of document.querySelectorAll('.filter[data-kind]')) {

@@ -1,6 +1,6 @@
 # Heimdall Sagas extension
 
-Status: **0.1.5 development preview** (bridge 0.1.5, client 0.1.4). The extension is opt-in and separate
+Status: **0.1.6 development preview** (bridge 0.1.6, client 0.1.4). The extension is opt-in and separate
 from the existing `saga.json` skill ranking. It has not been installed on a live
 server or published to Hexium.
 
@@ -76,12 +76,18 @@ position). Vegvisir boss targets are learned at runtime, so modded boss
 locations are included. At startup the bridge logs which built-in landmark
 names exist in the loaded world.
 
-After each server start the bridge derives a 512x512 biome grid from the world
-seed (`WorldGenerator.GetBiome`, a few rows per frame) and drops it in the
-inbox. The importer keeps it in `atlas/`. The admin picks the public map mode:
-no map, known lands (terrain revealed 700 m around consented shared locations;
-default) or the whole world. The overview API returns the image only when its
-content key changes. Player exploration fog from the client is not captured.
+The bridge derives 4096x4096 cartography layers from the world seed in a
+background task and drops them in the Sagas inbox. The importer checks sizes
+and metadata, then copies the layers into private storage. A separate,
+memory-limited worker renders only the Birds Eye style into private WebP tiles.
+The public tile endpoint checks the admin's current map mode on every request.
+In known-lands mode (default), it also checks current profile and map consent
+and reveals terrain within 700 m of shared locations; the response itself is
+masked, so guessing a tile URL cannot reveal the full world. Disabling the map
+or revoking consent takes effect on the next request. Full-world mode explicitly
+reveals every tile. The old biome grid is discarded. Client exploration fog is
+not captured. Exporting layers uses about 117 MB of private storage per world,
+plus rendered tiles; the worker runs outside the game with a 2 GB memory cap.
 
 ## Story providers and automatic chapters
 
@@ -104,7 +110,7 @@ the public page.
 | Last equipped items | Implemented in preview | Verify modded inventory slots and item localization |
 | Kill and death events with local retry, admin kill filter, biome, and recent feats | Implemented in preview | One-client combat/reconnect and consent-revocation playtest |
 | Advanced boss credit, drops, rarity, bounty | Planned | Server-authoritative provenance and deduplication tests |
-| Seed biome map with known-lands fog and discovery pins | Implemented in preview | Real-world orientation check |
+| Birds Eye map with consent-filtered known-lands fog and discovery pins | Implemented in preview | Real-world orientation and performance check |
 | Client exploration fog, custom pins, activity layers | Planned | Consent-preserving capture, bounded transport, large-map tests |
 | Portraits, icons, effects, resistances | Planned | Frame-budgeted capture and media validation |
 | Rankings, comparisons, trophy hall | Planned | Credited fact ledger and time-window rules |

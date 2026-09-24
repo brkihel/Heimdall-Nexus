@@ -91,11 +91,11 @@
   <p class="resumo-pronto" id="req-mapa-resumo">Verificando…</p>
   <ul class="requisitos" id="req-mapa" aria-live="polite"></ul>
   <fieldset class="sagas-filtro" id="map-filter"><legend>O que mostrar nas Crônicas</legend>
-      <p>O mapa de biomas é calculado pela ponte a partir da semente do mundo, uma vez por reinício do servidor.</p>
+      <p>O mapa Birds Eye é calculado pela ponte a partir da semente do mundo. A primeira geração pode levar alguns minutos.</p>
       <div class="sagas-modos">
         <label class="sagas-modo"><input type="radio" name="map_mode" value="off"><span><strong>Sem mapa</strong><small>Mostra só os pontos registrados, sem terreno.</small></span></label>
         <label class="sagas-modo"><input type="radio" name="map_mode" value="explored"><span><strong>Terras conhecidas</strong><small>Revela o terreno perto de locais compartilhados; o resto fica sob névoa.</small></span></label>
-        <label class="sagas-modo"><input type="radio" name="map_mode" value="full"><span><strong>Mundo inteiro</strong><small>Revela todos os biomas. Pode estragar a exploração dos jogadores.</small></span></label>
+        <label class="sagas-modo"><input type="radio" name="map_mode" value="full"><span><strong>Mundo inteiro</strong><small>Revela o terreno completo. Pode estragar a exploração dos jogadores.</small></span></label>
       </div>
     </fieldset>
   <div class="story-actions"><button class="btn principal" id="map-save" type="button">Salvar mapa</button><span id="map-feedback" role="status"></span></div>
@@ -167,8 +167,9 @@ function sagasShow(d){
   ]);
   requirements('req-mapa',[
     [d.settings.enabled,'Extensão ligada',d.settings.enabled?'':'Ligue “Extensão ativa” em Módulos.'],
-    [d.atlas>0,'Mapa de biomas gerado pela ponte',d.atlas>0?'Pronto para '+d.atlas+' mundo(s).':
-      'A ponte gera o mapa uma vez, logo depois que o Valheim inicia com a extensão ligada. Reinicie o servidor e aguarde cerca de 1 minuto.'],
+    [d.atlas>0&&!d.atlas_error,'Mapa Birds Eye pronto',d.atlas_error>0?'HN-ATL-001 · A geração falhou. Confira: sudo journalctl -u heimdall-sagas-atlas -n 50 --no-pager':d.atlas>0?'Pronto para '+d.atlas+' mundo(s).':
+      d.atlas_waiting>0?'Camadas recebidas. O renderizador está preparando as tiles; aguarde alguns minutos.':
+      'A ponte exporta o mapa após iniciar o Valheim com a extensão ligada. Reinicie o servidor e aguarde alguns minutos.'],
     [(d.settings.map_mode||'explored')!=='off','Modo do mapa escolhido',(d.settings.map_mode||'explored')!=='off'?'':'Escolha “Terras conhecidas” ou “Mundo inteiro” abaixo e salve.'],
     [(d.settings.map_mode==='full')||d.map_players>0,'Jogadores compartilhando locais',
       d.settings.map_mode==='full'?'Não é necessário no modo Mundo inteiro.':d.map_players>0?d.map_players+' Viking(s) compartilham o mapa.':

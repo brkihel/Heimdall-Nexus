@@ -1,0 +1,11 @@
+[Unit]
+Description=Check for a new Heimdall Sagas world map to render
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+AccuracySec=10s
+Unit=heimdall-sagas-atlas.service
+
+[Install]
+WantedBy=timers.target

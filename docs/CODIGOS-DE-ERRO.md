@@ -16,6 +16,7 @@ dele (`python3 ferramentas/gerar-codigos.py`) e um teste confere que as duas bat
 
 | Código | O que houve | Como resolver |
 |---|---|---|
+| `HN-ATL-001` | O mapa Birds Eye não pôde ser gerado | Confira o erro no servidor: sudo journalctl -u heimdall-sagas-atlas -n 50 --no-pager. Após corrigir a causa, o Nexus tenta de novo em até 10 minutos. |
 | `HN-UPD-001` | Git não instalado | Na máquina do Nexus, rode: sudo apt install git |
 | `HN-UPD-002` | O repositório demorou demais para responder | Confira a internet do servidor e tente de novo em alguns minutos. |
 | `HN-UPD-003` | O Git não conseguiu baixar as versões | Confira se o servidor acessa github.com (curl -I https://github.com). O detalhe do Git aparece na mensagem. |

@@ -56,7 +56,8 @@ from pathlib import Path
 import sys
 root, panel = sys.argv[1:]
 for name in ('heimdall-sagas-ingest.service', 'heimdall-sagas-ingest.timer',
-             'heimdall-sagas-story.service', 'heimdall-sagas-story.timer'):
+             'heimdall-sagas-story.service', 'heimdall-sagas-story.timer',
+             'heimdall-sagas-atlas.service', 'heimdall-sagas-atlas.timer'):
     text = (Path(root) / 'deploy/systemd' / name).read_text()
     text = text.replace('@ROOT@', root).replace('@PANEL_OS_USER@', panel)
     target = Path('/etc/systemd/system') / name
@@ -65,7 +66,34 @@ for name in ('heimdall-sagas-ingest.service', 'heimdall-sagas-ingest.timer',
 PY
   systemctl daemon-reload
   systemctl restart heimdall-sagas-ingest.timer
-  systemctl enable --now heimdall-sagas-story.timer
+  systemctl enable --now heimdall-sagas-story.timer heimdall-sagas-atlas.timer
+  nginx_backup="$(mktemp /etc/nginx/sites-available/.heimdall-atlas.XXXXXX)"
+  cp -p /etc/nginx/sites-available/heimdall-nexus "$nginx_backup"
+  python3 - <<'PY'
+from pathlib import Path
+path = Path('/etc/nginx/sites-available/heimdall-nexus')
+text = path.read_text()
+route = '''    location ^~ /api/sagas/v1/atlas/ {
+        limit_except GET { deny all; }
+        proxy_pass http://127.0.0.1:8791;
+        proxy_set_header Host $host;
+        add_header Cache-Control "no-store" always;
+    }
+
+'''
+if 'location ^~ /api/sagas/v1/atlas/' not in text:
+    marker = '    location = /api/sagas/v1/overview {'
+    if marker not in text:
+        raise SystemExit('The Nexus Nginx configuration has an unexpected layout.')
+    path.write_text(text.replace(marker, route + marker, 1))
+PY
+  if ! nginx -t; then
+    cp -p "$nginx_backup" /etc/nginx/sites-available/heimdall-nexus
+    rm -f "$nginx_backup"
+    fail HN-UPD-103 nginx-atlas-route
+  fi
+  rm -f "$nginx_backup"
+  systemctl reload nginx
 fi
 
 step 4 site-helpers HN-UPD-104

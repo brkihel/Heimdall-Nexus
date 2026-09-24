@@ -2,6 +2,7 @@
 import importlib.util
 import json
 import sqlite3
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -48,30 +49,90 @@ class SagasContractTests(unittest.TestCase):
         self.assertFalse(sagas.validate(event(kind='death', boss=True))['boss'])
 
     def test_atlas_import_and_fog(self):
-        import atlas
+        atlas_spec = importlib.util.spec_from_file_location('heimdall_atlas', ROOT / 'servicos/painel/atlas.py')
+        atlas = importlib.util.module_from_spec(atlas_spec)
+        with patch.dict(sys.modules, {'sagas': sagas}):
+            atlas_spec.loader.exec_module(atlas)
+        from PIL import Image
+        import io
         with tempfile.TemporaryDirectory() as temporary:
             state = Path(temporary)
             enable(state)
             (state / 'inbox').mkdir()
-            grid = bytes([1]) * (sagas.ATLAS_SIZE * sagas.ATLAS_SIZE)
-            (state / 'inbox' / f'atlas-{"a" * 64}.biomes').write_bytes(
-                b'HSB1' + sagas.ATLAS_SIZE.to_bytes(2, 'little') + b'\0\0' + grid)
-            (state / 'inbox' / f'atlas-{"b" * 64}.biomes').write_bytes(b'junk')
+            world = 'a' * 64
+            for layer, channels in sagas.CARTOGRAPHY_LAYERS.items():
+                with (state / 'inbox' / f'cartography-{world}.{layer}').open('wb') as output:
+                    output.truncate(sagas.CARTOGRAPHY_SIZE ** 2 * channels)
+            (state / 'inbox' / f'cartography-{world}.meta').write_text(json.dumps({
+                'version': 1, 'world': world, 'size': sagas.CARTOGRAPHY_SIZE, 'pixelSize': 6}))
+            (state / 'inbox' / f'cartography-{"b" * 64}.meta').write_text('invalid')
             with sagas.connect(state / 'sagas.sqlite3') as db:
                 sagas.ingest(db, sagas.validate(presence()), now=100)
                 sagas.ingest(db, sagas.validate(event(x=0, z=0)), now=101)
             sagas.process_inbox(state)
-            self.assertEqual(sorted(p.name for p in (state / 'atlas').iterdir()),
-                             [f'{"a" * 64}.biomes'])
-            self.assertEqual(list((state / 'inbox').glob('*.biomes')), [])
-            info = atlas.summary(state, 'a' * 64)
+            folder = state / 'cartography' / world
+            self.assertTrue((folder / 'base.rgb').is_file())
+            self.assertEqual(list((state / 'inbox').glob('cartography-*')), [])
+            rev = '1' * 16
+            (folder / 'published.json').write_text(json.dumps({'revision': rev}))
+            tile_path = folder / 'tiles' / rev / '0' / '0' / '0.webp'
+            tile_path.parent.mkdir(parents=True)
+            Image.new('RGB', (256, 256), (255, 0, 0)).save(tile_path, 'WEBP')
+            info = atlas.summary(state, world)
             self.assertEqual(info['mode'], 'explored')
-            self.assertEqual(info['points'], [(0, 0)])
-            self.assertTrue(atlas.image(state, 'a' * 64, info).startswith('data:image/png;base64,'))
+            self.assertNotIn('points', info)
+            shown = Image.open(io.BytesIO(atlas.tile(state, world, rev, 0, 0, 0)))
+            self.assertGreater(shown.getpixel((128, 128))[0], 200)
+            self.assertLess(shown.getpixel((0, 0))[0], 30)
+            with sagas.connect(state / 'sagas.sqlite3') as db:
+                sagas.ingest(db, sagas.validate(presence(share_map=False)), now=102)
+            hidden = Image.open(io.BytesIO(atlas.tile(state, world, rev, 0, 0, 0)))
+            self.assertLess(hidden.getpixel((128, 128))[0], 30)
+            self.assertIsNone(atlas.tile(state, world, '2' * 16, 0, 0, 0))
+            self.assertIsNone(atlas.tile(state, world, rev, 0, 1, 0))
             settings = sagas.load_settings(state)
+            settings['map_mode'] = 'full'
+            (state / 'settings.json').write_text(json.dumps(settings))
+            revealed = Image.open(io.BytesIO(atlas.tile(state, world, rev, 0, 0, 0)))
+            self.assertGreater(revealed.getpixel((0, 0))[0], 200)
             settings['map_mode'] = 'off'
             (state / 'settings.json').write_text(json.dumps(settings))
-            self.assertIsNone(atlas.summary(state, 'a' * 64))
+            self.assertIsNone(atlas.summary(state, world))
+            self.assertIsNone(atlas.tile(state, world, rev, 0, 0, 0))
+
+    def test_cartography_import_rejects_symlink_layer(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            state = Path(temporary)
+            enable(state)
+            inbox = state / 'inbox'
+            inbox.mkdir()
+            secret = state / 'secret'
+            secret.write_text('private')
+            (inbox / f'cartography-{WORLD}.base.rgb').symlink_to(secret)
+            (inbox / f'cartography-{WORLD}.meta').write_text(json.dumps({
+                'version': 1, 'world': WORLD, 'size': sagas.CARTOGRAPHY_SIZE, 'pixelSize': 6}))
+            sagas.process_inbox(state)
+            self.assertEqual(secret.read_text(), 'private')
+            self.assertFalse((state / 'cartography' / WORLD / 'meta.json').exists())
+
+    def test_birds_eye_rows_put_north_at_top(self):
+        import numpy as np
+        atlas_spec = importlib.util.spec_from_file_location('heimdall_atlas', ROOT / 'servicos/painel/atlas.py')
+        atlas = importlib.util.module_from_spec(atlas_spec)
+        with patch.dict(sys.modules, {'sagas': sagas}):
+            atlas_spec.loader.exec_module(atlas)
+        with tempfile.TemporaryDirectory() as temporary, patch.object(atlas, 'SIZE', 4):
+            folder = Path(temporary)
+            base = np.zeros((4, 4, 3), np.uint8)
+            base[0, :, 0] = 200  # southern row
+            base[3, :, 2] = 200  # northern row
+            base.tofile(folder / 'base.rgb')
+            np.zeros((4, 4, 2), np.uint8).tofile(folder / 'height.rg')
+            np.zeros((4, 4), np.uint8).tofile(folder / 'abyss.r8')
+            np.zeros((4, 4), np.uint8).tofile(folder / 'paper.r8')
+            result = atlas.render_birds_eye(folder)
+            self.assertGreater(result[0, 0, 2], result[0, 0, 0])
+            self.assertGreater(result[3, 0, 0], result[3, 0, 2])
 
     def test_legacy_settings_default_to_all_kills(self):
         with tempfile.TemporaryDirectory() as temporary:
