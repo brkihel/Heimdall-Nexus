@@ -231,3 +231,20 @@ class SetupAccessTests(unittest.TestCase):
             local.server_close()
         for address in setup_server.local_addresses():
             self.assertFalse(address.startswith('127.'))
+
+
+class CommandRunnerTests(unittest.TestCase):
+    def test_process_that_exits_after_closing_output_is_not_a_timeout(self):
+        engine = installer.Installer(choices(), lambda step, line: None)
+        started = __import__('time').monotonic()
+        # Closes stdout/stderr first and exits a second later, like a quick
+        # systemctl call whose output ends just before the process is reaped.
+        engine.command('services', ['sh', '-c', 'echo done; exec 1>&- 2>&-; sleep 1'], timeout=10)
+        self.assertLess(__import__('time').monotonic() - started, 5)
+
+    def test_failure_after_closing_output_still_reports(self):
+        engine = installer.Installer(choices(), lambda step, line: None)
+        with self.assertRaises(installer.InstallError) as caught:
+            engine.command('services', ['sh', '-c', 'echo "ERROR! broken"; exec 1>&- 2>&-; sleep 1; exit 3'],
+                           timeout=10)
+        self.assertIn('ERROR! broken', str(caught.exception))

@@ -276,7 +276,15 @@ class Installer:
                 item = stream.get(timeout=0.5)
             except queue.Empty:
                 item = ''
-            if item is None and process.poll() is not None:
+            if item is None:
+                # Output closed. The process may exit a moment later, so wait
+                # for it instead of polling once (a lost EOF hung until timeout).
+                try:
+                    process.wait(timeout=max(1.0, deadline - time.monotonic()))
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()
+                    raise InstallError(f'{step} timed out.')
                 break
             if item:
                 last = item
