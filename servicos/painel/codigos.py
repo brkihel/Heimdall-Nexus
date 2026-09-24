@@ -36,6 +36,8 @@ CATALOGO: dict[str, dict[str, str]] = {
                    'solucao': 'O systemd recusou a tarefa. Veja: sudo journalctl -u heimdall-executor -n 50'},
     'HN-UPD-012': {'titulo': 'Nenhuma procura recente',
                    'solucao': 'Clique em Procurar atualizações antes de atualizar.'},
+    'HN-UPD-013': {'titulo': 'Esta versão já está instalada',
+                   'solucao': 'Nada a fazer. Procure atualizações de novo mais tarde.'},
     # --- Updates: steps of deploy/update.sh ---
     'HN-UPD-100': {'titulo': 'Pré-requisitos da atualização não atendidos',
                    'solucao': 'A instalação não foi encontrada ou o script não rodou como root. Veja o registro técnico.'},

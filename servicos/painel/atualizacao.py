@@ -169,6 +169,10 @@ def status(state: Path = STATE, runtime: Path = RUNTIME) -> dict:
         check = json.loads(paths['check'].read_text(encoding='utf-8'))
     except (OSError, ValueError):
         check = None
+    current = installed(runtime).get('commit', '')
+    if isinstance(check, dict) and check.get('target') and check['target'] == current:
+        # The saved result predates the update that installed its target.
+        check = {**check, 'up_to_date': True, 'commits': []}
     active = running()
     log = _log_tail(paths['log'], 400)
     return {'installed': installed(runtime), 'channel': channel(state, runtime),
@@ -257,6 +261,8 @@ def start(commit: object, state: Path = STATE, runner=subprocess.run,
         last = json.loads(paths['check'].read_text(encoding='utf-8'))
     except (OSError, ValueError) as error:
         raise UpdateError('HN-UPD-012', 'procure atualizações antes de atualizar') from error
+    if commit == installed(runtime).get('commit'):
+        raise UpdateError('HN-UPD-013', 'esta versão já está instalada')
     source = paths['source']
     remote = _git(source, 'rev-parse', f'origin/{last["channel"]}^{{commit}}').strip()
     if last.get('error') or last.get('target') != commit or remote != commit or last['channel'] != channel(state, runtime):

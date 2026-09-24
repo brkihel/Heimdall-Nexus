@@ -100,6 +100,18 @@ class UpdateTests(unittest.TestCase):
         self.assertEqual(command[-1], str(self.state / 'source/deploy/update.sh'))
         self.assertEqual(git(self.state / 'source', 'rev-parse', 'HEAD'), third)
 
+    def test_saved_check_is_up_to_date_after_its_target_is_installed(self):
+        self.check()
+        self.assertFalse(atualizacao.status(self.state, self.runtime)['check']['up_to_date'])
+        (self.runtime / '.heimdall-version.json').write_text(json.dumps(
+            {'commit': self.second, 'short': self.second[:7]}))
+        after = atualizacao.status(self.state, self.runtime)['check']
+        self.assertTrue(after['up_to_date'])
+        self.assertEqual(after['commits'], [])
+        with patch.object(atualizacao, 'running', return_value=False), \
+                self.assertRaisesRegex(atualizacao.UpdateError, 'HN-UPD-013'):
+            atualizacao.start(self.second, self.state, lambda *a, **k: None, self.runtime)
+
     def test_refuses_while_another_update_runs(self):
         self.check()
         with patch.object(atualizacao, 'running', return_value=True), \

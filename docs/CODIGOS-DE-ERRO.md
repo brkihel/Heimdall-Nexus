@@ -26,6 +26,7 @@ dele (`python3 ferramentas/gerar-codigos.py`) e um teste confere que as duas bat
 | `HN-UPD-010` | A lista de mudanças ficou desatualizada | O canal recebeu uma versão nova depois da sua procura. Procure de novo e confira a lista. |
 | `HN-UPD-011` | Não foi possível iniciar a atualização | O systemd recusou a tarefa. Veja: sudo journalctl -u heimdall-executor -n 50 |
 | `HN-UPD-012` | Nenhuma procura recente | Clique em Procurar atualizações antes de atualizar. |
+| `HN-UPD-013` | Esta versão já está instalada | Nada a fazer. Procure atualizações de novo mais tarde. |
 | `HN-UPD-100` | Pré-requisitos da atualização não atendidos | A instalação não foi encontrada ou o script não rodou como root. Veja o registro técnico. |
 | `HN-UPD-101` | Falha ao copiar o código novo | Confira o espaço em disco (df -h /opt). A versão anterior continua nos serviços até o reinício. |
 | `HN-UPD-102` | Falha ao atualizar as bibliotecas do painel | O pip não conseguiu instalar as dependências. Confira a internet do servidor e tente de novo. |
