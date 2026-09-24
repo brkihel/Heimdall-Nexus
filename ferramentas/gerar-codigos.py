@@ -7,10 +7,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'servicos/painel'))
 import codigos  # noqa: E402
 
-AREAS = {'UPD': 'Atualizações pelo Jarl e `deploy/update.sh`',
+AREAS = {'ATL': 'Geração do mapa Birds Eye',
+         'UPD': 'Atualizações pelo Jarl e `deploy/update.sh`',
          'CFG': 'Server Config: admins, whitelist, banidos e modificadores de mundo',
          'MOD': 'Instalar, atualizar e remover mods pelo Jarl',
-         'STO': 'Histórias das Sagas (OpenRouter, OpenAI, Anthropic)'}
+         'STO': 'Histórias das Sagas (OpenRouter, OpenAI, Anthropic, Gemini)'}
 
 
 def render() -> str:

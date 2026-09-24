@@ -68,7 +68,7 @@ CATALOGO: dict[str, dict[str, str]] = {
     'HN-STO-002': {'titulo': 'Histórias desligadas', 'solucao': 'Ligue "Extensão ativa" e "Abates e mortes" em Módulos e "Histórias ativas" no cartão de histórias.'},
     'HN-STO-003': {'titulo': 'Mundo ou Viking inválido', 'solucao': 'Recarregue a página e escolha de novo.'},
     'HN-STO-004': {'titulo': 'Chave de API não configurada', 'solucao': 'Cole a chave do provedor escolhido e clique em Guardar chave.'},
-    'HN-STO-005': {'titulo': 'Chave de API inválida', 'solucao': 'Confira se a chave é do provedor escolhido (OpenRouter sk-or-…, OpenAI sk-…, Anthropic sk-ant-…).'},
+    'HN-STO-005': {'titulo': 'Chave de API inválida', 'solucao': 'Confira se a chave é do provedor escolhido (OpenRouter sk-or-…, OpenAI sk-…, Anthropic sk-ant-… ou uma chave da API Gemini).'},
     'HN-STO-006': {'titulo': 'Nenhum evento autorizado', 'solucao': 'O jogador precisa de ShareProfile e ShareStories como true no BepInEx e de ao menos um momento registrado.'},
     'HN-STO-007': {'titulo': 'Já existe uma história para esses momentos', 'solucao': 'Espere novos momentos serem registrados.'},
     'HN-STO-008': {'titulo': 'Limite diário de histórias atingido', 'solucao': 'O limite volta à meia-noite UTC. Aumente "Capítulos por dia" se quiser mais.'},

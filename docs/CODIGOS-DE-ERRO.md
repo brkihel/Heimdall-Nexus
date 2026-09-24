@@ -9,10 +9,11 @@ dele (`python3 ferramentas/gerar-codigos.py`) e um teste confere que as duas bat
 
 | Área | Significado |
 |---|---|
+| ATL | Geração do mapa Birds Eye |
 | UPD | Atualizações pelo Jarl e `deploy/update.sh` |
 | CFG | Server Config: admins, whitelist, banidos e modificadores de mundo |
 | MOD | Instalar, atualizar e remover mods pelo Jarl |
-| STO | Histórias das Sagas (OpenRouter, OpenAI, Anthropic) |
+| STO | Histórias das Sagas (OpenRouter, OpenAI, Anthropic, Gemini) |
 
 | Código | O que houve | Como resolver |
 |---|---|---|
@@ -45,7 +46,7 @@ dele (`python3 ferramentas/gerar-codigos.py`) e um teste confere que as duas bat
 | `HN-STO-002` | Histórias desligadas | Ligue "Extensão ativa" e "Abates e mortes" em Módulos e "Histórias ativas" no cartão de histórias. |
 | `HN-STO-003` | Mundo ou Viking inválido | Recarregue a página e escolha de novo. |
 | `HN-STO-004` | Chave de API não configurada | Cole a chave do provedor escolhido e clique em Guardar chave. |
-| `HN-STO-005` | Chave de API inválida | Confira se a chave é do provedor escolhido (OpenRouter sk-or-…, OpenAI sk-…, Anthropic sk-ant-…). |
+| `HN-STO-005` | Chave de API inválida | Confira se a chave é do provedor escolhido (OpenRouter sk-or-…, OpenAI sk-…, Anthropic sk-ant-… ou uma chave da API Gemini). |
 | `HN-STO-006` | Nenhum evento autorizado | O jogador precisa de ShareProfile e ShareStories como true no BepInEx e de ao menos um momento registrado. |
 | `HN-STO-007` | Já existe uma história para esses momentos | Espere novos momentos serem registrados. |
 | `HN-STO-008` | Limite diário de histórias atingido | O limite volta à meia-noite UTC. Aumente "Capítulos por dia" se quiser mais. |

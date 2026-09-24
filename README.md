@@ -70,7 +70,7 @@ Then sign in at `https://your-domain/jarl/entrar`. Full walkthrough: [**Installa
 - Valheim Dedicated Server through SteamCMD, as a systemd service
 - Optional BepInEx, with modpacks from Thunderstore or Hexium (paste the link)
 - Your own `.zip` modpack with private mods
-- Server Config: name, world, port, password, crossplay, launch arguments
+- Server Config: name, world, port, password, world modifiers, admins and allowlist
 
 </td>
 <td width="50%" valign="top">
@@ -78,6 +78,7 @@ Then sign in at `https://your-domain/jarl/entrar`. Full walkthrough: [**Installa
 **Day to day**
 - Live console, file manager and mod config editor
 - Install and update mods, with a verified backup before each change
+- Update Heimdall from Jarl, with progress, error codes and a stable channel
 - Tarefas: cron schedules for restarts, starts, stops and backups
 - Backups you can download, restore, lock and delete
 
@@ -90,6 +91,7 @@ Then sign in at `https://your-domain/jarl/entrar`. Full walkthrough: [**Installa
 - Live status, players, world clock and mod list
 - Visual editor with versions and shareable previews
 - Name, logo, favicon, background and a global color table
+- Editable navigation and pages for map, stories, armory and rankings
 - Pages from wiki or blank templates
 
 </td>
@@ -99,11 +101,21 @@ Then sign in at `https://your-domain/jarl/entrar`. Full walkthrough: [**Installa
 - Game password required; removable only with a passwordless-server mod
 - Separate Linux accounts for the game and the panel
 - One-time setup links; privileged actions go through an audited executor
-- No telemetry: outside connections are only downloads and the optional setup link
+- No core telemetry; optional AI stories send consented facts to the chosen provider
 
 </td>
 </tr>
 </table>
+
+## Optional Sagas extension
+
+Sagas adds a Birds Eye map, Viking moments, equipment, rankings and AI-assisted
+chapters to the site. The admin enables each feature in Jarl; players choose
+separately whether to share their profile, map, position and story facts.
+Provider keys stay on the server. The [Sagas guide](https://github.com/brkihel/Heimdall-Nexus/wiki/Sagas)
+explains installation, consent and the remaining preview limits.
+
+See the [0.2.0 release notes](CHANGELOG.md).
 
 ## Documentation
 
@@ -111,7 +123,8 @@ Everything lives in the [**wiki**](https://github.com/brkihel/Heimdall-Nexus/wik
 [Installation](https://github.com/brkihel/Heimdall-Nexus/wiki/Installation) ·
 [Configuration](https://github.com/brkihel/Heimdall-Nexus/wiki/Configuration) ·
 [Operations](https://github.com/brkihel/Heimdall-Nexus/wiki/Operations) ·
-[Visual Editor](https://github.com/brkihel/Heimdall-Nexus/wiki/Visual-Editor)
+[Visual Editor](https://github.com/brkihel/Heimdall-Nexus/wiki/Visual-Editor) ·
+[Sagas](https://github.com/brkihel/Heimdall-Nexus/wiki/Sagas)
 
 ## Updating
 

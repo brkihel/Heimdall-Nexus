@@ -70,7 +70,7 @@ Depois entre em `https://seu-dominio/jarl/entrar`. Passo a passo completo: [**In
 - Valheim Dedicated Server pelo SteamCMD, como serviço systemd
 - BepInEx opcional, com modpacks da Thunderstore ou do Hexium (é só colar o link)
 - Seu próprio modpack `.zip`, com mods privados
-- Server Config: nome, mundo, porta, senha, crossplay, argumentos de inicialização
+- Server Config: nome, mundo, porta, senha, modificadores, admins e whitelist
 
 </td>
 <td width="50%" valign="top">
@@ -78,6 +78,7 @@ Depois entre em `https://seu-dominio/jarl/entrar`. Passo a passo completo: [**In
 **Dia a dia**
 - Console ao vivo, gerenciador de arquivos e editor de configurações de mods
 - Instalar e atualizar mods, com backup verificado antes de cada mudança
+- Atualizar o Heimdall pelo Jarl, com progresso, códigos de erro e canal estável
 - Tarefas: rotinas cron para reiniciar, ligar, desligar e fazer backup
 - Backups para baixar, restaurar, travar e apagar
 
@@ -90,6 +91,7 @@ Depois entre em `https://seu-dominio/jarl/entrar`. Passo a passo completo: [**In
 - Estado ao vivo, jogadores, relógio do mundo e lista de mods
 - Editor visual com versões e prévias para compartilhar
 - Nome, logo, favicon, fundo e uma tabela global de cores
+- Navegação editável e páginas de mapa, histórias, armaria e rankings
 - Páginas a partir dos modelos wiki ou vazio
 
 </td>
@@ -99,11 +101,22 @@ Depois entre em `https://seu-dominio/jarl/entrar`. Passo a passo completo: [**In
 - Senha do jogo obrigatória; só pode sair com um mod de servidor sem senha
 - Contas Linux separadas para o jogo e o painel
 - Links de instalação de uso único; ações privilegiadas passam por um executor auditado
-- Sem telemetria: as conexões externas são só os downloads e o link opcional de instalação
+- Sem telemetria do núcleo; histórias opcionais enviam fatos consentidos ao provedor escolhido
 
 </td>
 </tr>
 </table>
+
+## Extensão Sagas opcional
+
+Sagas acrescenta mapa Birds Eye, momentos dos Vikings, equipamento, rankings e
+capítulos com ajuda de IA ao site. O administrador liga cada recurso no Jarl;
+os jogadores escolhem separadamente se compartilham perfil, mapa, posição e
+fatos para histórias. As chaves dos provedores ficam no servidor. O
+[guia Sagas](https://github.com/brkihel/Heimdall-Nexus/wiki/Sagas-PT)
+explica instalação, consentimento e os limites desta prévia.
+
+Veja as [notas da versão 0.2.0](CHANGELOG.md).
 
 ## Documentação
 
@@ -111,7 +124,8 @@ Tudo está na [**wiki**](https://github.com/brkihel/Heimdall-Nexus/wiki/Inicio),
 [Instalação](https://github.com/brkihel/Heimdall-Nexus/wiki/Instalacao) ·
 [Configuração](https://github.com/brkihel/Heimdall-Nexus/wiki/Configuracao) ·
 [Operação](https://github.com/brkihel/Heimdall-Nexus/wiki/Operacao) ·
-[Editor visual](https://github.com/brkihel/Heimdall-Nexus/wiki/Editor-Visual)
+[Editor visual](https://github.com/brkihel/Heimdall-Nexus/wiki/Editor-Visual) ·
+[Sagas](https://github.com/brkihel/Heimdall-Nexus/wiki/Sagas-PT)
 
 ## Atualizar
 
