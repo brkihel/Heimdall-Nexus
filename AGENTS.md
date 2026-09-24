@@ -7,5 +7,6 @@ GenesisMods tokens and components.
 
 - Code, logs and comments in English; player-facing text in pt-BR.
 - The Sagas port plan and status live in docs/SAGAS-EXTENSION.md.
-- Development happens on `dev/sagas`; the user tests it on a private VM by
+- Stable releases live on `main` and carry a `vX.Y.Z` tag. Develop new
+  features on branches from `main`; the user tests them on a private VM by
   `git pull` + `sudo ./deploy/update.sh`. Never test on production.

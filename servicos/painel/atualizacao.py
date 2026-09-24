@@ -66,9 +66,18 @@ def _git(source: Path, *args: str, timeout: int = 30, allow_file: bool = False) 
 def installed(runtime: Path = RUNTIME) -> dict:
     try:
         data = json.loads((runtime / '.heimdall-version.json').read_text(encoding='utf-8'))
-        return data if isinstance(data, dict) else {}
     except (OSError, ValueError):
-        return {}
+        data = {}
+    if not isinstance(data, dict):
+        data = {}
+    if not data.get('version'):
+        try:
+            version = (runtime / 'deploy/VERSION').read_text(encoding='ascii').strip()
+            if re.fullmatch(r'\d+\.\d+\.\d+', version):
+                data['version'] = version
+        except (OSError, UnicodeError):
+            pass
+    return data
 
 
 def channel(state: Path = STATE, runtime: Path = RUNTIME) -> str:

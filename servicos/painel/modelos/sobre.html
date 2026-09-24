@@ -48,7 +48,8 @@
 
 <div class="cartao"><h2>Versão instalada</h2>
   <div class="versao">
-    <div><small>Versão</small><b id="v-commit">—</b></div>
+    <div><small>Versão</small><b id="v-version">—</b></div>
+    <div><small>Revisão</small><b id="v-commit">—</b></div>
     <div><small>Canal</small><b id="v-canal">—</b></div>
     <div><small>Atualizado em</small><b id="v-quando">—</b></div>
   </div>
@@ -153,6 +154,7 @@ function mostraFalha(codigo){
 $('falha-fechar').addEventListener('click',()=>{$('falha').hidden=true;guarda('heimdall-falha-vista',$('falha-codigo').textContent+(ultimoProgresso?'':''));});
 function mostra(d){
   const v=d.installed||{};
+  $('v-version').textContent=v.version||'desconhecida';
   $('v-commit').textContent=v.short?v.short:'desconhecida';
   $('v-canal').textContent=v.branch||d.channel;
   $('v-quando').textContent=quando(v.updated_at);

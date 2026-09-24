@@ -155,6 +155,7 @@ commit = git('rev-parse', 'HEAD')
 branch = branch or git('rev-parse', '--abbrev-ref', 'HEAD')
 info = {'commit': commit, 'short': commit[:7], 'subject': git('log', '-1', '--format=%s')[:200],
         'date': int(git('log', '-1', '--format=%ct') or 0), 'branch': '' if branch == 'HEAD' else branch,
+        'version': (Path(runtime) / 'deploy/VERSION').read_text(encoding='ascii').strip(),
         'updated_at': int(time.time()), 'bridge_updated': bridge == 'true',
         'from_panel': root == '/var/lib/heimdall-nexus/source'}
 target = Path(runtime) / '.heimdall-version.json'

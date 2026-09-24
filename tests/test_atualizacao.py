@@ -71,6 +71,14 @@ class UpdateTests(unittest.TestCase):
         atualizacao.set_channel('main', self.state)
         self.assertEqual(atualizacao.channel(self.state, self.runtime), 'main')
 
+    def test_installed_version_comes_from_release_manifest(self):
+        release = self.runtime / 'deploy/VERSION'
+        release.parent.mkdir()
+        release.write_text('0.2.0\n', encoding='ascii')
+        self.assertEqual(atualizacao.installed(self.runtime)['version'], '0.2.0')
+        (self.runtime / '.heimdall-version.json').write_text(json.dumps({'version': '0.2.1'}))
+        self.assertEqual(atualizacao.installed(self.runtime)['version'], '0.2.1')
+
     def test_channel_names_are_restricted(self):
         for bad in ('Feature_Evil', '../main', 'main; rm', 'dev/', 3):
             with self.subTest(bad=bad), self.assertRaises(atualizacao.UpdateError):
