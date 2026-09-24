@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Wiki (English)
+    url: https://github.com/brkihel/Heimdall-Nexus/wiki
+    about: Installation, configuration, operations and the visual editor.
+  - name: Wiki (Português)
+    url: https://github.com/brkihel/Heimdall-Nexus/wiki/Inicio
+    about: Instalação, configuração, operação e editor visual.

@@ -1,0 +1,51 @@
+name: Bug report / Relatar problema
+description: Something failed or behaves wrong. / Algo falhou ou funciona errado.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping. **Never paste passwords, panel links or setup links with tokens.**
+        Obrigado por ajudar. **Nunca cole senhas, links do painel ou links de instalação com token.**
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where / Onde
+      options:
+        - Installer / Instalador
+        - Panel / Painel
+        - Website / Site
+        - Game server / Servidor de jogo
+        - Mods / Modpack
+        - Update / Atualização (update.sh)
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened / O que aconteceu
+      description: The step and the exact error message. / A etapa e a mensagem de erro exata.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected / O que você esperava
+  - type: input
+    id: os
+    attributes:
+      label: OS / Sistema
+      placeholder: Debian 13 (trixie), Ubuntu 24.04…
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Heimdall Nexus version / Versão
+      description: Output of / Saída de `git log -1 --oneline`
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: For example / Por exemplo `sudo journalctl -u heimdall-panel -n 80 --no-pager`
+      render: text

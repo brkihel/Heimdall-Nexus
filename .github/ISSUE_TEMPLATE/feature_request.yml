@@ -1,0 +1,15 @@
+name: Idea / Sugestão
+description: Suggest an improvement. / Sugira uma melhoria.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What do you want to do? / O que você quer fazer?
+      description: Describe the need, not only the solution. / Descreva a necessidade, não só a solução.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How could it work? / Como poderia funcionar?

@@ -1,70 +1,134 @@
-# Heimdall Nexus
+<div align="center">
 
-**Valheim Server Management Platform**
-Criado por **BRKiHeL**. [Read in English](README.md).
+<img src=".github/assets/banner.webp" alt="Heimdall Nexus" width="100%">
 
-O Heimdall Nexus instala e mantém um servidor dedicado de Valheim, com um painel no navegador e um site público editável visualmente. Pelo painel você cuida do jogo, dos mods, das tarefas agendadas e dos backups. O site já vem com uma identidade neutra do Heimdall: defina nome, logo, favicon, cores, fundo e rodapé em **Aparência**, crie páginas a partir dos modelos wiki ou vazio e edite os textos no editor visual. Sem planilhas nem geradores de página.
+### O guardião que tudo vê para o seu servidor de Valheim
 
-## Prepare a VM
+Instale um servidor dedicado de Valheim, um painel no navegador e um site editável visualmente —<br>
+num único assistente guiado, numa máquina nova com Ubuntu ou Debian.
 
-Use uma máquina nova com Ubuntu ou Debian x86-64, systemd, Python 3.10 ou mais recente, sudo, internet e espaço para jogo, mundos, mods e backups. Instale primeiro os pacotes do sistema:
+[**Começo rápido**](#começo-rápido) · [**Wiki**](https://github.com/brkihel/Heimdall-Nexus/wiki/Inicio) · [**Read in English**](README.md)
 
-~~~bash
-sudo apt update
-sudo apt install -y git ca-certificates curl tar unzip libc6-i386 lib32gcc-s1 \
-  libatomic1 libpulse0 libpulse-dev nginx python3 python3-venv python3-pip rsync
-~~~
+[![Licença](https://img.shields.io/badge/licen%C3%A7a-PolyForm%20Noncommercial-c8a45c?style=flat-square&labelColor=0d151d)](LICENSE)
+[![Valheim](https://img.shields.io/badge/Valheim-servidor%20dedicado-c8a45c?style=flat-square&labelColor=0d151d)](https://valheim.com/support/a-guide-to-dedicated-servers/)
+[![Plataforma](https://img.shields.io/badge/Ubuntu%20%7C%20Debian-x86--64-c8a45c?style=flat-square&labelColor=0d151d)](#começo-rápido)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-c8a45c?style=flat-square&labelColor=0d151d)](https://www.python.org/)
 
-Se for ativar HTTPS automático, instale também `sudo apt install -y certbot python3-certbot-nginx`. O assistente instala esses pacotes caso faltem, mas prepará-los agora revela problemas no APT antes de você preencher as configurações. SteamCMD, servidor Valheim, BepInEx opcional e arquivos do modpack são baixados pelo assistente. Não é preciso instalar Node.js, Docker nem o cliente Steam. Veja a [preparação completa](docs/wiki/pt-BR/Instalacao.md#1-prepare-a-máquina).
+</div>
 
-## Instalação visual
+---
 
-Clone o repositório e execute:
+## Instale pelo navegador
 
-~~~bash
+O instalador roda no seu servidor e abre no seu navegador. São cinco telas: endereço do site, mundo e senha, mods e dados ao vivo, conta de administrador e revisão. Ele baixa o SteamCMD e o Valheim, instala o BepInEx e o seu modpack se você quiser, e mostra cada etapa enquanto acontece.
+
+<img src=".github/assets/installer.webp" alt="Instalador visual do Heimdall Nexus" width="100%">
+
+## Cuide do servidor por um painel só
+
+Ligue, desligue e reinicie o jogo, acompanhe o log ao vivo, edite arquivos e configurações de mods, instale e atualize mods, agende reinícios e backups e restaure qualquer backup com um clique. Toda mudança fica registrada na auditoria.
+
+<img src=".github/assets/panel.webp" alt="Painel do Heimdall Nexus" width="100%">
+
+## Dê à sua comunidade um site de verdade
+
+Um site rápido com estado do servidor ao vivo, jogadores online, hora do mundo e a lista de mods. Defina nome, logo, favicon e cores em **Aparência**, edite cada texto direto na página e crie páginas a partir dos modelos wiki ou vazio. Sem código e sem planilhas.
+
+<img src=".github/assets/site.webp" alt="Um site de comunidade feito com o Heimdall Nexus" width="100%">
+
+<sub>As capturas usam dados de exemplo.</sub>
+
+## Começo rápido
+
+Numa máquina nova com **Ubuntu ou Debian x86-64** e Python 3.10+:
+
+```bash
+sudo apt update && sudo apt install -y git
 git clone https://github.com/brkihel/Heimdall-Nexus.git
 cd Heimdall-Nexus
 sudo ./deploy/install.sh
-~~~
+```
 
-O terminal mostra como abrir o assistente no navegador. São três jeitos:
+O terminal mostra um link privado para o instalador. Abra no seu navegador e siga as cinco telas.
 
-- **Link HTTPS temporário (padrão).** O instalador cria o link com o Cloudflare Quick Tunnel e só o mostra depois de confirmar que ele abre. Se o link parar de funcionar, ele cria outro e mostra o novo. O assistente continua escutando só em 127.0.0.1:8765.
-- **Link direto, `--direct`.** Para uma máquina numa rede de confiança, como uma VM na sua rede local. O assistente escuta no IP da máquina e mostra `http://IP:8765/claim?token=…`. Usa HTTP sem criptografia, então evite em redes públicas. Libere a porta TCP 8765 se o firewall bloquear.
-- **Túnel SSH, `--local-only`.** Sem serviço externo e sem porta aberta.
+| Como abrir o instalador | Quando usar |
+|---|---|
+| `sudo ./deploy/install.sh` | Padrão. Link HTTPS temporário pela Cloudflare, conferido antes de aparecer. |
+| `sudo ./deploy/install.sh --direct` | Máquina numa rede de confiança, como uma VM da sua rede local. Link HTTP para o IP dela. |
+| `sudo ./deploy/install.sh --local-only` | Sem serviço externo. Encaminhe a porta com `ssh -L 8765:127.0.0.1:8765 usuario@servidor`. |
 
-~~~bash
-sudo ./deploy/install.sh --direct       # VM na sua rede
-sudo ./deploy/install.sh --local-only   # depois, no seu computador:
-ssh -L 8765:127.0.0.1:8765 usuario@seu-servidor
-~~~
+Depois entre em `https://seu-dominio/jarl/entrar`. Passo a passo completo: [**Instalação**](https://github.com/brkihel/Heimdall-Nexus/wiki/Instalacao).
 
-Todo link leva um token de uso único; não o compartilhe. Abra no navegador o link mostrado. Escolha domínio ou IP, nome/mundo/porta do jogo, BepInEx opcional, dados ao vivo, o nome da conta Linux do serviço e o login do painel e se o jogo deve ser iniciado. **Iniciar Valheim vem desmarcado.** A tela mostra o progresso de cada etapa.
+## Recursos
 
-O assistente baixa SteamCMD da Valve e instala Valheim Dedicated Server (Steam App 896660), o serviço systemd, pastas persistentes do mundo, Nginx, site e painel. O código dos serviços é copiado para `/opt/heimdall-nexus`, então o painel funciona mesmo que o repositório tenha sido clonado numa pasta pessoal fechada. BepInExPack Valheim é opcional. Selecionar um modpack Hexium traz sua **lista para o site** e pode instalar os pacotes compatíveis com servidor e suas dependências em lote. Se versões requeridas conflitarem, ele usa a mais alta. Pacotes marcados só para cliente são pulados. Confira a configuração de cada mod depois.
+<table>
+<tr>
+<td width="50%" valign="top">
 
-Depois, entre em https://SEU-DOMINIO/jarl/entrar ou http://SEU-IP/jarl/entrar sem HTTPS. Edite em **Site → Editor em tela cheia**. As publicações guardam versões e prévias. A cópia editável do site fica em /var/lib/heimdall-nexus/site, separada do repositório.
+**Servidor de jogo**
+- Valheim Dedicated Server pelo SteamCMD, como serviço systemd
+- BepInEx opcional, com modpacks da Thunderstore ou do Hexium (é só colar o link)
+- Seu próprio modpack `.zip`, com mods privados
+- Server Config: nome, mundo, porta, senha, crossplay, argumentos de inicialização
 
-Com a rede Steam, libere a porta UDP escolhida e a seguinte. O Nginx usa TCP 80 e, com HTTPS, TCP 443. Veja o [guia oficial do servidor Valheim](https://valheim.com/support/a-guide-to-dedicated-servers/).
+</td>
+<td width="50%" valign="top">
 
-## Atualizar
+**Dia a dia**
+- Console ao vivo, gerenciador de arquivos e editor de configurações de mods
+- Instalar e atualizar mods, com backup verificado antes de cada mudança
+- Tarefas: rotinas cron para reiniciar, ligar, desligar e fazer backup
+- Backups para baixar, restaurar, travar e apagar
 
-Num servidor já instalado: `cd ~/Heimdall-Nexus && git pull --ff-only && sudo ./deploy/update.sh`. Atualiza o painel e as ferramentas sem mexer em mundos, mods ou conteúdo do site, e não reinicia o Valheim.
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Site**
+- Estado ao vivo, jogadores, relógio do mundo e lista de mods
+- Editor visual com versões e prévias para compartilhar
+- Nome, logo, favicon, fundo e uma tabela global de cores
+- Páginas a partir dos modelos wiki ou vazio
+
+</td>
+<td width="50%" valign="top">
+
+**Seguro por padrão**
+- Senha do jogo obrigatória; só pode sair com um mod de servidor sem senha
+- Contas Linux separadas para o jogo e o painel
+- Links de instalação de uso único; ações privilegiadas passam por um executor auditado
+- Sem telemetria: as conexões externas são só os downloads e o link opcional de instalação
+
+</td>
+</tr>
+</table>
 
 ## Documentação
 
-- [Início da Wiki](docs/wiki/pt-BR/Inicio.md) / [English](docs/wiki/Home.md)
-- [Instalação](docs/wiki/pt-BR/Instalacao.md) / [Installation](docs/wiki/Installation.md)
-- [Configuração](docs/wiki/pt-BR/Configuracao.md) / [Configuration](docs/wiki/Configuration.md)
-- [Operação](docs/wiki/pt-BR/Operacao.md) / [Operations](docs/wiki/Operations.md)
-- [Editor visual](docs/wiki/pt-BR/Editor.md) / [Visual editor](docs/wiki/Editor.md)
+Tudo está na [**wiki**](https://github.com/brkihel/Heimdall-Nexus/wiki/Inicio), em português e inglês:
+[Instalação](https://github.com/brkihel/Heimdall-Nexus/wiki/Instalacao) ·
+[Configuração](https://github.com/brkihel/Heimdall-Nexus/wiki/Configuracao) ·
+[Operação](https://github.com/brkihel/Heimdall-Nexus/wiki/Operacao) ·
+[Editor visual](https://github.com/brkihel/Heimdall-Nexus/wiki/Editor-Visual)
 
-## Verificações
+## Atualizar
 
-~~~bash
-python3 -m unittest discover -s tests -v
-bash -n deploy/install.sh deploy/install-web.sh deploy/valheim-launch.sh
-node --check deploy/setup/app.js
-~~~
+Num servidor já instalado:
 
-Essas verificações não ligam o Valheim. A instalação completa ainda precisa ser executada de ponta a ponta numa máquina nova; não rode o assistente em servidor de produção existente.
+```bash
+cd ~/Heimdall-Nexus && git pull --ff-only && sudo ./deploy/update.sh
+```
+
+Atualiza o painel e as ferramentas sem mexer em mundos, mods ou conteúdo do site, e não reinicia o Valheim.
+
+## Licença
+
+O Heimdall Nexus tem **código aberto para consulta** sob a [PolyForm Noncommercial License 1.0.0](LICENSE). Você pode usar, estudar, modificar e compartilhar para qualquer fim **não comercial**: rodar o seu servidor ou o da sua comunidade, projetos pessoais, estudo e organizações sem fins lucrativos ou públicas. **Vender ou usar comercialmente não é permitido.** Para uso comercial, fale com o autor.
+
+Valheim é marca da Iron Gate AB. As imagens de exemplo em `site/web/assets` vêm do press kit oficial do Valheim e pertencem à Iron Gate AB; elas não fazem parte desta licença. O Heimdall Nexus não é afiliado à Iron Gate AB nem à Coffee Stain.
+
+<div align="center">
+<br>
+<sub>Feito por <a href="https://github.com/brkihel">BRKiHeL</a> para a comunidade de Valheim.</sub>
+</div>
