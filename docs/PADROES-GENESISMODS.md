@@ -141,9 +141,9 @@ celular sem rolagem horizontal.
   registrado" com o fato real, botão fantasma "Ler a saga completa".
 - **Replay de jornada:** barra com play, progresso dourado, velocidade e
   "seguir jornada"; linha pontilhada dourada entre os momentos.
-- **Perfil do Viking:** cenário do bioma ao fundo, retrato ao centro, itens em
-  cartões laterais com borda esquerda na cor da raridade, barra rápida
-  numerada embaixo.
+- **Perfil do Viking:** cenário do bioma ao fundo, ícones reais dos itens em
+  cartões com borda esquerda na cor da raridade, barra rápida numerada
+  embaixo. Sem retrato 3D do personagem (decisão de 22/09/2026).
 - **Sempre distinguir fato de ficção:** o texto gerado é rotulado como
   ficção e liga aos registros que o inspiraram.
 
