@@ -126,7 +126,7 @@ It updates the panel and tools without touching worlds, mods or site content, an
 
 Heimdall Nexus is **source-available** under the [PolyForm Noncommercial License 1.0.0](LICENSE). You may use, study, modify and share it for any **noncommercial** purpose: running your own or your community's server, hobby projects, learning, and nonprofit or public organizations. **Selling it or using it commercially is not allowed.** For commercial use, contact the author.
 
-Valheim is a trademark of Iron Gate AB. The sample images in `site/web/assets` come from the official Valheim press kit and belong to Iron Gate AB; they are not covered by this license. Heimdall Nexus is not affiliated with Iron Gate AB or Coffee Stain.
+Valheim is a trademark of Iron Gate AB. The default site backgrounds are original artwork made for Heimdall Nexus (drawn by `.github/art/landscapes.html`) and are covered by this license. Heimdall Nexus is not affiliated with Iron Gate AB or Coffee Stain.
 
 <div align="center">
 <br>

@@ -1,0 +1,285 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>html,body{margin:0;background:#000}canvas{display:block}</style></head>
+<body><!-- Source of the default site backgrounds. Open with ?scene=fjord|forest|mist|meadow&w=2560&h=1440 --><canvas id="c"></canvas>
+<script>
+// Original landscape art for Heimdall Nexus, painted procedurally (seeded).
+const params = new URLSearchParams(location.search);
+const SCENE = params.get('scene') || 'fjord';
+const W = +params.get('w') || 2560, H = +params.get('h') || 1440;
+const c = document.getElementById('c'); c.width = W; c.height = H;
+const g = c.getContext('2d');
+let seed = {fjord: 11, forest: 23, mist: 37, meadow: 53}[SCENE] || 7;
+const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+const lerp = (a, b, t) => a + (b - a) * t;
+const S = W / 2560; // scale for sizes
+
+function sky(stops) {
+  const gr = g.createLinearGradient(0, 0, 0, H);
+  stops.forEach(([p, col]) => gr.addColorStop(p, col));
+  g.fillStyle = gr; g.fillRect(0, 0, W, H);
+}
+function stars(n, maxY, alpha = 1) {
+  for (let i = 0; i < n; i++) {
+    const x = rnd() * W, y = Math.pow(rnd(), 1.6) * maxY, r = (rnd() * 1.3 + 0.3) * S;
+    g.fillStyle = `rgba(255,255,255,${(rnd() * 0.7 + 0.2) * alpha})`;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
+}
+function glow(x, y, r, col) {
+  const gr = g.createRadialGradient(x, y, 0, x, y, r);
+  gr.addColorStop(0, col); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2);
+}
+// Midpoint displacement ridge: returns y for each x step
+function ridge(base, rough, amp, steps = 512) {
+  let pts = [base + (rnd() - 0.5) * amp, base + (rnd() - 0.5) * amp];
+  let disp = amp;
+  while (pts.length < steps) {
+    const next = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+      next.push(pts[i]);
+      next.push((pts[i] + pts[i + 1]) / 2 + (rnd() - 0.5) * disp);
+    }
+    next.push(pts[pts.length - 1]);
+    pts = next; disp *= rough;
+  }
+  return pts;
+}
+function fillRidge(pts, col, bottom = H) {
+  g.fillStyle = col; g.beginPath(); g.moveTo(0, bottom);
+  pts.forEach((y, i) => g.lineTo(i / (pts.length - 1) * W, y));
+  g.lineTo(W, bottom); g.closePath(); g.fill();
+}
+function peaks(base, count, hMin, hMax, rough) {
+  const list = Array.from({length: count}, () => ({x: rnd() * W, h: lerp(hMin, hMax, rnd()) * S, sl: 0.55 + rnd() * 0.5}));
+  const noise = ridge(0, rough, 60 * S);
+  return noise.map((n, i) => {
+    const x = i / (noise.length - 1) * W;
+    let top = 0;
+    list.forEach(p => { top = Math.max(top, p.h - Math.abs(x - p.x) * p.sl); });
+    return base - top + n * (0.4 + top / (hMax * S));
+  });
+}
+function mountains(base, amp, rough, col, snow, count) {
+  const pts = count ? peaks(base, count, amp * 0.35 / S, amp / S, rough) : ridge(base, rough, amp);
+  fillRidge(pts, col);
+  if (!snow) return pts;
+  g.save();
+  g.beginPath(); g.moveTo(0, H);
+  pts.forEach((y, i) => g.lineTo(i / (pts.length - 1) * W, y));
+  g.lineTo(W, H); g.closePath(); g.clip();
+  const top = Math.min(...pts);
+  const gr = g.createLinearGradient(0, top, 0, top + amp * 0.55);
+  gr.addColorStop(0, snow); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.fillRect(0, top, W, amp * 0.55);
+  g.restore();
+  return pts;
+}
+function fog(y, h, col) {
+  const gr = g.createLinearGradient(0, y - h, 0, y + h);
+  gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.5, col); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.fillRect(0, y - h, W, h * 2);
+}
+function pine(x, baseY, h, col) {
+  g.fillStyle = col;
+  const tiers = 5, w = h * 0.3;
+  for (let t = 0; t < tiers; t++) {
+    const top = baseY - h + t * (h * 0.7 / tiers);
+    const bottom = top + h * 0.42;
+    const ww = w * (0.35 + 0.65 * (t + 1) / tiers);
+    g.beginPath(); g.moveTo(x, top); g.lineTo(x + ww, bottom); g.lineTo(x - ww, bottom); g.closePath(); g.fill();
+  }
+  g.fillRect(x - w * 0.07, baseY - h * 0.2, w * 0.14, h * 0.2);
+}
+function treeLine(pts, density, hMin, hMax, col) {
+  for (let i = 0; i < pts.length; i += density) {
+    const x = i / (pts.length - 1) * W + (rnd() - 0.5) * density * W / pts.length;
+    pine(x, pts[i] + 6 * S, lerp(hMin, hMax, rnd()) * S, col);
+  }
+}
+function aurora(ribbons) {
+  g.save(); g.globalCompositeOperation = 'lighter';
+  ribbons.forEach(({y, amp, cols, width, alpha}) => {
+    g.filter = `blur(${28 * S}px)`;
+    for (let k = 0; k < 3; k++) {
+      const gr = g.createLinearGradient(0, 0, W, 0);
+      cols.forEach((col, i) => gr.addColorStop(i / (cols.length - 1), col));
+      g.strokeStyle = gr; g.globalAlpha = alpha * (1 - k * 0.25);
+      g.lineWidth = width * S * (1 + k * 0.6);
+      g.beginPath();
+      const ph = rnd() * 6, fq = 1.5 + rnd();
+      for (let x = -50; x <= W + 50; x += 20) {
+        const yy = y + Math.sin(x / W * Math.PI * fq + ph) * amp + Math.sin(x / W * 11 + ph) * amp * 0.15;
+        x < 0 ? g.moveTo(x, yy) : g.lineTo(x, yy);
+      }
+      g.stroke();
+    }
+    // vertical curtains
+    g.filter = `blur(${10 * S}px)`;
+    for (let x = 0; x < W; x += 9 * S) {
+      const yy = y + Math.sin(x / W * Math.PI * 2 + 1) * amp;
+      const len = (120 + rnd() * 220) * S;
+      const gr = g.createLinearGradient(0, yy - len, 0, yy + 20 * S);
+      gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, cols[Math.floor(x / W * cols.length) % cols.length]);
+      g.strokeStyle = gr; g.globalAlpha = alpha * 0.35 * rnd(); g.lineWidth = 3 * S;
+      g.beginPath(); g.moveTo(x, yy - len); g.lineTo(x, yy + 20 * S); g.stroke();
+    }
+  });
+  g.restore(); g.filter = 'none'; g.globalAlpha = 1;
+}
+function longhouse(x, y, s, col) {
+  g.fillStyle = col; g.beginPath();
+  g.moveTo(x - 90 * s, y); g.lineTo(x - 90 * s, y - 34 * s); g.lineTo(x - 70 * s, y - 70 * s);
+  g.lineTo(x + 70 * s, y - 70 * s); g.lineTo(x + 90 * s, y - 34 * s); g.lineTo(x + 90 * s, y); g.closePath(); g.fill();
+  // crossed gable horns
+  g.strokeStyle = col; g.lineWidth = 5 * s;
+  g.beginPath(); g.moveTo(x - 70 * s, y - 70 * s); g.lineTo(x - 84 * s, y - 88 * s);
+  g.moveTo(x + 70 * s, y - 70 * s); g.lineTo(x + 84 * s, y - 88 * s); g.stroke();
+  // warm door and windows
+  g.fillStyle = '#ffb45a';
+  g.fillRect(x - 8 * s, y - 24 * s, 16 * s, 24 * s);
+  g.fillRect(x - 55 * s, y - 28 * s, 10 * s, 8 * s); g.fillRect(x + 45 * s, y - 28 * s, 10 * s, 8 * s);
+  glow(x, y - 12 * s, 140 * s, 'rgba(255,150,60,0.35)');
+  // smoke
+  g.save(); g.filter = `blur(${8 * s}px)`;
+  for (let i = 0; i < 9; i++) {
+    g.fillStyle = `rgba(160,170,180,${0.12 - i * 0.011})`;
+    g.beginPath(); g.arc(x + 20 * s + i * 9 * s, y - 80 * s - i * 26 * s, (14 + i * 5) * s, 0, Math.PI * 2); g.fill();
+  }
+  g.restore();
+}
+function runestone(x, y, s, col) {
+  g.fillStyle = col; g.beginPath();
+  g.moveTo(x - 30 * s, y); g.quadraticCurveTo(x - 38 * s, y - 120 * s, x - 6 * s, y - 170 * s);
+  g.quadraticCurveTo(x + 30 * s, y - 150 * s, x + 32 * s, y); g.closePath(); g.fill();
+  g.strokeStyle = 'rgba(255,190,110,0.55)'; g.lineWidth = 2.2 * s;
+  g.beginPath(); g.moveTo(x - 4 * s, y - 130 * s); g.lineTo(x - 4 * s, y - 40 * s);
+  g.moveTo(x - 4 * s, y - 110 * s); g.lineTo(x + 12 * s, y - 95 * s);
+  g.moveTo(x - 4 * s, y - 80 * s); g.lineTo(x - 18 * s, y - 64 * s); g.stroke();
+}
+function reflect(fromY) {
+  const h = H - fromY;
+  const img = g.getImageData(0, fromY - h, W, h);
+  const tmp = document.createElement('canvas'); tmp.width = W; tmp.height = h;
+  tmp.getContext('2d').putImageData(img, 0, 0);
+  g.save(); g.translate(0, fromY + h); g.scale(1, -1); g.globalAlpha = 0.45;
+  for (let y = 0; y < h; y += 2) {
+    const off = Math.sin(y * 0.09) * 5 * S * (y / h);
+    g.drawImage(tmp, 0, y, W, 2, off, y, W, 2);
+  }
+  g.restore();
+  const gr = g.createLinearGradient(0, fromY, 0, H);
+  gr.addColorStop(0, 'rgba(6,12,20,0.35)'); gr.addColorStop(1, 'rgba(4,8,12,0.9)');
+  g.fillStyle = gr; g.fillRect(0, fromY, W, h);
+  g.fillStyle = 'rgba(180,220,230,0.07)';
+  for (let i = 0; i < 180; i++) g.fillRect(rnd() * W, fromY + rnd() * h, (20 + rnd() * 90) * S, 1.2 * S);
+}
+function grain(amount) {
+  const img = g.getImageData(0, 0, W, H), d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const n = (rnd() - 0.5) * amount;
+    d[i] += n; d[i + 1] += n; d[i + 2] += n;
+  }
+  g.putImageData(img, 0, 0);
+}
+function vignette() {
+  const gr = g.createRadialGradient(W / 2, H * 0.45, H * 0.3, W / 2, H * 0.5, W * 0.75);
+  gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,0.55)');
+  g.fillStyle = gr; g.fillRect(0, 0, W, H);
+}
+
+const scenes = {
+  fjord() {
+    sky([[0, '#02050b'], [0.45, '#08172a'], [0.7, '#12324a'], [1, '#0b1a26']]);
+    stars(900, H * 0.7);
+    aurora([{y: H * 0.26, amp: 70 * S, width: 60, alpha: 0.55, cols: ['#1f7a6a', '#3fd0a0', '#7ff0c0', '#3aa0c8', '#6a5fd0']},
+            {y: H * 0.18, amp: 50 * S, width: 34, alpha: 0.35, cols: ['#2fbf8f', '#b25fd0', '#3fd0a0']}]);
+    glow(W * 0.78, H * 0.2, 90 * S, 'rgba(230,240,255,0.5)');
+    g.fillStyle = '#eef3ff'; g.beginPath(); g.arc(W * 0.78, H * 0.2, 26 * S, 0, Math.PI * 2); g.fill();
+    mountains(H * 0.6, 520 * S, 0.55, '#1c3850', 'rgba(215,235,250,0.6)', 9);
+    fog(H * 0.5, 70 * S, 'rgba(120,160,190,0.18)');
+    mountains(H * 0.63, 300 * S, 0.55, '#11263a', 'rgba(170,200,225,0.3)', 12);
+    fog(H * 0.6, 50 * S, 'rgba(90,130,160,0.2)');
+    const shore = ridge(H * 0.64, 0.5, 70 * S);
+    fillRidge(shore, '#08131b');
+    treeLine(shore, 3, 30, 70, '#06101a');
+    longhouse(W * 0.32, shore[Math.round(0.32 * 511)] + 4 * S, 1.25 * S, '#050b12');
+    reflect(H * 0.68);
+    vignette(); grain(10);
+  },
+  forest() {
+    sky([[0, '#0f1d27'], [0.35, '#2d4c55'], [0.55, '#9db3a3'], [0.66, '#e6d8a8'], [1, '#1a2622']]);
+    glow(W * 0.6, H * 0.48, 620 * S, 'rgba(255,225,160,0.55)');
+    g.fillStyle = 'rgba(255,245,215,0.9)'; g.beginPath(); g.arc(W * 0.6, H * 0.48, 44 * S, 0, Math.PI * 2); g.fill();
+    g.save(); g.globalCompositeOperation = 'lighter'; g.filter = `blur(${14 * S}px)`;
+    for (let i = 0; i < 12; i++) {
+      const a0 = Math.PI * (0.18 + i * 0.055), a1 = a0 + 0.018;
+      g.fillStyle = `rgba(255,235,185,${0.04 + rnd() * 0.05})`;
+      g.beginPath(); g.moveTo(W * 0.6, H * 0.48);
+      g.lineTo(W * 0.6 + Math.cos(a0) * W * 1.2, H * 0.48 + Math.sin(a0) * W * 1.2);
+      g.lineTo(W * 0.6 + Math.cos(a1) * W * 1.2, H * 0.48 + Math.sin(a1) * W * 1.2); g.fill();
+    }
+    g.restore(); g.filter = 'none';
+    mountains(H * 0.5, 260 * S, 0.55, '#7d948c', null);
+    const layers = [['#617a74', 0.56, 110, 190, 3], ['#44605c', 0.64, 170, 280, 3], ['#2a4040', 0.74, 240, 400, 4], ['#132226', 0.88, 360, 620, 6]];
+    layers.forEach(([col, base, hMin, hMax, step], i) => {
+      const r = ridge(H * base, 0.5, 50 * S);
+      fillRidge(r, col);
+      treeLine(r, step, hMin, hMax, col);
+      fog(H * (base - 0.01), 110 * S, `rgba(230,228,200,${0.3 - i * 0.06})`);
+    });
+    vignette(); grain(9);
+  },
+  mist() {
+    sky([[0, '#0c0716'], [0.35, '#2a1d44'], [0.62, '#5a4a7c'], [0.8, '#7d6e98'], [1, '#161226']]);
+    stars(260, H * 0.35, 0.6);
+    glow(W * 0.3, H * 0.35, 300 * S, 'rgba(200,170,255,0.25)');
+    const cols = ['#4a3d66', '#3a2f55', '#2a2242', '#1a1530'];
+    cols.forEach((col, i) => {
+      const r = ridge(H * (0.42 + i * 0.1), 0.62, (300 - i * 50) * S);
+      fillRidge(r, col);
+      // jagged spires
+      for (let k = 0; k < 6 - i; k++) {
+        const x = rnd() * W, idx = Math.round(x / W * 511), top = r[idx] - (120 + rnd() * 200) * S * (1 - i * 0.2);
+        const bend = (rnd() - 0.5) * 60 * S, wid = (30 + rnd() * 40) * S;
+        g.fillStyle = col; g.beginPath(); g.moveTo(x - wid, r[idx] + 12 * S);
+        g.quadraticCurveTo(x - wid * 0.25 + bend, (top + r[idx]) / 2, x + bend * 1.6, top);
+        g.quadraticCurveTo(x + wid * 0.35 + bend, (top + r[idx]) / 2, x + wid, r[idx] + 12 * S); g.fill();
+      }
+      fog(H * (0.48 + i * 0.1), 150 * S, `rgba(200,180,240,${0.34 - i * 0.05})`);
+    });
+    // glowing crystals
+    for (let i = 0; i < 16; i++) glow(rnd() * W, H * (0.7 + rnd() * 0.25), (20 + rnd() * 40) * S, 'rgba(120,230,255,0.35)');
+    vignette(); grain(10);
+  },
+  meadow() {
+    sky([[0, '#1a1f3a'], [0.35, '#4a3d6a'], [0.55, '#c0668a'], [0.68, '#f0a06a'], [0.78, '#ffd08a'], [1, '#2a2418']]);
+    glow(W * 0.58, H * 0.56, 620 * S, 'rgba(255,190,110,0.6)');
+    g.fillStyle = '#fff1c8'; g.beginPath(); g.arc(W * 0.58, H * 0.56, 58 * S, 0, Math.PI * 2); g.fill();
+    // soft clouds
+    g.save(); g.filter = `blur(${18 * S}px)`;
+    for (let i = 0; i < 14; i++) {
+      g.fillStyle = `rgba(255,${150 + rnd() * 60},${140 + rnd() * 40},${0.15 + rnd() * 0.15})`;
+      g.beginPath(); g.ellipse(rnd() * W, H * (0.2 + rnd() * 0.35), (200 + rnd() * 400) * S, (20 + rnd() * 30) * S, 0, 0, Math.PI * 2); g.fill();
+    }
+    g.restore(); g.filter = 'none';
+    mountains(H * 0.63, 190 * S, 0.55, '#6a4a62', null);
+    fog(H * 0.67, 60 * S, 'rgba(255,190,150,0.25)');
+    const hill1 = ridge(H * 0.72, 0.45, 80 * S);
+    fillRidge(hill1, '#3d3446');
+    treeLine(hill1.map((y, i) => (i % 97 < 12 ? y : H * 2)), 4, 60, 120, '#2e2838');
+    const hill2 = ridge(H * 0.82, 0.4, 70 * S);
+    fillRidge(hill2, '#241e28');
+    runestone(W * 0.22, hill2[Math.round(0.22 * 511)] + 10 * S, 1.3 * S, '#140f16');
+    // grass blades catching light
+    g.strokeStyle = 'rgba(255,200,130,0.18)'; g.lineWidth = 1.4 * S;
+    for (let i = 0; i < 1400; i++) {
+      const x = rnd() * W, idx = Math.round(x / W * 511), y = hill2[idx] + rnd() * (H - hill2[idx]);
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + (rnd() - 0.5) * 8 * S, y - (8 + rnd() * 18) * S); g.stroke();
+    }
+    vignette(); grain(9);
+  },
+};
+scenes[SCENE]();
+window.done = true;
+</script></body></html>

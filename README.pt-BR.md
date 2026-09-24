@@ -126,7 +126,7 @@ Atualiza o painel e as ferramentas sem mexer em mundos, mods ou conteúdo do sit
 
 O Heimdall Nexus tem **código aberto para consulta** sob a [PolyForm Noncommercial License 1.0.0](LICENSE). Você pode usar, estudar, modificar e compartilhar para qualquer fim **não comercial**: rodar o seu servidor ou o da sua comunidade, projetos pessoais, estudo e organizações sem fins lucrativos ou públicas. **Vender ou usar comercialmente não é permitido.** Para uso comercial, fale com o autor.
 
-Valheim é marca da Iron Gate AB. As imagens de exemplo em `site/web/assets` vêm do press kit oficial do Valheim e pertencem à Iron Gate AB; elas não fazem parte desta licença. O Heimdall Nexus não é afiliado à Iron Gate AB nem à Coffee Stain.
+Valheim é marca da Iron Gate AB. As imagens de fundo padrão do site são arte original feita para o Heimdall Nexus (desenhadas por `.github/art/landscapes.html`) e fazem parte desta licença. O Heimdall Nexus não é afiliado à Iron Gate AB nem à Coffee Stain.
 
 <div align="center">
 <br>
