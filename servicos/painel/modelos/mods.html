@@ -216,37 +216,45 @@ function ligaBotoes(){
 async function executa(verbo, dados, pergunta){
   if (!confirm(pergunta)) return;
   const d = await post('/api/mods', {verbo, dados});
-  if (d && d.tarefa) acompanha(d.tarefa);
+  if (d && d.tarefa) acompanha(d.tarefa, {tipo: verbo.split('.')[1], nome: dados.nome, versao: dados.versao});
 }
 
-function acompanha(id){
-  if (tarefaAberta) tarefaAberta.remove();
-  const caixa = document.createElement('div');
-  caixa.className = 'tarefa';
-  caixa.innerHTML = `<div class="tarefa-topo"><span class="girando"></span>
-      <span id="t-titulo">trabalhando…</span><button title="fechar">×</button></div>
-    <div class="tarefa-saida" id="t-saida"></div>`;
-  document.body.append(caixa);
-  caixa.querySelector('button').onclick = () => { caixa.remove(); tarefaAberta = null; };
-  tarefaAberta = caixa;
-
+const CATALOGO = {{ (codigos or {})|tojson }};
+const TAREFAS = {
+  instalar:  {andando: 'Instalando', feito: n => `Mod ${n} instalado com sucesso`, codigo: 'HN-MOD-001', falhou: n => `Não foi possível instalar ${n}`},
+  atualizar: {andando: 'Atualizando', feito: n => `Mod ${n} atualizado com sucesso`, codigo: 'HN-MOD-002', falhou: n => `Não foi possível atualizar ${n}`},
+  remover:   {andando: 'Removendo', feito: n => `Mod ${n} removido`, codigo: 'HN-MOD-003', falhou: n => `Não foi possível remover ${n}`},
+  varredura: {andando: 'Procurando atualizações', feito: () => 'Procura concluída', codigo: 'HN-MOD-004', falhou: () => 'A procura por atualizações falhou'},
+};
+// Success is a short notice; the full log only appears when something fails,
+// with a button that copies a ready-to-send report (docs/PADROES-GENESISMODS.md).
+function acompanha(id, sobre = {tipo: 'varredura'}){
+  const tipo = TAREFAS[sobre.tipo] || TAREFAS.varredura, nome = sobre.nome || '';
+  const aviso = avisar({tipo: 'andamento', titulo: `${tipo.andando}${nome ? ' ' + nome : ''}…`, texto: 'Preparando…'});
   const relogio = setInterval(async () => {
     const d = await post('/api/mods', {verbo:'mods.tarefa', dados:{id}});
-    if (!d) { clearInterval(relogio); return; }
-    caixa.querySelector('#t-titulo').textContent = d.titulo;
-    const saida = caixa.querySelector('#t-saida');
-    saida.textContent = (d.saida || []).join('\n');
-    saida.scrollTop = saida.scrollHeight;
-    if (d.estado !== 'andando'){
-      clearInterval(relogio);
-      caixa.querySelector('.girando').replaceWith(
-        Object.assign(document.createElement('span'),
-          {textContent: d.estado === 'pronto' ? '✓' : '✕',
-           style: 'color:' + (d.estado === 'pronto' ? 'var(--bom)' : 'var(--ruim)')}));
-      recado(d.estado === 'pronto' ? 'Feito.' : `Não deu: ${d.erro || d.estado}`,
-             d.estado === 'pronto' ? 'bom' : 'ruim');
-      lerInstalados();
+    if (!d) { clearInterval(relogio); fecharAviso(aviso); return; }
+    const saida = d.saida || [];
+    const ultima = [...saida].reverse().find(l => l.trim());
+    if (ultima) atualizarAviso(aviso, ultima.length > 110 ? ultima.slice(0, 110) + '…' : ultima);
+    if (d.estado === 'andando') return;
+    clearInterval(relogio);
+    fecharAviso(aviso);
+    const texto = saida.join('\n');
+    if (d.estado === 'pronto') {
+      const religado = /servidor religado/.test(texto), estavaParado = /ja estava parado/.test(texto);
+      const aplicar = religado ? 'O servidor foi reiniciado para aplicar.' :
+        estavaParado ? 'O servidor estava desligado: ligue-o para aplicar.' :
+        sobre.tipo === 'varredura' ? '' : 'Reinicie o servidor para aplicar.';
+      const mundo = sobre.tipo === 'instalar' ? ' Alguns mods só funcionam plenamente num mundo novo.' : '';
+      avisar({tipo: 'ok', titulo: tipo.feito(nome), texto: (aplicar + mundo).trim() || 'Pronto.', duracao: 9000});
+    } else {
+      const info = CATALOGO[tipo.codigo] || {};
+      avisar({tipo: 'erro', codigo: tipo.codigo, titulo: tipo.falhou(nome),
+              texto: d.erro || info.titulo || 'A tarefa terminou com erro.', solucao: info.solucao,
+              detalhes: `${d.titulo || ''}\n\n${texto}`});
     }
+    lerInstalados();
   }, 1500);
 }
 

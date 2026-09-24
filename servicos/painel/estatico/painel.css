@@ -413,3 +413,16 @@ kbd{font-family:ui-monospace,monospace; font-size:.72rem; border:1px solid var(-
 :where(input[type=checkbox]):checked::after{transform:translateX(1.15rem); background:var(--ouro-claro)}
 :where(input[type=checkbox]):focus-visible{outline:2px solid var(--ouro-claro); outline-offset:2px}
 :where(input[type=checkbox]):disabled{opacity:.5; cursor:not-allowed}
+
+/* Status pill while the server changes state. */
+.pastilha.pulsando{animation:pastilha-pulsa 1.4s ease-in-out infinite}
+@keyframes pastilha-pulsa{50%{opacity:.55}}
+.estado-detalhe{margin:-.4rem 0 1rem;color:var(--fraco);font-size:.84rem}
+.aviso-flutuante.andamento{border-left-color:var(--ouro)}
+.aviso-icone.girando-aviso{border-color:rgba(200,164,92,.25); border-top-color:var(--ouro); animation:runa-roda 1s linear infinite}
+@keyframes runa-roda{to{transform:rotate(360deg)}}
+.aviso-detalhes{margin-top:.5rem}
+.aviso-detalhes summary{cursor:pointer; color:var(--ouro-claro); font-size:.8rem}
+.aviso-detalhes pre{max-height:220px; overflow:auto; margin:.4rem 0 0; padding:.6rem .7rem; background:#081117;
+  border:1px solid var(--borda); border-radius:3px; color:#b4c3cb; font:11.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+  white-space:pre-wrap; overflow-wrap:anywhere}

@@ -61,6 +61,15 @@ CATALOGO: dict[str, dict[str, str]] = {
                    'solucao': 'Veja o registro técnico. Se não houver erro nele, procure atualizações de novo.'},
     'HN-UPD-121': {'titulo': 'A atualização foi interrompida',
                    'solucao': 'O processo parou sem concluir (reinício da máquina ou falta de memória). Rode a atualização de novo.'},
+    # --- Mods (Jarl > Mods) ---
+    'HN-MOD-001': {'titulo': 'A instalação do mod falhou',
+                   'solucao': 'Os arquivos novos foram revertidos. Veja o registro técnico; se o download falhou, tente de novo em alguns minutos.'},
+    'HN-MOD-002': {'titulo': 'A atualização do mod falhou',
+                   'solucao': 'A versão anterior foi mantida. Veja o registro técnico e tente de novo.'},
+    'HN-MOD-003': {'titulo': 'A remoção do mod falhou',
+                   'solucao': 'Veja o registro técnico. A pasta do mod fica guardada nas cópias antes de sair.'},
+    'HN-MOD-004': {'titulo': 'A procura por atualizações falhou',
+                   'solucao': 'Confira a internet do servidor e tente de novo.'},
     # --- Server Config: access lists and world modifiers ---
     'HN-CFG-001': {'titulo': 'ID de jogador inválida',
                    'solucao': 'Use a Steam ID de 17 dígitos (começa com 7656119) ou Plataforma_ID, como Xbox_123…'},

@@ -11,6 +11,7 @@ dele (`python3 ferramentas/gerar-codigos.py`) e um teste confere que as duas bat
 |---|---|
 | UPD | Atualizações pelo Jarl e `deploy/update.sh` |
 | CFG | Server Config: admins, whitelist, banidos e modificadores de mundo |
+| MOD | Instalar, atualizar e remover mods pelo Jarl |
 
 | Código | O que houve | Como resolver |
 |---|---|---|
@@ -38,6 +39,10 @@ dele (`python3 ferramentas/gerar-codigos.py`) e um teste confere que as duas bat
 | `HN-UPD-108` | O painel não voltou depois de reiniciar | Veja: sudo journalctl -u heimdall-panel -n 80. Pelo terminal: cd ~/Heimdall-Nexus && sudo ./deploy/update.sh |
 | `HN-UPD-120` | A atualização terminou sem trocar a versão | Veja o registro técnico. Se não houver erro nele, procure atualizações de novo. |
 | `HN-UPD-121` | A atualização foi interrompida | O processo parou sem concluir (reinício da máquina ou falta de memória). Rode a atualização de novo. |
+| `HN-MOD-001` | A instalação do mod falhou | Os arquivos novos foram revertidos. Veja o registro técnico; se o download falhou, tente de novo em alguns minutos. |
+| `HN-MOD-002` | A atualização do mod falhou | A versão anterior foi mantida. Veja o registro técnico e tente de novo. |
+| `HN-MOD-003` | A remoção do mod falhou | Veja o registro técnico. A pasta do mod fica guardada nas cópias antes de sair. |
+| `HN-MOD-004` | A procura por atualizações falhou | Confira a internet do servidor e tente de novo. |
 | `HN-CFG-001` | ID de jogador inválida | Use a Steam ID de 17 dígitos (começa com 7656119) ou Plataforma_ID, como Xbox_123… |
 | `HN-CFG-002` | Nome de jogador inválido | Use até 40 caracteres, sem barra (/). |
 | `HN-CFG-003` | A mesma ID está como admin e banida | Remova a ID de uma das duas listas. |

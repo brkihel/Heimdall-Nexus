@@ -10,6 +10,7 @@
     <button class="btn ruim" data-acao="stop">Desligar</button>
   </div>
 </div>
+<p id="estado-detalhe" class="estado-detalhe" hidden></p>
 
 <div class="medidores">
   <div class="medidor">🌐 <b id="m-endereco">—</b></div>
@@ -70,16 +71,15 @@ async function lerEstado(){
     if (r.status === 401) { location.href = `${RAIZ}/entrar`; return; }
     const d = await r.json();
     const jogo = d.servicos.game || {}, publico = d.jogo || {};
-    const vivo = jogo.ActiveState === 'active';
-    if (!trabalhando){
-      const marca = document.getElementById('estado-jogo');
-      const confirmado = vivo && publico.online;
-      marca.textContent = confirmado ? 'no ar' : vivo ? 'ligado · aguardando confirmação' : (jogo.ActiveState || '?');
-      marca.title = confirmado && publico.status_consulta === 'journal'
-        ? 'Servidor pronto pelo log; consulta de jogadores indisponível'
-        : vivo && !confirmado ? 'Processo ativo, mas ainda sem sinal de prontidão' : '';
-      marca.className = 'pastilha ' + (confirmado ? 'viva' : vivo ? 'meio' : 'morta');
-    }
+    // The real state is shown even while an action runs: stopping, saving,
+    // starting and loading are all visible (docs/PADROES-GENESISMODS.md).
+    const e = d.estado_jogo || {};
+    const marca = document.getElementById('estado-jogo');
+    marca.textContent = e.rotulo || '?';
+    marca.title = e.detalhe || '';
+    marca.className = 'pastilha ' + (e.classe || 'meio') + (e.classe === 'meio' && e.codigo !== 'desconhecido' ? ' pulsando' : '');
+    const passo = document.getElementById('estado-detalhe');
+    if (passo) { passo.textContent = e.detalhe || ''; passo.hidden = !e.detalhe; }
 
     document.getElementById('m-endereco').textContent = (publico.servidor||{}).endereco || '—';
     document.getElementById('nome-servidor').textContent = (publico.servidor||{}).nome || 'Valheim';
@@ -136,9 +136,10 @@ document.querySelectorAll('[data-acao]').forEach(botao => {
     // atualizando, e uma tarja diz o que está acontecendo.
     document.querySelectorAll('[data-acao]').forEach(b => b.disabled = true);
     const marca = document.getElementById('estado-jogo');
-    marca.textContent = {start:'ligando…', restart:'reiniciando…', stop:'desligando…'}[acao];
-    marca.className = 'pastilha meio';
+    marca.textContent = 'Enviando pedido…';
+    marca.className = 'pastilha meio pulsando';
     trabalhando = true;
+    const rapido = setInterval(lerEstado, 1500);
     try{
       const r = await fetch(`${RAIZ}/api/servico`, {
         method:'POST', credentials:'same-origin',
@@ -149,6 +150,8 @@ document.querySelectorAll('[data-acao]').forEach(botao => {
       else recado(`Pedido aceito: ${nomes[acao]}. O jogo leva uns minutos para voltar.`);
     }catch(e){ recado('Falhou: ' + e, 'ruim'); }
     trabalhando = false;
+    // Keep polling fast while the world loads after a start or restart.
+    setTimeout(() => clearInterval(rapido), 180000);
     document.querySelectorAll('[data-acao]').forEach(b => b.disabled = false);
     lerEstado(); lerLog();
   });

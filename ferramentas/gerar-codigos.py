@@ -8,7 +8,8 @@ sys.path.insert(0, str(ROOT / 'servicos/painel'))
 import codigos  # noqa: E402
 
 AREAS = {'UPD': 'Atualizações pelo Jarl e `deploy/update.sh`',
-         'CFG': 'Server Config: admins, whitelist, banidos e modificadores de mundo'}
+         'CFG': 'Server Config: admins, whitelist, banidos e modificadores de mundo',
+         'MOD': 'Instalar, atualizar e remover mods pelo Jarl'}
 
 
 def render() -> str:

@@ -206,7 +206,7 @@ async def arquivos(pedido: Request, caminho: str = str(VALHEIM_DIR)):
 @app.get(f'{RAIZ_URL}/mods', response_class=HTMLResponse)
 async def mods(pedido: Request):
     exige(pedido)
-    return pagina(pedido, 'mods.html', aba='mods')
+    return pagina(pedido, 'mods.html', aba='mods', codigos=codigos.CATALOGO)
 
 
 @app.get(f'{RAIZ_URL}/cronica', response_class=HTMLResponse)
@@ -366,7 +366,31 @@ async def api_estado(pedido: Request):
         features = json.loads((WEB_DIR / 'api/features.json').read_text()).get('enabled', [])
     except (OSError, ValueError):
         features = []
-    return {'ok': True, 'servicos': fora, 'jogo': publico, 'features': features}
+    return {'ok': True, 'servicos': fora, 'jogo': publico, 'features': features,
+            'estado_jogo': estado_do_jogo(fora['game'])}
+
+
+def estado_do_jogo(servico: dict) -> dict:
+    """One status for every Jarl page, from the live systemd state."""
+    ativo = servico.get('ActiveState', '')
+    if 'erro' in servico:
+        return {'codigo': 'desconhecido', 'rotulo': 'Estado indisponível', 'classe': 'meio'}
+    if ativo == 'active' and servico.get('Pronto'):
+        return {'codigo': 'no-ar', 'rotulo': 'No ar', 'classe': 'viva'}
+    if ativo == 'active':
+        return {'codigo': 'carregando', 'rotulo': 'Carregando o mundo…', 'classe': 'meio',
+                'detalhe': 'O processo subiu; o Valheim ainda está carregando o mundo e os mods.'}
+    if ativo in ('activating', 'reloading'):
+        return {'codigo': 'iniciando', 'rotulo': 'Iniciando…', 'classe': 'meio'}
+    if ativo == 'deactivating':
+        return {'codigo': 'parando', 'rotulo': 'Parando e salvando o mundo…', 'classe': 'meio',
+                'detalhe': 'O Valheim grava o mundo antes de fechar. Não desligue a máquina agora.'}
+    if ativo == 'failed':
+        return {'codigo': 'falhou', 'rotulo': 'Falhou ao iniciar', 'classe': 'morta',
+                'detalhe': 'Veja o log abaixo para o motivo.'}
+    if ativo == 'inactive':
+        return {'codigo': 'desligado', 'rotulo': 'Desligado', 'classe': 'morta'}
+    return {'codigo': 'desconhecido', 'rotulo': ativo or 'Estado indisponível', 'classe': 'meio'}
 
 
 @app.get(f'{RAIZ_URL}/api/log')

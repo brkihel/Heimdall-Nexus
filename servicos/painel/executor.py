@@ -128,15 +128,44 @@ def v_ping(_):
     return {'ok': True, 'quando': agora()}
 
 
+_PRONTO_POR_EXECUCAO: dict[str, bool] = {}
+
+
+def _jogo_pronto(invocacao: str) -> bool:
+    """True once this run of the game logged that it accepts players.
+
+    Checked live against the current systemd invocation, so a restart is never
+    reported as ready because of a previous run. A confirmed run is cached.
+    """
+    if not re.fullmatch(r'[0-9a-f]{32}', invocacao or ''):
+        return False
+    if _PRONTO_POR_EXECUCAO.get(invocacao):
+        return True
+    try:
+        saida = subprocess.run(
+            ['journalctl', '_SYSTEMD_INVOCATION_ID=' + invocacao, '--grep=Game server connected',
+             '-n', '1', '--no-pager', '-o', 'cat'], capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    pronto = saida.returncode == 0 and 'Game server connected' in saida.stdout
+    if pronto:
+        _PRONTO_POR_EXECUCAO.clear()
+        _PRONTO_POR_EXECUCAO[invocacao] = True
+    return pronto
+
+
 def v_servico_estado(dados):
     nome = dados.get('servico', GAME_SERVICE)
     if nome not in SERVICOS:
         raise Recusa(f'serviço desconhecido: {nome}')
     saida = subprocess.run(
         ['systemctl', 'show', nome, '--no-page',
-         '--property=ActiveState,SubState,ExecMainStartTimestamp,MemoryCurrent,NRestarts'],
+         '--property=ActiveState,SubState,ExecMainStartTimestamp,ActiveEnterTimestamp,'
+         'MemoryCurrent,NRestarts,InvocationID'],
         capture_output=True, text=True, timeout=15).stdout
     campos = dict(linha.split('=', 1) for linha in saida.strip().splitlines() if '=' in linha)
+    if nome == GAME_SERVICE and campos.get('ActiveState') == 'active':
+        campos['Pronto'] = _jogo_pronto(campos.get('InvocationID', ''))
     return {'servico': nome, **campos}
 
 

@@ -252,10 +252,11 @@ async function estado(){
   const r = await fetch(`${RAIZ}/api/estado`, {credentials:'same-origin'});
   if (!r.ok) return;
   const d = await r.json();
-  const ativo = ((d.servicos || {}).game || {}).ActiveState === 'active';
+  const s = d.estado_jogo || {};
   const e = document.getElementById('estado');
-  e.textContent = ativo ? 'servidor no ar' : 'servidor parado';
-  e.className = 'pastilha ' + (ativo ? 'viva' : 'morta');
+  e.textContent = s.rotulo ? 'Servidor: ' + s.rotulo.charAt(0).toLowerCase() + s.rotulo.slice(1) : 'Estado indisponível';
+  e.title = s.detalhe || '';
+  e.className = 'pastilha ' + (s.classe || 'meio');
 }
 
 addEventListener('beforeunload', e => { if (pendentes()) { e.preventDefault(); e.returnValue = ''; } });
