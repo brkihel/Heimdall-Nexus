@@ -35,6 +35,21 @@ def event(**changes):
 
 
 class SagasContractTests(unittest.TestCase):
+    def test_credited_kill_appears_once_after_profile_consent(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            dbfile = Path(temporary) / 'sagas.sqlite3'
+            enable(dbfile.parent)
+            packet = sagas.validate(event(id='c' * 64, kind='kill',
+                                          target='Greydwarf', stars=2))
+            with sagas.connect(dbfile) as db:
+                sagas.ingest(db, sagas.validate(presence()), now=100)
+                sagas.ingest(db, packet, now=101)
+                sagas.ingest(db, packet, now=102)
+            view = sagas.public_view(dbfile)
+            self.assertEqual(len(view['events']), 1)
+            self.assertEqual(view['events'][0]['target'], 'Greydwarf')
+            self.assertEqual(view['events'][0]['stars'], 2)
+
     def test_admin_status_keeps_saved_options_visible_when_database_is_unreadable(self):
         with tempfile.TemporaryDirectory() as temporary:
             state = Path(temporary)

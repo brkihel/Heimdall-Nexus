@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using BepInEx;
@@ -11,7 +12,7 @@ using UnityEngine;
 
 namespace Heimdall.Sagas.Mod
 {
-    [BepInPlugin("gg.heimdall.sagas.client", "Heimdall Sagas Client", "0.1.0")]
+    [BepInPlugin("gg.heimdall.sagas.client", "Heimdall Sagas Client", "0.1.1")]
     public sealed class ClientPlugin : BaseUnityPlugin
     {
         private const string Rpc = "Heimdall.Sagas.V1";
@@ -34,6 +35,7 @@ namespace Heimdall.Sagas.Mod
         private ZRpc registeredServer;
         private string outbox;
         private readonly Dictionary<string, WirePacket> pending = new Dictionary<string, WirePacket>();
+        private static readonly FieldInfo lastHit = AccessTools.Field(typeof(Character), "m_lastHit");
 
         private void Awake()
         {
@@ -55,7 +57,9 @@ namespace Heimdall.Sagas.Mod
                         if (new FileInfo(path).Length > 8192) continue;
                         var packet = JsonUtility.FromJson<WirePacket>(File.ReadAllText(path));
                         if (packet != null && packet.type == "event" &&
-                            Guid.TryParseExact(packet.id, "N", out _) &&
+                            (Guid.TryParseExact(packet.id, "N", out _) ||
+                             packet.id != null && packet.id.Length == 64 &&
+                             packet.id.All(c => c >= '0' && c <= '9' || c >= 'a' && c <= 'f')) &&
                             Path.GetFileNameWithoutExtension(path) == packet.id) pending[packet.id] = packet;
                     } catch (Exception error) { Logger.LogWarning("Skipped a damaged Sagas event: " + error.Message); }
                 }
@@ -186,6 +190,45 @@ namespace Heimdall.Sagas.Mod
             if (Time.unscaledTime < current.bridgeUntil) Send(packet);
         }
 
+        private static void RecordKill(Character victim)
+        {
+            var plugin = current;
+            var player = Player.m_localPlayer;
+            if (plugin == null || player == null || victim is Player || !plugin.shareProfile.Value ||
+                !plugin.bridgeEvents || Time.unscaledTime >= plugin.bridgeUntil || lastHit == null)
+                return;
+            var view = victim.GetComponent<ZNetView>();
+            if (view == null || !view.IsValid() || !view.IsOwner()) return;
+            var hit = lastHit.GetValue(victim) as HitData;
+            if (hit?.GetAttacker() != player) return;
+            var zdo = view.GetZDO();
+            var world = WorldId();
+            if (zdo == null || world == "") return;
+            var id = KillId(world, zdo.m_uid);
+            if (plugin.pending.ContainsKey(id) || plugin.pending.Count >= 256) return;
+            var position = victim.transform.position;
+            var target = Localization.instance == null ? victim.m_name :
+                Localization.instance.Localize(victim.m_name);
+            var packet = new WirePacket { type = "event", kind = "kill", id = id,
+                world = world, name = player.GetPlayerName(), target = CleanText(target, 120),
+                stars = Math.Max(0, victim.GetLevel() - 1),
+                utc = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                has_location = plugin.shareMap.Value,
+                x = plugin.shareMap.Value ? position.x : 0,
+                z = plugin.shareMap.Value ? position.z : 0 };
+            if (!plugin.Save(packet)) return;
+            plugin.pending[id] = packet;
+            Send(packet);
+        }
+
+        private static string KillId(string world, ZDOID creature)
+        {
+            using (var sha = SHA256.Create()) {
+                var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes("kill:" + world + ":" + creature));
+                return BitConverter.ToString(bytes).Replace("-", "").ToLowerInvariant();
+            }
+        }
+
         private bool Save(WirePacket packet)
         {
             var temp = Path.Combine(outbox, "." + packet.id + ".tmp");
@@ -239,6 +282,16 @@ namespace Heimdall.Sagas.Mod
             private static void Prefix(Player __instance)
             {
                 if (__instance == Player.m_localPlayer) RecordDeath();
+            }
+        }
+
+        [HarmonyPatch(typeof(Character), "OnDeath")]
+        private static class KillPatch
+        {
+            private static void Prefix(Character __instance)
+            {
+                try { RecordKill(__instance); }
+                catch (Exception error) { current?.Logger.LogWarning("Heimdall Sagas could not record a kill: " + error.Message); }
             }
         }
     }

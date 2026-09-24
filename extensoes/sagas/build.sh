@@ -25,7 +25,7 @@ artifacts = root / 'artifacts/sagas'
 artifacts.mkdir(parents=True, exist_ok=True)
 for kind in ('Client', 'Bridge'):
     dll = root / f'extensoes/sagas/mod/HeimdallSagas.{kind}/bin/Release/net48/HeimdallSagas.{kind}.dll'
-    output = artifacts / f'HeimdallSagas.{kind}-0.1.0.zip'
+    output = artifacts / f'HeimdallSagas.{kind}-0.1.1.zip'
     with ZipFile(output, 'w', ZIP_DEFLATED) as archive:
         archive.write(dll, f'BepInEx/plugins/HeimdallSagas/HeimdallSagas.{kind}.dll')
         archive.write(root / 'extensoes/sagas/mod/README.md', 'README.md')
@@ -40,7 +40,7 @@ for kind in ('Client', 'Bridge'):
                 raise SystemExit('Client package is missing required Gale files.')
             manifest = json.loads(archive.read('manifest.json'))
             if manifest.get('name') != 'HeimdallSagasClient' or \
-                    manifest.get('version_number') != '0.1.0':
+                    manifest.get('version_number') != '0.1.1':
                 raise SystemExit('Client package has an unexpected identity.')
             icon = archive.read('icon.png')
             if icon[:8] != b'\x89PNG\r\n\x1a\n' or \

@@ -3,22 +3,26 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using BepInEx;
+using HarmonyLib;
 using UnityEngine;
 
 namespace Heimdall.Sagas.Mod
 {
-    [BepInPlugin("gg.heimdall.sagas.bridge", "Heimdall Sagas Bridge", "0.1.0")]
+    [BepInPlugin("gg.heimdall.sagas.bridge", "Heimdall Sagas Bridge", "0.1.1")]
     public sealed class BridgePlugin : BaseUnityPlugin
     {
         private const string Rpc = "Heimdall.Sagas.V1";
         private const string Hello = "Heimdall.Sagas.Hello.V1";
         private const string Probe = "Heimdall.Sagas.Probe.V1";
         private const string Ack = "Heimdall.Sagas.Ack.V1";
+        private static readonly FieldInfo lastHit = AccessTools.Field(typeof(Character), "m_lastHit");
+        private static BridgePlugin current;
         [Serializable]
         private sealed class BridgeSettings
         {
@@ -37,9 +41,11 @@ namespace Heimdall.Sagas.Mod
         private readonly HashSet<ZRpc> registered = new HashSet<ZRpc>();
         private readonly Dictionary<ZRpc, float> nextPacket = new Dictionary<ZRpc, float>();
         private readonly Dictionary<ZRpc, WirePacket> latest = new Dictionary<ZRpc, WirePacket>();
+        private readonly HashSet<ZRpc> announced = new HashSet<ZRpc>();
         private BlockingCollection<PendingWrite> queue;
         private readonly ConcurrentQueue<PendingWrite> committed = new ConcurrentQueue<PendingWrite>();
         private Task writer;
+        private Harmony harmony;
         private string inbox;
         private string settingsPath;
         private BridgeSettings settings = new BridgeSettings { enabled = false };
@@ -48,6 +54,7 @@ namespace Heimdall.Sagas.Mod
         private float nextClock;
         private float nextSettingsRefresh;
         private long lastSpoolTick;
+        private float nextIdentityWarning;
 
         private void Awake()
         {
@@ -60,10 +67,15 @@ namespace Heimdall.Sagas.Mod
             queue = new BlockingCollection<PendingWrite>(512);
             writer = Task.Run(() => WritePackets());
             RefreshSettings();
+            current = this;
+            harmony = new Harmony("gg.heimdall.sagas.bridge");
+            harmony.PatchAll();
         }
 
         private void OnDestroy()
         {
+            harmony?.UnpatchSelf();
+            if (current == this) current = null;
             queue?.CompleteAdding();
             try { writer?.Wait(2000); } catch (AggregateException) { }
         }
@@ -100,8 +112,12 @@ namespace Heimdall.Sagas.Mod
                 latest.Remove(rpc);
                 nextPacket.Remove(rpc);
                 registered.Remove(rpc);
+                announced.Remove(rpc);
             }
-            foreach (var rpc in registered.Where(p => !live.Contains(p)).ToArray()) registered.Remove(rpc);
+            foreach (var rpc in registered.Where(p => !live.Contains(p)).ToArray()) {
+                registered.Remove(rpc);
+                announced.Remove(rpc);
+            }
             if (settings.enabled && settings.clock && EnvMan.instance != null &&
                 Time.unscaledTime >= nextClock) {
                 nextClock = Time.unscaledTime + 30f;
@@ -119,13 +135,19 @@ namespace Heimdall.Sagas.Mod
                 !peer.IsReady() || data == null || data.Length > 8192) return;
             if (nextPacket.TryGetValue(rpc, out var next) && Time.unscaledTime < next) return;
             nextPacket[rpc] = Time.unscaledTime + .2f;
-            if (!TryPlayerId(peer, out var playerId)) return;
+            if (!TryPlayerId(peer, out var playerId)) {
+                if (Time.unscaledTime >= nextIdentityWarning) {
+                    nextIdentityWarning = Time.unscaledTime + 60f;
+                    Logger.LogWarning("Heimdall Sagas received a client packet but could not yet verify the player's character identity.");
+                }
+                return;
+            }
             WirePacket packet;
             try { packet = JsonUtility.FromJson<WirePacket>(data); }
             catch (ArgumentException) { return; }
             if (packet == null || packet.version != 1) return;
             if (packet.type != "presence" && packet.type != "withdraw" &&
-                !(packet.type == "event" && packet.kind == "death")) return;
+                !(packet.type == "event" && (packet.kind == "death" || packet.kind == "kill"))) return;
             if (packet.type != "withdraw" && !settings.enabled) return;
             if (packet.type == "event" && !settings.events) return;
             var world = WorldId();
@@ -147,12 +169,22 @@ namespace Heimdall.Sagas.Mod
                     ? (packet.gear ?? Array.Empty<GearItem>()).Where(g => g != null).Take(32).ToArray()
                     : Array.Empty<GearItem>();
                 latest[rpc] = packet;
+                if (announced.Add(rpc))
+                    Logger.LogInfo("Heimdall Sagas accepted a client sharing snapshot.");
             } else {
-                if (!Guid.TryParseExact(packet.id, "N", out _)) return;
+                if (!Guid.TryParseExact(packet.id, "N", out _) &&
+                    !(packet.id != null && packet.id.Length == 64 &&
+                      packet.id.All(c => c >= '0' && c <= '9' || c >= 'a' && c <= 'f')))
+                    return;
                 if (!latest.TryGetValue(rpc, out var consent) || !consent.share_profile) return;
                 packet.has_location &= consent.share_map;
-                packet.target = "";
-                packet.stars = 0;
+                if (packet.kind == "kill") {
+                    packet.target = SafeText(packet.target, 120);
+                    packet.stars = Math.Max(0, Math.Min(100, packet.stars));
+                } else {
+                    packet.target = "";
+                    packet.stars = 0;
+                }
                 packet.quantity = 1;
                 var received = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
                 if (packet.utc < received - 7 * 86400 || packet.utc > received + 120)
@@ -170,7 +202,7 @@ namespace Heimdall.Sagas.Mod
             if (character == null || character.GetPrefab() != "Player".GetStableHashCode() ||
                 character.GetOwner() != peer.m_uid) return false;
             id = character.GetLong(ZDOVars.s_playerID, 0);
-            return id != 0 && id == peer.m_playerID;
+            return id != 0 && (peer.m_playerID == 0 || id == peer.m_playerID);
         }
 
         private void RefreshSettings()
@@ -195,8 +227,48 @@ namespace Heimdall.Sagas.Mod
         private static string SafeName(string value)
         {
             if (string.IsNullOrWhiteSpace(value)) return "Viking";
-            var clean = new string(value.Where(c => !char.IsControl(c)).Take(64).ToArray()).Trim();
+            var clean = SafeText(value, 64);
             return clean == "" ? "Viking" : clean;
+        }
+
+        private static string SafeText(string value, int maximum) =>
+            new string((value ?? "").Where(c => !char.IsControl(c)).Take(maximum).ToArray()).Trim();
+
+        private void RecordServerKill(Character victim)
+        {
+            if (!settings.enabled || !settings.events || victim is Player || lastHit == null) return;
+            var view = victim.GetComponent<ZNetView>();
+            if (view == null || !view.IsValid() || !view.IsOwner()) return;
+            var killer = (lastHit.GetValue(victim) as HitData)?.GetAttacker() as Player;
+            if (killer == null || killer.GetPlayerID() == 0) return;
+            var world = WorldId();
+            if (world == "") return;
+            var actor = Digest(world + ":" + killer.GetPlayerID());
+            var consent = latest.Values.FirstOrDefault(p => p.actor == actor && p.share_profile);
+            if (consent == null) return;
+            var zdo = view.GetZDO();
+            if (zdo == null) return;
+            var location = victim.transform.position;
+            var target = Localization.instance == null ? victim.m_name :
+                Localization.instance.Localize(victim.m_name);
+            Enqueue(new WirePacket { type = "event", kind = "kill",
+                id = Digest("kill:" + world + ":" + zdo.m_uid), world = world, actor = actor,
+                name = SafeName(killer.GetPlayerName()), target = SafeText(target, 120),
+                stars = Math.Max(0, Math.Min(100, victim.GetLevel() - 1)),
+                utc = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                has_location = consent.share_map,
+                x = consent.share_map ? location.x : 0,
+                z = consent.share_map ? location.z : 0 });
+        }
+
+        [HarmonyPatch(typeof(Character), "OnDeath")]
+        private static class KillPatch
+        {
+            private static void Prefix(Character __instance)
+            {
+                try { current?.RecordServerKill(__instance); }
+                catch (Exception error) { current?.Logger.LogWarning("Heimdall Sagas could not record a kill: " + error.Message); }
+            }
         }
 
         private static string WorldId()

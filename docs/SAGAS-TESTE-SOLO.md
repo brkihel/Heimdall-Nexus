@@ -48,7 +48,7 @@ também precisa de BepInEx e da DLL Client.
    **Bridge**, não o ZIP. Ele cria a fila privada, configura o serviço de
    importação e a rota pública; o reinício carrega a DLL no Valheim.
 4. No computador do jogador, instale BepInEx para Valheim e extraia
-   `artifacts/sagas/HeimdallSagas.Client-0.1.0.zip` na pasta do jogo. O ZIP
+   `artifacts/sagas/HeimdallSagas.Client-0.1.1.zip` na pasta do jogo. O ZIP
    coloca `HeimdallSagas.Client.dll` em
    `BepInEx/plugins/HeimdallSagas/`. Não instale a Bridge no cliente.
 5. Abra o jogo uma vez para gerar

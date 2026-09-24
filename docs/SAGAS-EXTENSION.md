@@ -1,6 +1,6 @@
 # Heimdall Sagas extension
 
-Status: **0.1.0 development preview**. The extension is opt-in and separate
+Status: **0.1.1 development preview**. The extension is opt-in and separate
 from the existing `saga.json` skill ranking. It has not been installed on a live
 server or published to Hexium.
 
@@ -45,7 +45,7 @@ prunes SQLite to the 100,000 most recent events each hour.
 |---|---|---|
 | Online presence and world day | Implemented in preview | Dedicated server playtest; pause/time-skip behavior |
 | Last equipped items | Implemented in preview | Verify modded inventory slots and item localization |
-| Death events with local retry | Implemented in preview | One-client death/reconnect playtest and automated retry/dedup tests |
+| Kill and death events with local retry | Implemented in preview | One-client combat/reconnect playtest and automated retry/dedup tests |
 | Kills, boss credit, drops, rarity, bounty | Planned | Server-authoritative provenance and deduplication tests |
 | Atlas terrain, fog, pins, activity layers | Planned | Consent-preserving capture, bounded transport, large-map tests |
 | Portraits, icons, effects, resistances | Planned | Frame-budgeted capture and media validation |
@@ -65,7 +65,7 @@ prunes SQLite to the 100,000 most recent events each hour.
    transports actually verified. Then publish a versioned client package with
    checksum on Hexium and expose its modpack link in Jarl. The bridge remains
    a separate optional server install.
-2. **Build a credited fact ledger.** Add server-observed kill, boss, item and
+2. **Build a credited fact ledger.** Extend basic kill tracking with boss, item and
    bounty facts with stable IDs, actor credit, timestamps, and source adapters.
    Reject facts without verified ownership. Derive rankings and the trophy
    hall from that ledger, with visible rules for ties and time windows.

@@ -1,7 +1,7 @@
-# Heimdall Sagas 0.1.0 preview
+# Heimdall Sagas 0.1.1 preview
 
 This is an original optional companion to Heimdall Nexus. It currently records
-player presence, last known equipped items, opted-in live position, deaths, and the world day. It does not
+player presence, last known equipped items, opted-in live position, kills, deaths, and the world day. It does not
 yet include the atlas, armory, leaderboards or AI stories.
 
 The Client DLL is installed with BepInEx on each participating Valheim client.
