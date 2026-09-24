@@ -114,7 +114,9 @@ Everything lives in the [**wiki**](https://github.com/brkihel/Heimdall-Nexus/wik
 
 ## Updating
 
-On an installed server:
+From the panel: **Jarl → Sobre e atualizações → Procurar atualizações**. Review the changes, approve the exact version, and the panel updates and comes back on its own.
+
+From a terminal on an installed server:
 
 ```bash
 cd ~/Heimdall-Nexus && git pull --ff-only && sudo ./deploy/update.sh

@@ -114,7 +114,9 @@ Tudo está na [**wiki**](https://github.com/brkihel/Heimdall-Nexus/wiki/Inicio),
 
 ## Atualizar
 
-Num servidor já instalado:
+Pelo painel: **Jarl → Sobre e atualizações → Procurar atualizações**. Você vê a lista de mudanças e aprova a versão exata; o painel se atualiza e volta sozinho.
+
+Pelo terminal, num servidor já instalado:
 
 ```bash
 cd ~/Heimdall-Nexus && git pull --ff-only && sudo ./deploy/update.sh
