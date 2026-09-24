@@ -1,4 +1,4 @@
-# Heimdall Sagas 0.1.2 preview
+# Heimdall Sagas 0.1.3 preview
 
 This is an original optional companion to Heimdall Nexus. It currently records
 player presence, last known equipped items, opted-in live position, kills, deaths, and the world day. It does not

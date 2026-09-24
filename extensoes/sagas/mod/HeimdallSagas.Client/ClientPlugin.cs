@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace Heimdall.Sagas.Mod
 {
-    [BepInPlugin("gg.heimdall.sagas.client", "Heimdall Sagas Client", "0.1.2")]
+    [BepInPlugin("gg.heimdall.sagas.client", "Heimdall Sagas Client", "0.1.3")]
     public sealed class ClientPlugin : BaseUnityPlugin
     {
         private const string Rpc = "Heimdall.Sagas.V1";
@@ -88,6 +88,7 @@ namespace Heimdall.Sagas.Mod
                 foreach (var packet in pending.Values.Where(p => p.has_location)) {
                     packet.has_location = false;
                     packet.x = packet.z = 0;
+                    packet.biome = "";
                     Save(packet);
                 }
             }
@@ -191,6 +192,7 @@ namespace Heimdall.Sagas.Mod
                 world = WorldId(),
                 utc = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 has_location = current.shareMap.Value,
+                biome = current.shareMap.Value ? BiomeTag.At(p.transform.position) : "",
                 x = current.shareMap.Value ? p.transform.position.x : 0,
                 z = current.shareMap.Value ? p.transform.position.z : 0 };
             if (packet.world == "" || !current.Save(packet)) return;
@@ -226,6 +228,7 @@ namespace Heimdall.Sagas.Mod
                 stars = stars, boss = boss, elite = elite,
                 utc = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 has_location = plugin.shareMap.Value,
+                biome = plugin.shareMap.Value ? BiomeTag.At(position) : "",
                 x = plugin.shareMap.Value ? position.x : 0,
                 z = plugin.shareMap.Value ? position.z : 0 };
             if (!plugin.Save(packet)) return;

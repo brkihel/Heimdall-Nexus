@@ -23,6 +23,7 @@ DATABASE = STATE / 'sagas.sqlite3'
 SETTINGS = STATE / 'settings.json'
 IDENTIFIER = re.compile(r'^[a-f0-9]{24,64}$')
 EVENT_ID = re.compile(r'^[A-Za-z0-9_-]{8,96}$')
+BIOME = re.compile(r'^[A-Za-z][A-Za-z0-9_]{0,39}$')
 KINDS = {'kill', 'death', 'drop', 'collect', 'pickup', 'boss', 'bounty'}
 MAX_PACKET = 64 * 1024
 MAX_BATCH = 500
@@ -147,8 +148,13 @@ def validate(raw: object) -> dict:
     if raw.get('has_location') is True:
         out['x'] = _number(raw.get('x'), -20000, 20000)
         out['z'] = _number(raw.get('z'), -20000, 20000)
+        biome = raw.get('biome', '')
+        if not isinstance(biome, str) or biome and not BIOME.fullmatch(biome):
+            raise InvalidPacket('invalid biome')
+        out['biome'] = biome
     else:
         out['x'] = out['z'] = None
+        out['biome'] = ''
     return out
 
 
@@ -171,7 +177,7 @@ CREATE TABLE IF NOT EXISTS events (
   kind TEXT NOT NULL, name TEXT NOT NULL, target TEXT NOT NULL,
   stars INTEGER NOT NULL, quantity INTEGER NOT NULL,
   boss INTEGER NOT NULL DEFAULT 0, elite INTEGER NOT NULL DEFAULT 0,
-  x REAL, z REAL, occurred_at INTEGER NOT NULL,
+  biome TEXT NOT NULL DEFAULT '', x REAL, z REAL, occurred_at INTEGER NOT NULL,
   PRIMARY KEY(world, actor, id), FOREIGN KEY(world) REFERENCES worlds(id)
 );
 CREATE INDEX IF NOT EXISTS events_by_time ON events(world, occurred_at DESC);
@@ -197,6 +203,8 @@ def connect(path: Path = DATABASE) -> sqlite3.Connection:
     for flag in ('boss', 'elite'):
         if flag not in event_columns:
             db.execute(f'ALTER TABLE events ADD COLUMN {flag} INTEGER NOT NULL DEFAULT 0')
+    if 'biome' not in event_columns:
+        db.execute("ALTER TABLE events ADD COLUMN biome TEXT NOT NULL DEFAULT ''")
     return db
 
 
@@ -230,7 +238,7 @@ def ingest(db: sqlite3.Connection, packet: dict, now: int | None = None,
                 db.execute('DELETE FROM events WHERE world=? AND actor=?',
                            (world, packet['actor']))
             elif not packet['share_map']:
-                db.execute('UPDATE events SET x=NULL, z=NULL WHERE world=? AND actor=?',
+                db.execute("UPDATE events SET x=NULL, z=NULL, biome='' WHERE world=? AND actor=?",
                            (world, packet['actor']))
         else:
             consent = db.execute('''SELECT share_profile, share_map FROM players
@@ -239,13 +247,14 @@ def ingest(db: sqlite3.Connection, packet: dict, now: int | None = None,
             if consent is None or not consent['share_profile']:
                 return
             x, z = (packet['x'], packet['z']) if consent['share_map'] else (None, None)
+            biome = packet['biome'] if consent['share_map'] else ''
             db.execute('''INSERT OR IGNORE INTO events
-                          (world,actor,id,kind,name,target,stars,quantity,x,z,occurred_at,boss,elite)
-                          VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                          (world,actor,id,kind,name,target,stars,quantity,x,z,occurred_at,boss,elite,biome)
+                          VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                        (world, packet['actor'], packet['id'], packet['kind'],
                         packet['name'], packet['target'], packet['stars'],
                         packet['quantity'], x, z,
-                        packet['occurred_at'] or now, int(packet['boss']), int(packet['elite'])))
+                        packet['occurred_at'] or now, int(packet['boss']), int(packet['elite']), biome))
 
 
 def maintain(db: sqlite3.Connection, now: int | None = None) -> None:
@@ -348,9 +357,11 @@ def public_view(path: Path = DATABASE, world: str = '', limit: int = 50) -> dict
         event_columns = {row[1] for row in db.execute('PRAGMA table_info(events)')}
         boss = 'e.boss' if 'boss' in event_columns else '0'
         elite = 'e.elite' if 'elite' in event_columns else '0'
+        biome = 'e.biome' if 'biome' in event_columns else "''"
         events = [dict(row) for row in db.execute(f'''SELECT e.id, e.actor, e.kind, e.name,
                          e.target, e.stars, e.quantity, e.occurred_at,
                          {boss} AS boss, {elite} AS elite,
+                         CASE WHEN p.share_map=1 THEN {biome} ELSE '' END AS biome,
                          CASE WHEN p.share_map=1 THEN e.x END AS x,
                          CASE WHEN p.share_map=1 THEN e.z END AS z
                          FROM events e JOIN players p ON p.world=e.world AND p.id=e.actor

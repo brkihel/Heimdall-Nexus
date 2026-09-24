@@ -29,6 +29,7 @@ namespace Heimdall.Sagas.Mod
         public int stars;
         public bool boss;
         public bool elite;
+        public string biome = "";
         public int quantity = 1;
         public bool online;
         public bool share_profile;

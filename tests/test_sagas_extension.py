@@ -56,6 +56,23 @@ class SagasContractTests(unittest.TestCase):
             with self.subTest(changes=changes), self.assertRaises(sagas.InvalidPacket):
                 sagas.validate(event(kind='kill', **changes))
 
+    def test_biome_requires_map_consent_and_is_erased_on_revocation(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            dbfile = Path(temporary) / 'sagas.sqlite3'
+            enable(dbfile.parent)
+            with sagas.connect(dbfile) as db:
+                sagas.ingest(db, sagas.validate(presence()), now=100)
+                sagas.ingest(db, sagas.validate(event(biome='BlackForest')), now=101)
+                self.assertEqual(sagas.public_view(dbfile)['events'][0]['biome'],
+                                 'BlackForest')
+                sagas.ingest(db, sagas.validate(presence(share_map=False)), now=102)
+                self.assertEqual(db.execute('SELECT biome FROM events').fetchone()[0], '')
+            self.assertEqual(sagas.public_view(dbfile)['events'][0]['biome'], '')
+            self.assertEqual(sagas.validate(event(id='fedcba0987654321',
+                has_location=False, biome='BlackForest'))['biome'], '')
+            with self.assertRaises(sagas.InvalidPacket):
+                sagas.validate(event(biome='<script>'))
+
     def test_kill_mode_filters_history_and_new_packets_without_hiding_deaths(self):
         with tempfile.TemporaryDirectory() as temporary:
             state = Path(temporary)
@@ -237,7 +254,7 @@ class SagasContractTests(unittest.TestCase):
             with sagas.connect(dbfile) as db:
                 self.assertIn('gear_json', {r[1] for r in db.execute('PRAGMA table_info(players)')})
                 self.assertIn('name', {r[1] for r in db.execute('PRAGMA table_info(worlds)')})
-                self.assertTrue({'boss', 'elite'}.issubset(
+                self.assertTrue({'boss', 'elite', 'biome'}.issubset(
                     {r[1] for r in db.execute('PRAGMA table_info(events)')}))
 
     def test_storage_failure_keeps_valid_packet_for_retry(self):

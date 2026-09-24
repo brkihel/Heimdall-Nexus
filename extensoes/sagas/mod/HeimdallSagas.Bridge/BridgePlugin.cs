@@ -14,7 +14,7 @@ using UnityEngine;
 
 namespace Heimdall.Sagas.Mod
 {
-    [BepInPlugin("gg.heimdall.sagas.bridge", "Heimdall Sagas Bridge", "0.1.2")]
+    [BepInPlugin("gg.heimdall.sagas.bridge", "Heimdall Sagas Bridge", "0.1.3")]
     public sealed class BridgePlugin : BaseUnityPlugin
     {
         private const string Rpc = "Heimdall.Sagas.V1";
@@ -181,6 +181,7 @@ namespace Heimdall.Sagas.Mod
                     return;
                 if (!latest.TryGetValue(rpc, out var consent) || !consent.share_profile) return;
                 packet.has_location &= consent.share_map;
+                packet.biome = packet.has_location ? BiomeTag.Safe(packet.biome) : "";
                 if (packet.kind == "kill") {
                     packet.target = SafeText(packet.target, 120);
                     packet.stars = Math.Max(0, Math.Min(100, packet.stars));
@@ -268,6 +269,7 @@ namespace Heimdall.Sagas.Mod
                 stars = stars, boss = boss, elite = elite,
                 utc = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 has_location = consent.share_map,
+                biome = consent.share_map ? BiomeTag.At(location) : "",
                 x = consent.share_map ? location.x : 0,
                 z = consent.share_map ? location.z : 0 });
         }

@@ -1,6 +1,6 @@
 # Heimdall Sagas extension
 
-Status: **0.1.2 development preview**. The extension is opt-in and separate
+Status: **0.1.3 development preview**. The extension is opt-in and separate
 from the existing `saga.json` skill ranking. It has not been installed on a live
 server or published to Hexium.
 
@@ -46,6 +46,11 @@ creatures with at least three stars, or bosses only. Deaths remain visible in
 every mode. The client and bridge apply the filter before storage; the Nexus
 also filters pending packets and existing history. Older events without boss
 or elite classification remain visible in the all-kills mode.
+When map sharing is enabled, new kill and death events also carry the game's
+biome name. Turning map sharing off clears stored biome names along with event
+coordinates. The public Crônicas page marks bosses, elites, and high-star
+kills, offers matching filters, and builds a recent-feats panel from visible
+events. The panel only summarizes the latest events returned by the API.
 
 ## Feature inventory
 
@@ -53,7 +58,7 @@ or elite classification remain visible in the all-kills mode.
 |---|---|---|
 | Online presence and world day | Implemented in preview | Dedicated server playtest; pause/time-skip behavior |
 | Last equipped items | Implemented in preview | Verify modded inventory slots and item localization |
-| Kill and death events with local retry and admin kill filter | Implemented in preview | One-client combat/reconnect playtest and automated retry/dedup tests |
+| Kill and death events with local retry, admin kill filter, biome, and recent feats | Implemented in preview | One-client combat/reconnect and consent-revocation playtest |
 | Advanced boss credit, drops, rarity, bounty | Planned | Server-authoritative provenance and deduplication tests |
 | Atlas terrain, fog, pins, activity layers | Planned | Consent-preserving capture, bounded transport, large-map tests |
 | Portraits, icons, effects, resistances | Planned | Frame-budgeted capture and media validation |
