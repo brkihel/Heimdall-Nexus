@@ -23,6 +23,7 @@ import nucleo
 import sagas
 import stories
 import atlas
+import codigos
 
 BASE = Path(__file__).parent
 RAIZ_URL = os.environ.get('PAINEL_RAIZ', '/jarl')
@@ -243,7 +244,7 @@ async def sagas_admin_opcoes(pedido: Request):
 @app.get(f'{RAIZ_URL}/sobre', response_class=HTMLResponse)
 async def sobre(pedido: Request):
     exige(pedido)
-    return pagina(pedido, 'sobre.html', aba='sobre')
+    return pagina(pedido, 'sobre.html', aba='sobre', codigos=codigos.CATALOGO)
 
 
 @app.get(f'{RAIZ_URL}/api/sistema/atualizacao')

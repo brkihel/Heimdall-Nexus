@@ -1,0 +1,73 @@
+"""Error code catalog shown to admins (docs/CODIGOS-DE-ERRO.md mirrors it).
+
+Format: HN-<AREA>-<NNN>. HN = Heimdall Nexus. The number never changes once
+published; retired codes stay listed. Admin-facing text is pt-BR.
+"""
+from __future__ import annotations
+
+import re
+
+CODE = re.compile(r'^HN-[A-Z]{3,5}-\d{3}$')
+PREFIXED = re.compile(r'^(HN-[A-Z]{3,5}-\d{3}): (.*)$', re.S)
+
+CATALOGO: dict[str, dict[str, str]] = {
+    # --- Updates: checking and starting (executor) ---
+    'HN-UPD-001': {'titulo': 'Git não instalado',
+                   'solucao': 'Na máquina do Nexus, rode: sudo apt install git'},
+    'HN-UPD-002': {'titulo': 'O repositório demorou demais para responder',
+                   'solucao': 'Confira a internet do servidor e tente de novo em alguns minutos.'},
+    'HN-UPD-003': {'titulo': 'O Git não conseguiu baixar as versões',
+                   'solucao': 'Confira se o servidor acessa github.com (curl -I https://github.com). O detalhe do Git aparece na mensagem.'},
+    'HN-UPD-004': {'titulo': 'Endereço do repositório de atualização inválido',
+                   'solucao': 'HEIMDALL_UPDATE_REPO em /etc/heimdall-nexus/heimdall.env precisa ser um endereço https://….git.'},
+    'HN-UPD-005': {'titulo': 'A cópia local do repositório está danificada',
+                   'solucao': 'Apague /var/lib/heimdall-nexus/source (sudo rm -rf) e procure atualizações de novo.'},
+    'HN-UPD-006': {'titulo': 'O canal escolhido não existe no repositório',
+                   'solucao': 'Escolha outro canal. Canais de desenvolvimento podem ser apagados depois de publicados no estável.'},
+    'HN-UPD-007': {'titulo': 'Canal inválido',
+                   'solucao': 'Use main ou um canal dev/… da lista.'},
+    'HN-UPD-008': {'titulo': 'Versão inválida',
+                   'solucao': 'Procure atualizações de novo e use o botão Atualizar.'},
+    'HN-UPD-009': {'titulo': 'Já existe uma atualização em andamento',
+                   'solucao': 'Aguarde a atual terminar; o progresso aparece nesta página.'},
+    'HN-UPD-010': {'titulo': 'A lista de mudanças ficou desatualizada',
+                   'solucao': 'O canal recebeu uma versão nova depois da sua procura. Procure de novo e confira a lista.'},
+    'HN-UPD-011': {'titulo': 'Não foi possível iniciar a atualização',
+                   'solucao': 'O systemd recusou a tarefa. Veja: sudo journalctl -u heimdall-executor -n 50'},
+    'HN-UPD-012': {'titulo': 'Nenhuma procura recente',
+                   'solucao': 'Clique em Procurar atualizações antes de atualizar.'},
+    # --- Updates: steps of deploy/update.sh ---
+    'HN-UPD-100': {'titulo': 'Pré-requisitos da atualização não atendidos',
+                   'solucao': 'A instalação não foi encontrada ou o script não rodou como root. Veja o registro técnico.'},
+    'HN-UPD-101': {'titulo': 'Falha ao copiar o código novo',
+                   'solucao': 'Confira o espaço em disco (df -h /opt). A versão anterior continua nos serviços até o reinício.'},
+    'HN-UPD-102': {'titulo': 'Falha ao atualizar as bibliotecas do painel',
+                   'solucao': 'O pip não conseguiu instalar as dependências. Confira a internet do servidor e tente de novo.'},
+    'HN-UPD-103': {'titulo': 'Falha ao atualizar os serviços das Sagas',
+                   'solucao': 'Veja: systemctl status heimdall-sagas-ingest.timer heimdall-sagas-story.timer'},
+    'HN-UPD-104': {'titulo': 'Falha ao atualizar os ajudantes do site',
+                   'solucao': 'Confira as permissões de /var/lib/heimdall-nexus/site. Suas páginas não foram alteradas.'},
+    'HN-UPD-105': {'titulo': 'Falha ao publicar o site',
+                   'solucao': 'O site anterior continua no ar. Veja o registro técnico e tente de novo.'},
+    'HN-UPD-106': {'titulo': 'Falha ao atualizar a ponte Sagas',
+                   'solucao': 'A ponte anterior continua instalada. Confira a pasta BepInEx/plugins/HeimdallSagas do servidor.'},
+    'HN-UPD-107': {'titulo': 'Falha ao registrar a versão instalada',
+                   'solucao': 'A atualização foi aplicada, mas a versão não foi gravada. Rode a atualização de novo.'},
+    'HN-UPD-108': {'titulo': 'O painel não voltou depois de reiniciar',
+                   'solucao': 'Veja: sudo journalctl -u heimdall-panel -n 80. Pelo terminal: cd ~/Heimdall-Nexus && sudo ./deploy/update.sh'},
+    'HN-UPD-120': {'titulo': 'A atualização terminou sem trocar a versão',
+                   'solucao': 'Veja o registro técnico. Se não houver erro nele, procure atualizações de novo.'},
+    'HN-UPD-121': {'titulo': 'A atualização foi interrompida',
+                   'solucao': 'O processo parou sem concluir (reinício da máquina ou falta de memória). Rode a atualização de novo.'},
+}
+
+
+def com_codigo(codigo: str, mensagem: str) -> str:
+    """Prefix a message so the code survives the executor/panel plumbing."""
+    assert codigo in CATALOGO, codigo
+    return f'{codigo}: {mensagem}'
+
+
+def separa(texto: str) -> tuple[str, str]:
+    match = PREFIXED.match(texto or '')
+    return (match.group(1), match.group(2)) if match else ('', texto or '')

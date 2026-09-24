@@ -62,6 +62,23 @@ na fila de ajuste.
 - **Idioma.** Texto ao jogador em pt-BR, com sabor nórdico quando couber, mas
   claro. Código, logs e comentários em inglês.
 
+### Códigos de erro e avisos
+
+- **Todo erro mostrado ao administrador tem código** `HN-ÁREA-NNN`
+  (HN = Heimdall Nexus). O catálogo único fica em
+  `servicos/painel/codigos.py`, com título e "como resolver" em pt-BR;
+  `docs/CODIGOS-DE-ERRO.md` é gerado dele e um teste confere os dois. Um
+  número publicado nunca muda de significado. Área nova ganha sigla própria
+  (UPD = atualizações).
+- **Avisos flutuantes** (`estatico/avisos.js`, função `avisar`): sucesso e
+  informação somem sozinhos em poucos segundos, com uma barra de tempo; erro
+  fica até o usuário fechar e mostra o código, o que houve, como resolver e um
+  botão para copiar o código.
+- **Tarefas demoradas mostram progresso real**: etapa atual, passo N de T,
+  tempo decorrido e registro técnico recolhido. Scripts anunciam etapas com
+  `::heimdall step N/T CÓDIGO`, falhas com `::heimdall fail CÓDIGO` e o fim com
+  `::heimdall done`.
+
 ## 4. Identidade visual
 
 A identidade nasce do servidor principal da GenesisMods: não é copiar o site, é usar a mesma

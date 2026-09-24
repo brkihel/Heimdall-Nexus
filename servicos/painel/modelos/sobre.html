@@ -18,6 +18,27 @@
 .resultado{border:1px solid var(--borda);border-radius:3px;padding:.8rem 1rem;margin:.6rem 0;background:rgba(5,9,13,.35)}
 .resultado.pronto{border-color:rgba(127,217,162,.45)}
 .resultado.aviso{border-color:rgba(216,177,63,.5)}
+.andamento{margin:1rem 0 .4rem;padding:1rem 1.1rem;border:1px solid rgba(200,164,92,.35);border-radius:3px;background:linear-gradient(168deg,rgba(200,164,92,.07),rgba(5,9,13,.4))}
+.andamento-topo{display:flex;align-items:center;gap:.9rem}
+.runa{position:relative;flex:none;display:grid;place-items:center;width:44px;height:44px;color:var(--ouro-claro);font:700 1.2rem 'Cinzel',serif}
+.runa::before{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid rgba(200,164,92,.2);border-top-color:var(--ouro);animation:runa-gira 1.1s linear infinite}
+.andamento.feito .runa::before{border-color:var(--bom);animation:none}
+.andamento.falhou .runa::before{border-color:var(--ruim);animation:none}
+.andamento-topo strong{display:block;color:var(--osso);font-weight:600}
+.andamento-topo small{display:block;color:var(--fraco);font-size:.8rem}
+.barra{position:relative;height:8px;margin-top:.9rem;border-radius:99px;background:rgba(5,9,13,.7);border:1px solid var(--borda);overflow:hidden}
+.barra i{position:absolute;inset:0 auto 0 0;width:0;background:linear-gradient(90deg,var(--ouro-fundo),var(--ouro) 70%,var(--ouro-claro));transition:width .5s ease}
+.barra i::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);animation:barra-brilho 1.6s linear infinite}
+.andamento.feito .barra i{background:var(--bom)}.andamento.falhou .barra i{background:var(--ruim)}
+.andamento.feito .barra i::after,.andamento.falhou .barra i::after{display:none}
+.etapas{display:flex;justify-content:space-between;margin-top:.45rem;color:var(--fraco);font-size:.7rem}
+.falha-caixa{margin:.8rem 0;padding:.85rem 2.4rem .85rem 1rem;position:relative;border:1px solid rgba(239,142,124,.5);border-left:3px solid var(--ruim);border-radius:3px;background:rgba(239,142,124,.06)}
+.falha-caixa strong{color:var(--osso)}
+.falha-caixa p{margin:.3rem 0 0;color:var(--texto);font-size:.86rem}
+.falha-caixa .aviso-codigo{margin-right:.4rem}
+.registro summary{cursor:pointer;color:var(--ouro-claro);font-size:.84rem;margin-top:.7rem}
+@keyframes runa-gira{to{transform:rotate(360deg)}}
+@keyframes barra-brilho{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
 .log{height:280px;overflow:auto;margin:.6rem 0 0;padding:.8rem 1rem;border:1px solid var(--borda);border-radius:3px;background:#081117;color:#b4c3cb;font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
 </style>
 {% endblock %}
@@ -48,7 +69,13 @@
   <div id="resultado" hidden></div>
   <div class="linha-acoes" id="acao-atualizar" hidden><button class="btn principal" id="atualizar" type="button">Atualizar agora</button></div>
   <p class="nota" id="o-que-acontece" hidden>Ao atualizar, o painel baixa a versão mostrada acima e reinicia sozinho (cerca de 30 segundos; esta página volta sozinha). O servidor Valheim <b>não</b> é reiniciado, e seus mundos, mods, configurações e páginas do site não são tocados. Se a ponte Sagas mudar, ela é trocada e passa a valer no próximo reinício do Valheim.</p>
-  <pre class="log" id="log" hidden aria-live="polite"></pre>
+  <div class="andamento" id="progresso" hidden>
+    <div class="andamento-topo"><span class="runa" aria-hidden="true">ᚺ</span><div><strong id="p-etapa">Preparando a atualização…</strong><small id="p-detalhe">Passo 0 de 7 · 0:00</small></div></div>
+    <div class="barra" id="p-barra" role="progressbar" aria-label="Andamento da atualização" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="p-preenche"></i></div>
+    <div class="etapas"><span>Baixar</span><span>Instalar</span><span>Publicar</span><span>Reiniciar</span></div>
+  </div>
+  <div class="falha-caixa" id="falha" role="alert" hidden><button type="button" class="aviso-fechar" id="falha-fechar" aria-label="Fechar aviso">×</button><span class="aviso-codigo" id="falha-codigo"></span><strong id="falha-titulo"></strong><p id="falha-solucao"></p></div>
+  <details class="registro" id="registro" hidden><summary>Ver registro técnico</summary><pre class="log" id="log" aria-live="off"></pre></details>
 </div>
 
 <div class="cartao"><h2>Segurança das atualizações</h2>
@@ -58,9 +85,17 @@
 {% block script %}
 <script>
 const api={{ (raiz ~ '/api/sistema/atualizacao')|tojson }};
+const catalogo={{ codigos|tojson }};
 const $=id=>document.getElementById(id);
-let estado=null,alvo='',acompanhando=false,alvoEsperado='',falhas=0;
+let alvo='',acompanhando=false,alvoEsperado='',falhas=0,inicio=0,relogio=null,ultimoProgresso=null;
 function quando(s){return s?new Date(s*1000).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'—';}
+function guarda(k,v){try{v==null?sessionStorage.removeItem(k):sessionStorage.setItem(k,v);}catch{}}
+function le(k){try{return sessionStorage.getItem(k);}catch{return null;}}
+function erro(mensagem,titulo){
+  const m=/^(HN-[A-Z]{3,5}-\d{3}): ([\s\S]*)$/.exec(mensagem||'');
+  const codigo=m?m[1]:'',info=catalogo[codigo]||{};
+  avisar({tipo:'erro',codigo,titulo:titulo||info.titulo||'Algo deu errado',texto:m?m[2]:mensagem,solucao:info.solucao});
+}
 function lista(id,itens){
   const ul=$(id);ul.replaceChildren();
   for(const [ok,titulo,ajuda,comando] of itens){
@@ -81,7 +116,8 @@ async function post(action,dados){
 function mostraResultado(c){
   const box=$('resultado');box.hidden=!c;$('acao-atualizar').hidden=true;$('o-que-acontece').hidden=true;
   if(!c)return;box.replaceChildren();alvo='';
-  if(c.error){const e=document.createElement('div');e.className='resultado aviso';e.textContent='A última procura falhou: '+c.error;box.append(e);return;}
+  if(c.error){const e=document.createElement('div');e.className='resultado aviso';
+    const info=catalogo[c.code]||{};e.textContent='A última procura falhou'+(c.code?' ('+c.code+')':'')+': '+(info.titulo||c.error)+'. '+(info.solucao||'');box.append(e);return;}
   const div=document.createElement('div');div.className='resultado';
   if(c.up_to_date){div.classList.add('pronto');div.textContent='Você está na versão mais recente do canal '+c.channel+' ('+c.target_short+'). Última procura: '+quando(c.checked_at)+'.';box.append(div);return;}
   alvo=c.target;
@@ -96,8 +132,27 @@ function mostraResultado(c){
   $('acao-atualizar').hidden=false;$('o-que-acontece').hidden=false;
   $('atualizar').textContent='Atualizar para '+c.target_short;
 }
+function tempo(){const s=Math.max(0,Math.round((Date.now()-inicio)/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
+function desenhaProgresso(p,reiniciando){
+  const box=$('progresso');box.hidden=false;box.classList.remove('feito','falhou');
+  const total=p&&p.total||7,passo=p&&p.step||0;
+  let pct=Math.max(4,Math.round(passo/total*100)-6),etapa=p&&p.label||'Preparando a atualização…';
+  if(reiniciando){pct=Math.max(pct,92);etapa='Reiniciando o painel… esta página volta sozinha';}
+  if(p&&p.state==='done'){pct=100;etapa='Atualização concluída';box.classList.add('feito');}
+  if(p&&p.state==='failed'){box.classList.add('falhou');}
+  $('p-preenche').style.width=pct+'%';$('p-barra').setAttribute('aria-valuenow',String(pct));
+  $('p-etapa').textContent=etapa;
+  $('p-detalhe').textContent='Passo '+Math.min(passo,total)+' de '+total+(inicio?' · '+tempo():'');
+}
+function mostraFalha(codigo){
+  const info=catalogo[codigo]||{titulo:'A atualização falhou',solucao:'Veja o registro técnico.'};
+  $('falha').hidden=false;$('falha-codigo').textContent=codigo;$('falha-titulo').textContent=info.titulo;
+  $('falha-solucao').textContent='Como resolver: '+info.solucao;
+  $('registro').hidden=false;$('registro').open=true;
+}
+$('falha-fechar').addEventListener('click',()=>{$('falha').hidden=true;guarda('heimdall-falha-vista',$('falha-codigo').textContent+(ultimoProgresso?'':''));});
 function mostra(d){
-  estado=d;const v=d.installed||{};
+  const v=d.installed||{};
   $('v-commit').textContent=v.short?v.short:'desconhecida';
   $('v-canal').textContent=v.branch||d.channel;
   $('v-quando').textContent=quando(v.updated_at);
@@ -117,53 +172,74 @@ function mostra(d){
     [!d.running,'Nenhuma atualização em andamento',d.running?'Aguarde a atual terminar; o progresso aparece abaixo.':''],
     [!(d.check&&d.check.error),'Repositório oficial acessível',d.check&&d.check.error?d.check.error:''],
   ]);
-  const log=$('log');
-  if(d.running||acompanhando){log.hidden=false;log.textContent=(d.log||[]).join('\n');log.scrollTop=log.scrollHeight;}
-  const pastilha=$('estado');
+  $('log').textContent=(d.log||[]).join('\n');
+  const p=d.progress||{};ultimoProgresso=p;
+  if(d.running||acompanhando){$('registro').hidden=false;desenhaProgresso(p,false);}
+  else if(p.state==='failed'&&le('heimdall-falha-vista')!==p.code){desenhaProgresso(p,false);mostraFalha(p.code);}
   const disponivel=d.check&&!d.check.error&&!d.check.up_to_date;
+  const pastilha=$('estado');
   pastilha.textContent=d.running?'Atualizando…':!d.check||d.check.error?'Não verificado':disponivel?'Atualização disponível':'Em dia';
   pastilha.className='pastilha '+(d.check&&d.check.up_to_date&&!d.running?'viva':'meio');
   if(!acompanhando)mostraResultado(d.check);
-  $('atualizar').disabled=d.running;$('checar').disabled=d.running;
+  $('atualizar').disabled=d.running;$('checar').disabled=d.running;$('canal').disabled=d.running;
 }
 async function carrega(){
   const r=await fetch(api,{cache:'no-store',credentials:'same-origin'});
   const d=await r.json();if(!r.ok||!d.ok)throw Error(d.erro||'HTTP '+r.status);
   mostra(d);return d;
 }
+function termina(){acompanhando=false;clearInterval(relogio);relogio=null;$('checar').disabled=false;$('canal').disabled=false;}
 async function acompanha(){
-  // The panel restarts during the update; failed polls are expected for a while.
+  // The panel restarts in the last step; failed polls are expected for a while.
   try{
-    const d=await carrega();falhas=0;
-    if(!d.running&&(d.installed||{}).commit===alvoEsperado){
-      acompanhando=false;$('checar-msg').textContent='Atualizado para '+alvoEsperado.slice(0,7)+'. Recarregando…';
-      setTimeout(()=>location.reload(),1500);return;
+    const d=await carrega();falhas=0;const p=d.progress||{};
+    if(p.state==='done'||(!d.running&&(d.installed||{}).commit===alvoEsperado)){
+      desenhaProgresso({...p,state:'done'},false);termina();
+      guarda('heimdall-atualizado',(d.installed||{}).short||alvoEsperado.slice(0,7));
+      setTimeout(()=>location.reload(),1400);return;
     }
-    if(!d.running&&falhas===0&&Date.now()-inicio>20000&&(d.installed||{}).commit!==alvoEsperado){
-      acompanhando=false;$('checar-msg').textContent='A atualização terminou sem trocar a versão. Veja o registro abaixo.';return;
+    if(p.state==='failed'){
+      termina();desenhaProgresso(p,false);mostraFalha(p.code);
+      erro(p.code+': '+((catalogo[p.code]||{}).titulo||'falha na atualização'));return;
     }
-  }catch(e){falhas++;$('checar-msg').textContent='O painel está reiniciando… ('+falhas+')';}
+    if(!d.running&&Date.now()-inicio>25000){
+      termina();const codigo='HN-UPD-120';desenhaProgresso({...p,state:'failed'},false);mostraFalha(codigo);erro(codigo+': '+catalogo[codigo].titulo);return;
+    }
+  }catch(e){
+    falhas++;desenhaProgresso(ultimoProgresso,true);
+    if(falhas>90){termina();const codigo='HN-UPD-108';mostraFalha(codigo);erro(codigo+': '+catalogo[codigo].titulo);return;}
+  }
   setTimeout(acompanha,2000);
 }
-let inicio=0;
+function comeca(alvoNovo){
+  alvoEsperado=alvoNovo;acompanhando=true;inicio=Date.now();falhas=0;
+  guarda('heimdall-falha-vista',null);$('falha').hidden=true;
+  $('acao-atualizar').hidden=true;$('o-que-acontece').hidden=true;$('resultado').hidden=true;
+  $('checar').disabled=true;$('canal').disabled=true;
+  desenhaProgresso({step:0,total:7},false);
+  if(!relogio)relogio=setInterval(()=>{if(acompanhando)$('p-detalhe').textContent=$('p-detalhe').textContent.replace(/ · \d+:\d\d$/,'')+' · '+tempo();},1000);
+  acompanha();
+}
 $('checar').addEventListener('click',async()=>{
   $('checar-msg').textContent='Procurando no repositório oficial…';$('checar').disabled=true;
   try{await post('checar',{});await carrega();$('checar-msg').textContent='';}
-  catch(e){$('checar-msg').textContent=e.message;}
+  catch(e){$('checar-msg').textContent='';await carrega().catch(()=>{});erro(e.message,'A procura por atualizações falhou');}
   finally{$('checar').disabled=false;}
 });
 $('canal').addEventListener('change',async e=>{
-  try{await post('canal',{canal:e.target.value});$('checar-msg').textContent='Canal trocado. Procure atualizações.';await carrega();}
-  catch(err){$('checar-msg').textContent=err.message;}
+  try{await post('canal',{canal:e.target.value});await carrega();avisar({tipo:'info',titulo:'Canal trocado para '+e.target.value,texto:'Agora procure atualizações nesse canal.'});}
+  catch(err){erro(err.message,'Não foi possível trocar o canal');}
 });
 $('atualizar').addEventListener('click',async()=>{
   if(!alvo)return;
   if(!confirm('Atualizar o Heimdall Nexus para '+alvo.slice(0,7)+'? O painel reinicia; o servidor Valheim continua ligado.'))return;
-  try{await post('atualizar',{commit:alvo});alvoEsperado=alvo;acompanhando=true;inicio=Date.now();
-    $('acao-atualizar').hidden=true;$('log').hidden=false;$('checar-msg').textContent='Atualização iniciada.';acompanha();}
-  catch(e){$('checar-msg').textContent=e.message;}
+  try{await post('atualizar',{commit:alvo});comeca(alvo);}
+  catch(e){erro(e.message,'A atualização não começou');}
 });
-carrega().then(d=>{if(d.running){acompanhando=true;inicio=Date.now();alvoEsperado=(d.check||{}).target||'';acompanha();}})
-  .catch(e=>{$('estado').textContent='Estado indisponível';$('checar-msg').textContent=e.message;});
+const concluida=le('heimdall-atualizado');
+if(concluida){guarda('heimdall-atualizado',null);
+  addEventListener('load',()=>avisar({tipo:'ok',titulo:'Heimdall atualizado',texto:'Agora na versão '+concluida+'. O servidor Valheim continuou ligado.'}));}
+carrega().then(d=>{if(d.running){comeca((d.check||{}).target||'');}})
+  .catch(e=>{$('estado').textContent='Estado indisponível';erro(e.message,'Não foi possível ler o estado das atualizações');});
 </script>
 {% endblock %}

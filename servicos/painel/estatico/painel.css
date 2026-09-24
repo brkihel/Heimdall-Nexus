@@ -8,6 +8,7 @@
   color-scheme:dark;
 }
 *{box-sizing:border-box}
+[hidden]{display:none !important}
 body{margin:0; background:var(--breu); color:var(--texto);
   font-family:'Spectral',Georgia,serif; font-size:15px; line-height:1.6;
   -webkit-font-smoothing:antialiased}
@@ -372,3 +373,32 @@ kbd{font-family:ui-monospace,monospace; font-size:.72rem; border:1px solid var(-
 .resumo-pronto.ok{color:var(--bom)}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;
   animation-iteration-count:1!important; transition-duration:.01ms!important; scroll-behavior:auto!important}}
+
+/* ---- Floating notices (estatico/avisos.js) ---- */
+.avisos{position:fixed; right:20px; bottom:20px; z-index:1000; display:grid; gap:.6rem;
+  width:min(420px,calc(100vw - 40px)); pointer-events:none}
+.aviso-flutuante{position:relative; display:grid; grid-template-columns:2rem 1fr; gap:.2rem .7rem;
+  padding:.9rem 2.4rem .9rem .9rem; border:1px solid var(--borda-viva); border-left:3px solid var(--ouro);
+  border-radius:3px; background:linear-gradient(168deg,rgba(21,32,41,.98),rgba(8,14,20,.98));
+  box-shadow:0 18px 50px rgba(0,0,0,.6); pointer-events:auto; overflow:hidden;
+  animation:aviso-entra .22s ease-out}
+.aviso-flutuante.ok{border-left-color:var(--bom)}
+.aviso-flutuante.erro{border-left-color:var(--ruim)}
+.aviso-flutuante.saindo{opacity:0; transform:translateY(6px); transition:opacity .2s, transform .2s}
+.aviso-icone{display:grid; place-items:center; width:2rem; height:2rem; border-radius:50%;
+  border:1px solid var(--ouro); color:var(--ouro-claro); font:700 .9rem 'Cinzel',serif}
+.ok .aviso-icone{border-color:var(--bom); color:var(--bom)}
+.erro .aviso-icone{border-color:var(--ruim); color:var(--ruim)}
+.aviso-corpo strong{display:block; color:var(--osso); font-weight:600; line-height:1.35}
+.aviso-corpo p{margin:.3rem 0 0; color:var(--texto); font-size:.86rem; line-height:1.45}
+.aviso-corpo .aviso-solucao{color:var(--fraco)}
+.aviso-codigo{display:inline-block; margin-bottom:.25rem; padding:.05rem .45rem; border:1px solid rgba(239,142,124,.5);
+  border-radius:3px; color:var(--ruim); font:600 .7rem ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.04em}
+.aviso-acoes{margin-top:.6rem}
+.aviso-fechar{position:absolute; right:.35rem; top:.35rem; min-width:32px; min-height:32px; border:0;
+  background:none; color:var(--fraco); font-size:1.2rem; cursor:pointer}
+.aviso-fechar:hover{color:var(--osso)}
+.aviso-tempo{position:absolute; left:0; bottom:0; height:2px; width:100%; background:var(--bom);
+  transform-origin:left; animation:aviso-tempo linear forwards}
+@keyframes aviso-entra{from{opacity:0; transform:translateY(8px)}}
+@keyframes aviso-tempo{to{transform:scaleX(0)}}
