@@ -1,4 +1,4 @@
-"""Optional AI chapters from consented Sagas facts (OpenRouter, OpenAI or Anthropic).
+"""Optional AI chapters from consented Sagas facts.
 
 Only the separate one-shot worker calls the provider. The game bridge and
 public requests never make external calls or receive the API key.
@@ -33,10 +33,15 @@ PROVIDERS = {
                'path': '/v1/chat/completions', 'key': 'openai', 'model': 'gpt-5-mini'},
     'anthropic': {'label': 'Anthropic', 'host': 'api.anthropic.com',
                   'path': '/v1/messages', 'key': 'anthropic', 'model': 'claude-haiku-4-5'},
+    'gemini': {'label': 'Gemini', 'host': 'generativelanguage.googleapis.com',
+               'path': '/v1beta/models/', 'key': 'gemini', 'model': 'gemini-3.8-flash'},
 }
 KEYS = {'openrouter': re.compile(r'^sk-or-[A-Za-z0-9_-]{14,250}$'),
         'openai': re.compile(r'^sk-(?!ant-)(?!or-)[A-Za-z0-9_-]{20,250}$'),
-        'anthropic': re.compile(r'^sk-ant-[A-Za-z0-9_-]{20,250}$')}
+        'anthropic': re.compile(r'^sk-ant-[A-Za-z0-9_-]{20,250}$'),
+        # Google issues both legacy and authorization keys; their prefix is not
+        # part of the published API contract. Reject controls and whitespace.
+        'gemini': re.compile(r'^(?!sk-)[A-Za-z0-9._~-]{16,512}$')}
 MODEL = re.compile(r'^[A-Za-z0-9_.-]+(/[A-Za-z0-9_.:+-]{1,100})?$')
 MAX_RESPONSE = 512 * 1024
 MAX_EVIDENCE = 12
@@ -72,7 +77,8 @@ def valid_config(value: object) -> dict:
             not isinstance(value['model'], str) or not MODEL.fullmatch(value['model']) or \
             value['provider'] == 'openrouter_free' and value['model'] != 'openrouter/free' and \
             not value['model'].endswith(':free') or \
-            value['provider'].startswith('openrouter') and '/' not in value['model']:
+            value['provider'].startswith('openrouter') and '/' not in value['model'] or \
+            value['provider'] == 'gemini' and not re.fullmatch(r'gemini-[A-Za-z0-9_.-]{1,90}', value['model']):
         raise StoryError('HN-STO-001', 'opções das histórias inválidas')
     return value.copy()
 
@@ -159,8 +165,10 @@ def _fact(row: dict, index: int) -> dict:
     for opaque in (row['world'], row['actor'], row['id']):
         name = name.replace(opaque, '[oculto]')
         target = target.replace(opaque, '[oculto]')
-    name = re.sub(r'(?i)\b[a-f0-9]{24,64}\b|sk-or-[A-Za-z0-9_-]{8,}', '[oculto]', name)
-    target = re.sub(r'(?i)\b[a-f0-9]{24,64}\b|sk-or-[A-Za-z0-9_-]{8,}', '[oculto]', target)
+    secret_pattern = (r'(?i)\b[a-f0-9]{24,64}\b|sk-or-[A-Za-z0-9_-]{8,}'
+                      r'|AIza[A-Za-z0-9_-]{20,}|\bAQ[A-Za-z0-9._~-]{20,}')
+    name = re.sub(secret_pattern, '[oculto]', name)
+    target = re.sub(secret_pattern, '[oculto]', target)
     if row['kind'] == 'discover':
         if target.startswith('vegvisir:'):
             place = LANDMARKS.get(target[9:], target[9:])
@@ -191,13 +199,21 @@ def _request(key: str, model: str, scope: str, facts: list[dict],
     if focus:
         system += (f' O capítulo deve girar em torno do registro {focus}, o feito que o '
                    'motivou; os demais registros são apenas contexto próximo no tempo.')
-    user = json.dumps({'scope': scope, 'facts': facts}, ensure_ascii=False)
+    user = json.dumps({'scope': scope, 'facts': facts}, ensure_ascii=False).replace(key, '[oculto]')
     spec = PROVIDERS[provider]
     headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
     if provider == 'anthropic':
         headers.update({'x-api-key': key, 'anthropic-version': '2023-06-01'})
         request = {'model': model, 'max_tokens': 1500, 'system': system,
                    'messages': [{'role': 'user', 'content': user}]}
+    elif provider == 'gemini':
+        headers['x-goog-api-key'] = key
+        request = {'systemInstruction': {'parts': [{'text': system}]},
+                   'contents': [{'role': 'user', 'parts': [{'text': user}]}],
+                   'generationConfig': {'maxOutputTokens': 4000, 'temperature': 0.7,
+                                        'responseMimeType': 'application/json'}}
+        if model.startswith('gemini-3.'):
+            request['generationConfig']['thinkingConfig'] = {'thinkingLevel': 'low'}
     else:
         headers['Authorization'] = 'Bearer ' + key
         request = {'model': model, 'messages': [{'role': 'system', 'content': system},
@@ -212,10 +228,11 @@ def _request(key: str, model: str, scope: str, facts: list[dict],
                             'response_format': {'type': 'json_object'}})
     body = json.dumps(request, ensure_ascii=False).encode('utf-8')
     label = spec['label']
+    path = spec['path'] + model + ':generateContent' if provider == 'gemini' else spec['path']
     connection = http.client.HTTPSConnection(spec['host'], timeout=60)
     try:
         try:
-            connection.request('POST', spec['path'], body=body, headers=headers)
+            connection.request('POST', path, body=body, headers=headers)
             response = connection.getresponse()
             payload = response.read(MAX_RESPONSE + 1)
         except (OSError, TimeoutError, http.client.HTTPException) as error:
@@ -225,7 +242,7 @@ def _request(key: str, model: str, scope: str, facts: list[dict],
     if len(payload) > MAX_RESPONSE:
         raise StoryError('HN-STO-015', f'resposta grande demais do {label}', transient=True)
     if response.status != 200:
-        detail = _provider_error(payload)
+        detail = _provider_error(payload, key)
         if response.status == 402:
             raise StoryError('HN-STO-017', f'{label} sem créditos ou limite de gasto atingido{detail}')
         raise StoryError('HN-STO-009', f'{label} recusou o pedido (HTTP {response.status}){detail}',
@@ -235,31 +252,41 @@ def _request(key: str, model: str, scope: str, facts: list[dict],
     except ValueError as error:
         raise StoryError('HN-STO-011', f'{label} devolveu uma resposta ilegível', transient=True) from error
     if isinstance(data, dict) and data.get('error'):
-        raise StoryError('HN-STO-009', f'{label} recusou o pedido{_provider_error(payload)}', transient=True)
+        raise StoryError('HN-STO-009', f'{label} recusou o pedido{_provider_error(payload, key)}', transient=True)
     try:
         if provider == 'anthropic':
             content = ''.join(block['text'] for block in data['content']
                               if block.get('type') == 'text')
+        elif provider == 'gemini':
+            candidate = data['candidates'][0]
+            content = ''.join(part['text'] for part in candidate['content']['parts']
+                              if isinstance(part, dict) and not part.get('thought') and
+                              isinstance(part.get('text'), str))
         else:
             content = data['choices'][0]['message']['content']
-    except (KeyError, IndexError, TypeError) as error:
+    except (KeyError, IndexError, TypeError, AttributeError) as error:
         raise StoryError('HN-STO-011', f'{label} devolveu uma resposta sem texto', transient=True) from error
     result = extract_json(content)
     if result is None:
         raise StoryError('HN-STO-011', 'o modelo respondeu fora do formato combinado', transient=True)
     if isinstance(data, dict) and isinstance(data.get('model'), str):
         result['_model'] = data['model'][:100]
+    elif provider == 'gemini' and isinstance(data, dict) and isinstance(data.get('modelVersion'), str):
+        result['_model'] = data['modelVersion'][:100]
     return result
 
 
-def _provider_error(payload: bytes) -> str:
+def _provider_error(payload: bytes, key: str = '') -> str:
     """A short, safe excerpt of the provider's own error message."""
     try:
         error = json.loads(payload).get('error')
         message = error.get('message') if isinstance(error, dict) else str(error or '')
     except (ValueError, AttributeError):
         return ''
-    message = ' '.join(str(message).split())[:160]
+    message = ' '.join(str(message).split())
+    if key:
+        message = message.replace(key, '[oculto]')
+    message = message[:160]
     return f': {message}' if message else ''
 
 

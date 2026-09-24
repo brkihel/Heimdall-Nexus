@@ -55,12 +55,12 @@ events. The panel only summarizes the latest events returned by the API.
 
 Stories require a separate `ShareStories` client consent, off by default.
 Only players who also share their profile can be included in Viking or server
-chapters. The admin enables stories in Jarl, saves an OpenRouter key there,
+chapters. The admin enables stories in Jarl, saves a provider key there,
 and requests a chapter for a Viking or the server. The key is stored outside
 the game process and outside SQLite, with mode 0600, and is never returned to
 the browser or written to the audit log. The worker sends only selected event
-facts, dates and public Viking names to OpenRouter and its selected model
-provider; it excludes coordinates, opaque IDs,
+facts, dates and public Viking names to the selected model provider; it excludes
+coordinates, opaque IDs,
 equipment and map data. It reserves one of the daily attempts before each
 request, including failed attempts. `openrouter/free` is the default; a paid
 model requires an explicit admin opt-in. Stories are labeled as AI fiction and
@@ -91,10 +91,18 @@ plus rendered tiles; the worker runs outside the game with a 2 GB memory cap.
 
 ## Story providers and automatic chapters
 
-Stories can use OpenRouter free models, paid OpenRouter models, the OpenAI API
-or the Anthropic API. ChatGPT and Claude subscriptions do not include API
-access; each provider needs its own API key and billing. Keys are stored per
-provider (`openrouter.key`, `openai.key`, `anthropic.key`, mode 0600).
+Stories can use OpenRouter free or paid models, the OpenAI API, the Anthropic
+API, or the Google Gemini API. Gemini defaults to `gemini-3.8-flash` and sends
+consented story facts through Google's `generateContent` endpoint with an
+authorization key from [Google AI Studio](https://ai.google.dev/aistudio).
+Legacy keys may no longer work; the panel does not assume a fixed key prefix.
+The [Gemini pricing
+page](https://ai.google.dev/gemini-api/docs/pricing) lists free-tier quotas,
+possible charges for billed keys, and the data-use terms for each tier. The
+Jarl explains these terms next to the provider choice. ChatGPT and Claude
+subscriptions do not include API access; each provider needs its own API key.
+Keys are stored per provider (`openrouter.key`, `openai.key`, `anthropic.key`,
+`gemini.key`, mode 0600). They never go to the browser or audit log.
 
 With automatic chapters on, the story worker (every 30 s) writes one chapter
 around each boss kill or discovery that happens after automation was enabled,
@@ -116,7 +124,7 @@ the public page.
 | Rankings, comparisons, trophy hall | Planned | Credited fact ledger and time-window rules |
 | SLS, Epic Loot, Jewelcrafting | Planned | Independent soft adapters and absent-mod tests |
 | Personal login and player settings | Planned | One-time challenge, owner verification, revocation |
-| Viking/server stories: on demand and automatic on boss kills and discoveries; OpenRouter, OpenAI or Anthropic | Implemented in preview | One-client consent and live provider playtest |
+| Viking/server stories: on demand and automatic on boss kills and discoveries; OpenRouter, OpenAI, Anthropic or Gemini | Implemented in preview | One-client consent and live provider playtest |
 | Multi-scene journey replay and automatic milestones | Planned | Fact-ledger sequencing, budgets, provider key custody |
 | Installer toggle and modpack link | Planned | Versioned release artifacts and staged upgrade flow |
 

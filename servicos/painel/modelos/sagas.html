@@ -114,6 +114,7 @@
       <option value="openrouter">OpenRouter · modelos pagos</option>
       <option value="openai">OpenAI (GPT) · API paga</option>
       <option value="anthropic">Anthropic (Claude) · API paga</option>
+      <option value="gemini">Google (Gemini) · API</option>
     </select></label>
     <label class="story-field">Modelo<input id="story-model" type="text" maxlength="110" spellcheck="false" autocomplete="off"></label>
     <label class="story-field">Capítulos por dia (UTC)<input id="story-limit" type="number" min="1" max="20" value="3"></label>
@@ -121,7 +122,7 @@
   <p class="story-note" id="story-provider-note"></p>
   <div class="story-actions"><button class="btn principal" id="story-save" type="button">Salvar histórias</button><span id="story-config-feedback" role="status"></span></div>
   <div class="story-grid">
-    <label class="story-field"><span id="story-key-label">Chave da API</span><input id="story-key" type="password" maxlength="256" autocomplete="new-password"></label>
+    <label class="story-field"><span id="story-key-label">Chave da API</span><input id="story-key" type="password" maxlength="512" autocomplete="new-password"></label>
     <label class="story-field">Gerar capítulo agora para<select id="story-target"><option value="">Carregando mundos…</option></select></label>
   </div>
   <p class="story-note" id="story-key-state">Chave: verificando…</p>
@@ -258,7 +259,9 @@ const storyProviders={
   openai:{key:'openai',label:'Chave da API OpenAI',hint:'sk-…',model:'gpt-5-mini',
     note:'A assinatura do ChatGPT (Plus/Pro) não inclui a API. Crie a chave e adicione créditos em platform.openai.com.'},
   anthropic:{key:'anthropic',label:'Chave da API Anthropic',hint:'sk-ant-…',model:'claude-haiku-4-5',
-    note:'A assinatura do Claude (Pro/Max) não inclui a API. Crie a chave e adicione créditos em console.anthropic.com.'}
+    note:'A assinatura do Claude (Pro/Max) não inclui a API. Crie a chave e adicione créditos em console.anthropic.com.'},
+  gemini:{key:'gemini',label:'Chave da API Gemini',hint:'Cole a chave do Google AI Studio',model:'gemini-3.8-flash',
+    note:'Crie uma chave de autorização no Google AI Studio (ai.google.dev/aistudio). O modelo padrão tem cota gratuita; uma chave com faturamento pode gerar custos. No plano gratuito, o Google pode usar os dados enviados para melhorar seus produtos. Confira as condições da sua conta.'}
 };
 let storyKeys={};
 function storyRequirements(){

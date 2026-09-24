@@ -74,6 +74,16 @@ class StoryTests(unittest.TestCase):
         self.assertFalse(stories.valid_key('sk-ant-api03-abcdefghijklmnopqrstuv', 'openai'))
         self.assertTrue(stories.valid_key('sk-proj-abcdefghijklmnopqrstuvwx', 'openai'))
         self.assertFalse(stories.valid_key('sk-or-v1-abcdefghijklmnopqrstuvwx', 'openai'))
+        self.assertTrue(stories.valid_key('AIzaSyabcdefghijklmnopqrstuvwxyz123456', 'gemini'))
+        self.assertTrue(stories.valid_key('AQabcdefghijklmnopqrstuvwx123456', 'gemini'))
+        self.assertFalse(stories.valid_key('sk-ant-api03-abcdefghijklmnopqrstuv', 'gemini'))
+        self.assertFalse(stories.valid_key('AQabcdefghijklmnopqrstuvwx123456\n', 'gemini'))
+        self.assertEqual(stories.PROVIDERS['gemini']['key'], 'gemini')
+        self.assertNotEqual(stories.key_path(Path('/tmp'), 'gemini'),
+                            stories.key_path(Path('/tmp'), 'openrouter'))
+        with self.assertRaises(stories.StoryError):
+            stories.valid_config({**stories.DEFAULT, 'provider': 'gemini',
+                                  'model': 'gemini-3.8-flash/../../secret'})
 
     def test_key_is_redacted_from_executor_audit(self):
         key = 'sk-or-this-is-a-private-test-key'
@@ -141,6 +151,62 @@ class StoryTests(unittest.TestCase):
                     self.assertEqual(path, '/v1/chat/completions')
                     self.assertNotIn('temperature', body)
                     self.assertEqual(body['response_format'], {'type': 'json_object'})
+
+    def test_gemini_request_uses_header_and_json_parts(self):
+        key = 'AIzaSyabcdefghijklmnopqrstuvwxyz123456'
+        class Reply:
+            status = 200
+            def read(self, _maximum):
+                return json.dumps({'modelVersion': 'gemini-3.8-flash',
+                                   'candidates': [{'content': {'parts': [
+                                       {'text': json.dumps(response())}]}}]}).encode()
+        class Connection:
+            def request(self, method, path, body, headers):
+                self.call = (method, path, body, headers)
+            def getresponse(self):
+                return Reply()
+            def close(self):
+                pass
+        connection = Connection()
+        with patch.object(stories.http.client, 'HTTPSConnection', return_value=connection) as factory:
+            result = stories._request(key, 'gemini-3.8-flash', 'viking',
+                                      [{'ref': 'e1', 'kind': 'kill'}], 'gemini')
+        factory.assert_called_once_with('generativelanguage.googleapis.com', timeout=60)
+        method, path, body, headers = connection.call
+        self.assertEqual((method, path),
+                         ('POST', '/v1beta/models/gemini-3.8-flash:generateContent'))
+        self.assertEqual(headers['x-goog-api-key'], key)
+        self.assertNotIn('Authorization', headers)
+        self.assertNotIn(key.encode(), body)
+        request = json.loads(body)
+        self.assertEqual(request['generationConfig']['responseMimeType'], 'application/json')
+        self.assertEqual(request['generationConfig']['thinkingConfig'], {'thinkingLevel': 'low'})
+        self.assertIn('APENAS nos registros', request['systemInstruction']['parts'][0]['text'])
+        self.assertIn('e1', request['contents'][0]['parts'][0]['text'])
+        self.assertEqual(result['_model'], 'gemini-3.8-flash')
+        self.assertEqual(result['title'], response()['title'])
+
+    def test_gemini_error_redacts_key(self):
+        key = 'AIzaSyabcdefghijklmnopqrstuvwxyz123456'
+        payload = json.dumps({'error': {'message': 'invalid key ' + key}}).encode()
+        self.assertNotIn(key, stories._provider_error(payload, key))
+
+    def test_saved_gemini_key_generates_a_chapter(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            state = Path(temporary)
+            state_ready(state)
+            config = {**stories.DEFAULT, 'enabled': True,
+                      'provider': 'gemini', 'model': 'gemini-3.8-flash'}
+            (state / 'story-settings.json').write_text(json.dumps(config))
+            key = 'AQabcdefghijklmnopqrstuvwx123456'
+            stories.key_path(state, 'gemini').write_text(key + '\n')
+            with patch.object(stories, '_request', return_value=response()) as request:
+                chapter = stories.generate(state, WORLD, ACTOR)
+            self.assertEqual(chapter['scope'], 'viking')
+            self.assertEqual(request.call_args.args[0:2], (key, 'gemini-3.8-flash'))
+            self.assertEqual(request.call_args.args[4], 'gemini')
+            self.assertTrue(stories.admin_status(state)['has_key'])
+            self.assertEqual(len(stories.public_list(state / 'sagas.sqlite3', WORLD)), 1)
 
     def test_boss_kill_after_automation_writes_one_focused_chapter(self):
         with tempfile.TemporaryDirectory() as temporary:
