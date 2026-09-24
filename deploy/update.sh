@@ -45,8 +45,8 @@ if systemctl is-enabled --quiet heimdall-sagas-ingest.timer 2>/dev/null; then
 from pathlib import Path
 import sys
 root, panel = sys.argv[1:]
-  for name in ('heimdall-sagas-ingest.service', 'heimdall-sagas-ingest.timer',
-               'heimdall-sagas-story.service', 'heimdall-sagas-story.timer'):
+for name in ('heimdall-sagas-ingest.service', 'heimdall-sagas-ingest.timer',
+             'heimdall-sagas-story.service', 'heimdall-sagas-story.timer'):
     text = (Path(root) / 'deploy/systemd' / name).read_text()
     text = text.replace('@ROOT@', root).replace('@PANEL_OS_USER@', panel)
     target = Path('/etc/systemd/system') / name
