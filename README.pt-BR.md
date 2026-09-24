@@ -116,6 +116,8 @@ fatos para histórias. As chaves dos provedores ficam no servidor. O
 [guia Sagas](https://github.com/brkihel/Heimdall-Nexus/wiki/Sagas-PT)
 explica instalação, consentimento e os limites desta prévia.
 
+<img src=".github/assets/stories.webp" alt="História ilustrativa de um Viking, com a fogueira e arte da luta contra um chefe" width="100%">
+
 Veja as [notas da versão 0.2.0](CHANGELOG.md).
 
 ## Documentação
@@ -130,6 +132,10 @@ Tudo está na [**wiki**](https://github.com/brkihel/Heimdall-Nexus/wiki/Inicio),
 ## Atualizar
 
 Pelo painel: **Jarl → Sobre e atualizações → Procurar atualizações**. Você vê a lista de mudanças e aprova a versão exata; o painel se atualiza e volta sozinho.
+
+<img src=".github/assets/updates.webp" alt="Jarl mostrando o Heimdall Nexus 0.2.0 e o canal estável de atualização" width="100%">
+
+As capturas usam dados ilustrativos; não mostram um servidor real.
 
 Pelo terminal, num servidor já instalado:
 

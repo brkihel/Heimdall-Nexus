@@ -115,6 +115,8 @@ separately whether to share their profile, map, position and story facts.
 Provider keys stay on the server. The [Sagas guide](https://github.com/brkihel/Heimdall-Nexus/wiki/Sagas)
 explains installation, consent and the remaining preview limits.
 
+<img src=".github/assets/stories.webp" alt="Sample Viking story with the campfire background and boss battle art" width="100%">
+
 See the [0.2.0 release notes](CHANGELOG.md).
 
 ## Documentation
@@ -129,6 +131,10 @@ Everything lives in the [**wiki**](https://github.com/brkihel/Heimdall-Nexus/wik
 ## Updating
 
 From the panel: **Jarl → Sobre e atualizações → Procurar atualizações**. Review the changes, approve the exact version, and the panel updates and comes back on its own.
+
+<img src=".github/assets/updates.webp" alt="Jarl showing Heimdall Nexus 0.2.0 and the stable update channel" width="100%">
+
+Screenshots use illustrative data; they do not show a real server.
 
 From a terminal on an installed server:
 
