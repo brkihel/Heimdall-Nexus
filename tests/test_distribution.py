@@ -92,7 +92,7 @@ class DistributionConfigTests(unittest.TestCase):
 
     def test_product_has_no_production_identity(self):
         for path in ROOT.rglob("*"):
-            if ".git" in path.parts or not path.is_file() or path.suffix in {".webp", ".png", ".pyc"}:
+            if any(part in {".git", "bin", "obj", "artifacts"} for part in path.parts) or not path.is_file() or path.suffix in {".webp", ".png", ".pyc"}:
                 continue
             if path.name == "test_distribution.py":
                 continue

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block titulo %}Sagas{% endblock %}
+{% block corpo %}
+<div class="topo"><h1>Heimdall Sagas</h1><span class="pastilha meio" id="state">verificando…</span>
+  <div class="acoes"><a class="btn" href="/cronicas/" target="_blank" rel="noopener">Abrir página pública ↗</a></div>
+</div>
+<p class="dica">Extensão opcional. O mod cliente coleta apenas os dados autorizados pelo jogador; a ponte no servidor entrega os registros ao Nexus sem abrir um website próprio.</p>
+<div class="medidores">
+  <div class="medidor"><b id="worlds">—</b><small>mundos</small></div>
+  <div class="medidor"><b id="players">—</b><small>Vikings</small></div>
+  <div class="medidor"><b id="events-count">—</b><small>eventos</small></div>
+  <div class="medidor"><b id="queued">—</b><small>aguardando importação</small></div>
+</div>
+<div class="cartao"><h2>Componentes</h2><p id="bridge">Ponte: verificando…</p><p id="ingest">Importação: verificando…</p>
+  <p>Os jogadores precisam do Heimdall Sagas Client no modpack e ativam seu próprio compartilhamento no BepInEx. O mod e a ponte devem usar a mesma versão do protocolo.</p>
+</div>
+<div class="cartao"><h2>Módulos</h2>
+  <p>As opções interrompem novos registros e ocultam os dados já guardados até que sejam reativadas. A ponte recebe alterações em até 30 segundos.</p>
+  <label><input type="checkbox" id="enabled"> Extensão ativa</label><br>
+  <label><input type="checkbox" id="gear"> Equipamento nos perfis</label><br>
+  <label><input type="checkbox" id="events"> Eventos e mortes</label><br>
+  <label><input type="checkbox" id="clock"> Dia do mundo</label><br><br>
+  <button class="btn" id="save" type="button">Salvar opções</button>
+  <span id="feedback" role="status"></span>
+</div>
+<div class="cartao"><h2>Privacidade</h2><p>Perfil, mapa e posição têm permissões separadas. Retirar o perfil apaga os eventos guardados desse Viking; retirar o mapa apaga coordenadas antigas. Posição também depende da visibilidade do mapa dentro do Valheim.</p></div>
+{% endblock %}
+{% block script %}
+<script>
+(async()=>{try{const response=await fetch({{ (raiz ~ '/api/sagas/estado')|tojson }},{cache:'no-store'});if(!response.ok)throw Error();const d=await response.json();if(!d.ok)throw Error();
+for(const k of ['worlds','players','events','queued'])document.getElementById(k==='events'?'events-count':k).textContent=d[k];
+const state=document.getElementById('state');state.textContent=!d.installed?'Ainda sem dados':d.settings.enabled?'Extensão ativa':'Extensão pausada';state.className='pastilha '+(d.installed&&d.settings.enabled?'viva':'meio');
+document.getElementById('bridge').textContent='Ponte no servidor: '+(d.bridge?'instalada':'não encontrada');
+document.getElementById('ingest').textContent='Fila local: '+d.queued+' pendente(s), '+d.rejected+' rejeitado(s).';
+for(const k of ['enabled','gear','events','clock'])document.getElementById(k).checked=!!d.settings[k];
+}catch{document.getElementById('state').textContent='Estado indisponível'}})();
+document.getElementById('save').addEventListener('click',async()=>{
+const data={};for(const k of ['enabled','gear','events','clock'])data[k]=document.getElementById(k).checked;
+const feedback=document.getElementById('feedback');feedback.textContent='Salvando…';
+try{const response=await fetch({{ (raiz ~ '/api/sagas/opcoes')|tojson }},{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(data)});
+const result=await response.json();if(!response.ok||!result.ok)throw Error(result.erro||'Falha ao salvar');feedback.textContent='Opções salvas.';
+}catch(error){feedback.textContent=error.message||'Falha ao salvar';}
+});
+</script>
+{% endblock %}

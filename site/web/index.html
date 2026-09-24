@@ -789,6 +789,7 @@ footer strong{color:var(--ouro); font-family:'Cinzel',serif; letter-spacing:.12e
     <div class="saga-lista" id="saga-lista" data-bloco="9d65c672">
       <p class="saga-vazio" data-campo="163d37ce">carregando a saga…</p>
     </div>
+    <p id="cronicas-link" hidden style="text-align:center;margin-top:1.4rem"><a class="botao" href="/cronicas/">Explorar as Crônicas dos Vikings →</a></p>
   </div>
   <footer class="rodape-embutido" data-bloco="339559ea">
   <p><strong data-identidade="nome">Seu Servidor</strong><br>
@@ -1074,6 +1075,11 @@ footer strong{color:var(--ouro); font-family:'Cinzel',serif; letter-spacing:.12e
       });
   }
   buscarSaga(); setInterval(buscarSaga, 300000);
+
+  fetch('/api/sagas/v1/overview', {cache:'no-store'})
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){ if (d && d.available) $('cronicas-link').hidden = false; })
+    .catch(function(){});
 
   // marca na bussola a secao visivel
   var elos = Array.prototype.slice.call(document.querySelectorAll(".bussola a"));

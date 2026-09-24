@@ -20,6 +20,7 @@ from fastapi.templating import Jinja2Templates
 from itsdangerous import BadSignature, URLSafeTimedSerializer
 
 import nucleo
+import sagas
 
 BASE = Path(__file__).parent
 RAIZ_URL = os.environ.get('PAINEL_RAIZ', '/jarl')
@@ -41,6 +42,16 @@ modelos = Jinja2Templates(directory=str(BASE / 'modelos'))
 modelos.env.globals['raiz'] = RAIZ_URL
 modelos.env.filters['tamanho'] = nucleo.tamanho_legivel
 portaria = nucleo.Portaria()
+
+
+@app.get('/api/sagas/v1/overview')
+async def sagas_public_overview(world: str = '', limit: int = 50):
+    """Public data is filtered again from the latest sharing choices on read."""
+    try:
+        data = sagas.public_view(world=world, limit=limit)
+    except (OSError, ValueError, sagas.sqlite3.Error):
+        data = {'available': False, 'worlds': [], 'players': [], 'events': []}
+    return JSONResponse(data, headers={'Cache-Control': 'no-store'})
 
 
 def assinador():
@@ -173,6 +184,38 @@ async def mods(pedido: Request):
 async def cronica(pedido: Request):
     exige(pedido)
     return pagina(pedido, 'cronica.html', aba='cronica')
+
+
+@app.get(f'{RAIZ_URL}/sagas', response_class=HTMLResponse)
+async def sagas_admin(pedido: Request):
+    exige(pedido)
+    return pagina(pedido, 'sagas.html', aba='sagas')
+
+
+@app.get(f'{RAIZ_URL}/api/sagas/estado')
+async def sagas_admin_estado(pedido: Request):
+    exige(pedido)
+    try:
+        return {'ok': True, **sagas.admin_status(game=VALHEIM_DIR)}
+    except (OSError, sagas.sqlite3.Error):
+        return JSONResponse({'ok': False, 'erro': 'estado indisponível'}, status_code=503)
+
+
+@app.post(f'{RAIZ_URL}/api/sagas/opcoes')
+async def sagas_admin_opcoes(pedido: Request):
+    usuario = exige(pedido)
+    expected_origin = f'{pedido.url.scheme}://{pedido.headers.get("host", "")}'
+    if pedido.headers.get('origin') != expected_origin or \
+            not pedido.headers.get('content-type', '').startswith('application/json'):
+        return JSONResponse({'ok': False, 'erro': 'origem ou formato inválido'}, status_code=403)
+    raw = await pedido.body()
+    if len(raw) > 1024:
+        return JSONResponse({'ok': False, 'erro': 'pedido grande demais'}, status_code=413)
+    try:
+        data = json.loads(raw)
+        return {'ok': True, **await nucleo.pede_async('sagas.settings.gravar', data, usuario)}
+    except (ValueError, nucleo.Erro) as erro:
+        return JSONResponse({'ok': False, 'erro': str(erro)}, status_code=400)
 
 
 @app.get(f'{RAIZ_URL}/api/cronica/sessoes')

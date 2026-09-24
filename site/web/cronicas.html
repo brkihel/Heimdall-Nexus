@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080e14">
+<title>Crônicas — Seu Servidor</title>
+<meta property="og:site_name" data-identidade="nome" content="Seu Servidor">
+<link rel="icon" data-identidade="favicon" href="/marca/favicon.svg" type="image/svg+xml">
+<link rel="canonical" data-identidade="url" data-caminho="/cronicas/" href="/cronicas/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Spectral:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--breu:#05090d;--noite:#080e14;--carvao:#0d151d;--ardosia:#152029;--borda:#22313d;--borda-viva:#33475a;--osso:#e6e0d2;--texto:#b4bec7;--fraco:#78848f;--ouro:#c8a45c;--ouro-claro:#eeddb0;--brasa:#ff8b3d;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--breu);color:var(--texto);font:17px/1.6 Spectral,Georgia,serif}a{color:var(--ouro-claro)}[hidden]{display:none!important}
+.shell{width:min(1180px,calc(100% - 2rem));margin:auto}header{border-bottom:1px solid var(--borda);background:var(--noite)}header .shell{display:flex;align-items:center;justify-content:space-between;gap:1rem;min-height:72px}header a{text-decoration:none}header strong{font:600 1.2rem Cinzel,Georgia,serif;color:var(--osso)}nav{display:flex;gap:1.25rem;flex-wrap:wrap}nav a{font-size:.88rem}
+.hero{padding:clamp(3rem,8vw,7rem) 0 3rem;background:radial-gradient(ellipse at 50% 0,color-mix(in srgb,var(--ouro) 14%,transparent),transparent 60%),linear-gradient(var(--noite),var(--breu));border-bottom:1px solid var(--borda)}.eyebrow{font:.65rem Cinzel,Georgia,serif;letter-spacing:.26em;text-transform:uppercase;color:var(--ouro)}h1,h2,h3{font-family:Cinzel,Georgia,serif;color:var(--osso);line-height:1.2}h1{font-size:clamp(2.1rem,5vw,4.5rem);margin:.45rem 0}.hero p{max-width:650px;margin:0}
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding:1.1rem 0;border-bottom:1px solid var(--borda)}select{background:var(--carvao);color:var(--osso);border:1px solid var(--borda-viva);padding:.55rem .8rem;font:inherit}main{padding:1.6rem 0 5rem}.grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,1fr);gap:1.5rem}.panel{position:relative;background:var(--carvao);border:1px solid var(--borda);padding:1.5rem;min-width:0}.panel:before,.panel:after{content:"";position:absolute;width:14px;height:14px;border-color:var(--ouro);pointer-events:none}.panel:before{left:5px;top:5px;border-left:1px solid;border-top:1px solid}.panel:after{right:5px;bottom:5px;border-right:1px solid;border-bottom:1px solid}.panel h2{font-size:1.25rem;margin:0 0 1rem}.empty{color:var(--fraco)}.players,.events{list-style:none;margin:0;padding:0}.players li,.events li{padding:.85rem 0;border-top:1px solid var(--borda)}.players li:first-child,.events li:first-child{border-top:0}.player{display:flex;align-items:center;gap:.8rem}.initial{display:grid;place-items:center;flex:none;width:38px;height:38px;border:1px solid var(--ouro);border-radius:50%;font-family:Cinzel;color:var(--ouro-claro)}.player strong{color:var(--osso)}.meta{display:block;color:var(--fraco);font-size:.78rem}.online{color:#9cc26a}.event-title{color:var(--osso)}.clock{font-family:Cinzel;color:var(--ouro-claro)}footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-size:.82rem}@media(max-width:720px){.grid{grid-template-columns:1fr}header .shell{padding:1rem 0;align-items:start;flex-direction:column}}
+.hero{background:radial-gradient(ellipse at 50% 0,color-mix(in srgb,var(--ouro) 14%,transparent),transparent 60%),linear-gradient(color-mix(in srgb,var(--breu) 36%,transparent),var(--breu)),var(--imagem-fundo,none);background-size:cover;background-position:center}
+details{margin:.45rem 0 0 3rem;font-size:.8rem;color:var(--fraco)}summary{cursor:pointer;color:var(--ouro-claro)}.gear{list-style:none;padding:0;margin:.4rem 0}.gear li{display:flex;justify-content:space-between;gap:1rem;padding:.25rem 0;border:0}.gear span:last-child{white-space:nowrap;color:var(--fraco)}
+</style>
+<link rel="stylesheet" href="/assets/tema.css">
+</head>
+<body>
+<header><div class="shell"><a href="/"><strong data-identidade="nome">Seu Servidor</strong></a><nav aria-label="Navegação"><a href="/">Início</a><a href="/wiki/">Wiki</a><a href="/cronicas/" aria-current="page">Crônicas</a></nav></div></header>
+<section class="hero"><div class="shell"><div class="eyebrow">Heimdall Nexus · Aventuras registradas</div><h1>Crônicas dos Vikings</h1><p>Momentos que os jogadores escolheram compartilhar. Os registros começam quando a extensão é ativada.</p></div></section>
+<div class="shell toolbar"><label for="world">Mundo <select id="world" aria-label="Selecionar mundo"></select></label><span id="clock" class="clock" aria-live="polite">—</span></div>
+<main class="shell"><p id="status" role="status">Carregando…</p><div id="content" class="grid" hidden><section class="panel"><h2>Momentos recentes</h2><ol id="events" class="events"></ol></section><section class="panel"><h2>Vikings</h2><ul id="players" class="players"></ul></section></div></main>
+<footer><div class="shell"><span data-identidade="rodape">Servidor comunitário de Valheim. Não somos afiliados à Iron Gate AB nem à Coffee Stain.</span></div></footer>
+<script>
+(()=>{'use strict';const $=id=>document.getElementById(id),kind={death:'caiu em batalha',kill:'derrotou',boss:'venceu',drop:'encontrou',collect:'coletou',pickup:'recolheu',bounty:'concluiu uma recompensa'};let selected='',requestId=0;
+function node(tag,text,cls){const e=document.createElement(tag);e.textContent=text;if(cls)e.className=cls;return e}
+function render(data){const worlds=$('world');worlds.replaceChildren();data.worlds.forEach((world,index)=>{const o=node('option',world.name||'Mundo '+(index+1));o.value=world.id;o.selected=world.id===data.world;worlds.append(o)});selected=data.world||'';const current=data.worlds.find(w=>w.id===selected);$('clock').textContent=current&&current.day!=null?'Dia '+current.day:'Relógio indisponível';const players=$('players'),events=$('events');players.replaceChildren();events.replaceChildren();
+for(const p of data.players){const li=node('li',''),row=node('div','','player'),badge=node('span',(p.name||'?').slice(0,1).toUpperCase(),'initial'),info=node('div',''),name=node('strong',p.name);info.append(name,node('span',p.online?'Online':'Último registro: '+new Date(p.seen_at*1000).toLocaleString('pt-BR'),'meta'+(p.online?' online':'')));row.append(badge,info);li.append(row);if(p.gear&&p.gear.length){const details=node('details',''),summary=node('summary','Equipamento · '+p.gear.length),list=node('ul','','gear');p.gear.forEach(item=>{const line=node('li','');line.append(node('span',item.name),node('span','Q'+item.quality+' · '+item.slot));list.append(line)});details.append(summary,list);li.append(details)}players.append(li)}
+for(const e of data.events){const li=node('li',''),title=node('span',(e.name||'Viking')+' '+(kind[e.kind]||'registrou')+(e.target?' '+e.target:''),'event-title');li.append(title,node('span',new Date(e.occurred_at*1000).toLocaleString('pt-BR'),'meta'));events.append(li)}
+if(!data.players.length)players.append(node('li','Nenhum perfil compartilhado.','empty'));if(!data.events.length)events.append(node('li','Ainda não há momentos compartilhados.','empty'));$('content').hidden=false;$('status').hidden=true}
+async function load(){const request=++requestId;try{const url='/api/sagas/v1/overview'+(selected?'?world='+encodeURIComponent(selected):'');const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw Error('HTTP '+response.status);const data=await response.json();if(request!==requestId)return;if(!data.available){$('status').textContent='A extensão de Crônicas ainda não está ativa neste servidor.';$('content').hidden=true;return}render(data)}catch{if(request!==requestId)return;$('status').textContent='Não foi possível carregar as Crônicas agora.';$('content').hidden=true}}
+$('world').addEventListener('change',e=>{selected=e.target.value;load()});load();setInterval(load,30000)})();
+</script>
+</body>
+</html>

@@ -29,6 +29,11 @@ class IdentityTests(unittest.TestCase):
         out = identidade.aplicar('<img data-identidade="logo" src="/x.png">', ident)
         self.assertIn("hidden", out)
 
+    def test_sagas_page_receives_site_identity(self):
+        ident = identidade.validar({**identidade.PADRAO, "nome": "Vikings do Vale"})
+        page = (ROOT / "site/web/cronicas.html").read_text()
+        self.assertIn('>Vikings do Vale</strong>', identidade.aplicar(page, ident))
+
     def test_validation_rejects_bad_values(self):
         for bad in ({"nome": ""}, {"url": "javascript:alert(1)"}, {"logo": "https://evil/x.png"},
                     {"cores": {"fundo": "red"}}, {"rodape": "x" * 500}):

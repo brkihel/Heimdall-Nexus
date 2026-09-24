@@ -40,6 +40,22 @@ echo "Updating panel libraries…"
 chown -R root:"$PANEL_OS_USER" "$RUNTIME/servicos/painel"
 chmod -R g+rX,g-w,o-rwx "$RUNTIME/servicos/painel"
 
+if systemctl is-enabled --quiet heimdall-sagas-ingest.timer 2>/dev/null; then
+  python3 - "$RUNTIME" "$PANEL_OS_USER" <<'PY'
+from pathlib import Path
+import sys
+root, panel = sys.argv[1:]
+for name in ('heimdall-sagas-ingest.service', 'heimdall-sagas-ingest.timer'):
+    text = (Path(root) / 'deploy/systemd' / name).read_text()
+    text = text.replace('@ROOT@', root).replace('@PANEL_OS_USER@', panel)
+    target = Path('/etc/systemd/system') / name
+    target.write_text(text)
+    target.chmod(0o644)
+PY
+  systemctl daemon-reload
+  systemctl restart heimdall-sagas-ingest.timer
+fi
+
 echo "Updating site helpers (your pages and identity stay as they are)…"
 for helper in publicar.py values.py sync_modpack.py identidade.py; do
   install -D -m 0640 -o root -g "$PANEL_OS_USER" "$RUNTIME/site/web/$helper" "$SITE_DIR/$helper"
@@ -55,10 +71,11 @@ done
   install -D -m 0640 -o root -g "$PANEL_OS_USER" "$RUNTIME/site/web/marca/favicon.svg" "$SITE_DIR/marca/favicon.svg"
 [[ -e "$SITE_DIR/identidade.json" ]] || \
   install -D -m 0640 -o root -g "$PANEL_OS_USER" "$RUNTIME/site/web/identidade.json" "$SITE_DIR/identidade.json"
+install -D -m 0640 -o root -g "$PANEL_OS_USER" "$RUNTIME/site/web/cronicas.html" "$SITE_DIR/cronicas.html"
 
 echo "Publishing the site…"
 HEIMDALL_WEB_DIR="$WEB_ROOT" HEIMDALL_WEB_USER=www-data HEIMDALL_WEB_BACKUP_DIR=/var/backups/heimdall-web \
-  HEIMDALL_SITE_DIR="$SITE_DIR" python3 "$SITE_DIR/publicar.py" vivo modpack-ui tema marca sitemap robots
+  HEIMDALL_SITE_DIR="$SITE_DIR" python3 "$SITE_DIR/publicar.py" vivo modpack-ui cronicas tema marca sitemap robots
 
 echo "Restarting the panel…"
 systemctl restart heimdall-executor.service heimdall-panel.service

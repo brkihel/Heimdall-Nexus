@@ -32,6 +32,7 @@ FIXOS = {
     'vivo': ('assets/vivo.js', 'assets/vivo.js'),
     'modpack-ui': ('assets/modpack.js', 'assets/modpack.js'),
     'mods': ('mods.json', 'mods.json'),
+    'cronicas': ('cronicas.html', 'cronicas/index.html'),
 }
 
 
@@ -150,6 +151,8 @@ def main(argv: list[str]) -> int:
                 print(f'!! {origem} não existe — pulei {alvo}')
                 continue
             dados = fonte.read_bytes()
+            if alvo == 'cronicas':
+                dados = identidade.aplicar(dados.decode('utf-8'), ident).encode('utf-8')
             if origem.endswith('.html') and b'@@' in dados:
                 print(f'!! {origem} ainda tem marcador @@ — não publiquei')
                 return 1

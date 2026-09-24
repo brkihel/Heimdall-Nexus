@@ -319,6 +319,7 @@ replacements = {'@ROOT@': root, '@WEB_ROOT@': web, '@STATE_ROOT@': '/var/lib/hei
 names = ('heimdall-executor.service', 'heimdall-panel.service',
          'heimdall-status.service', 'heimdall-status.timer',
          'heimdall-saga.service', 'heimdall-saga.timer',
+         'heimdall-sagas-ingest.service', 'heimdall-sagas-ingest.timer',
          'heimdall-schedule.service', 'heimdall-schedule.timer')
 dest = Path('/etc/systemd/system')
 for name in names:

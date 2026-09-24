@@ -26,6 +26,9 @@ site/web/assets/mods/*.webp
 **/.pytest_cache/
 **/.mypy_cache/
 **/.ruff_cache/
+**/bin/
+**/obj/
+/artifacts/
 
 # Local editor/assistant state
 .claude/

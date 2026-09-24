@@ -1,0 +1,11 @@
+[Unit]
+Description=Import optional Heimdall Sagas game data every few seconds
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=5s
+AccuracySec=1s
+Unit=heimdall-sagas-ingest.service
+
+[Install]
+WantedBy=timers.target

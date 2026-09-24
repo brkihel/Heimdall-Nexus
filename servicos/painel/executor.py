@@ -27,6 +27,7 @@ import tempfile
 import threading
 import urllib.request
 import uuid
+import sagas
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -1994,7 +1995,42 @@ def v_backups(dados):
     raise Recusa('ação de backup inválida')
 
 
+def v_sagas_settings(_):
+    return {'settings': sagas.load_settings(HEIMDALL_STATE_ROOT / 'sagas')}
+
+
+def v_sagas_settings_gravar(dados):
+    state = HEIMDALL_STATE_ROOT / 'sagas'
+    if not state.is_dir() or not (state / 'settings.json').is_file():
+        raise Recusa('instale a extensão antes de alterar suas opções')
+    names = ('enabled', 'gear', 'events', 'clock')
+    if not isinstance(dados, dict) or set(dados) != set(names) or any(
+            not isinstance(dados[name], bool) for name in names):
+        raise Recusa('opções da extensão inválidas')
+    settings = {'version': 1, **{name: dados[name] for name in names}}
+    target = state / 'settings.json'
+    temporary = state / ('.settings-' + uuid.uuid4().hex + '.tmp')
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o640)
+    try:
+        os.fchown(descriptor, pwd.getpwnam(GRUPO).pw_uid,
+                  grp.getgrnam('heimdall-sagas').gr_gid)
+        with os.fdopen(descriptor, 'w', encoding='utf-8') as file:
+            descriptor = -1
+            json.dump(settings, file, ensure_ascii=False, separators=(',', ':'))
+            file.write('\n')
+            file.flush()
+            os.fsync(file.fileno())
+        os.replace(temporary, target)
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        temporary.unlink(missing_ok=True)
+    return {'settings': settings}
+
+
 VERBOS = {
+    'sagas.settings': v_sagas_settings,
+    'sagas.settings.gravar': v_sagas_settings_gravar,
     'server.config': v_server_config,
     'server.reinstall': v_server_reinstall,
     'schedules': v_schedules,
@@ -2091,6 +2127,7 @@ class Atendente(socketserver.StreamRequestHandler):
                            'cronica.sessoes', 'cronica.ler', 'mundo.estado', 'mundo.seed', 'config.listar',
                            'arquivo.preparar_download', 'site.paginas', 'site.campos',
                            'site.versoes', 'site.versao.ver', 'site.previa.ler', 'site.identidade')
+            silenciosos += ('sagas.settings',)
             if verbo not in silenciosos and not (
                 verbo == 'server.config' and not dados.get('gravar') or
                 verbo in ('schedules', 'backups') and dados.get('acao', 'listar') == 'listar'):
