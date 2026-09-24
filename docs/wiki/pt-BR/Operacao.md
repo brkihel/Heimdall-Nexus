@@ -2,7 +2,7 @@
 
 ## Server Config
 
-Abra **Server Config** no painel para ver os argumentos de inicialização e alterar nome, mundo, porta, visibilidade, crossplay, descrição e senha do jogo. A senha atual nunca é mostrada. Deixe o campo vazio para conservá-la. A descrição é publicada no feed de status do site; o Valheim não oferece uma opção de descrição no comando de partida.
+Abra **Server Config** no painel para ver os argumentos de inicialização e alterar nome, mundo, porta, visibilidade, crossplay, descrição e senha do jogo. A senha atual nunca é mostrada. Deixe o campo vazio para conservá-la. A senha é obrigatória: só dá para removê-la com um mod de servidor sem senha instalado (por exemplo `serverblankpassword`), e aí aparece a opção **Servidor sem senha**. O Valheim também não aceita a senha dentro do nome do servidor. A descrição é publicada no feed de status do site; o Valheim não oferece uma opção de descrição no comando de partida.
 
 Mudanças dos argumentos entram em vigor após reiniciar o jogo. Quando ele estiver ligado, o painel mostra **Reiniciar para aplicar**. Trocar o nome do mundo pode criar um mundo novo no próximo início; confira o campo antes de salvar. **Reinstalar servidor** exige a senha do administrador do painel, desliga o jogo se estiver ligado e executa a verificação dos arquivos oficiais com SteamCMD. Salvos, configurações e mods permanecem separados. Faça um backup antes. O jogo permanece desligado após a reinstalação.
 

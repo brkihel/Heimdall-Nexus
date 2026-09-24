@@ -38,6 +38,7 @@ def test_server_config_keeps_password_hidden(tmp_path, monkeypatch):
     env.write_text('VH_NAME="Old Name"\nVH_WORLD="World"\nVH_PORT="2456"\nVH_PASSWORD="secret"\n')
     launcher = tmp_path / 'launcher.sh'
     launcher.write_text('args+=(-password "$VH_PASSWORD")\n')
+    monkeypatch.setattr(operacoes, 'GAME', tmp_path)
     monkeypatch.setattr(operacoes, 'ENV', env)
     monkeypatch.setattr(operacoes, 'PROFILE', tmp_path / 'profile.json')
     monkeypatch.setattr(operacoes, '_launcher', lambda: launcher)
@@ -73,3 +74,45 @@ def test_backup_create_and_restore_in_isolated_directory(tmp_path, monkeypatch):
     safety = operacoes.backup_restore(archive)
     assert world.read_bytes() == b'old world'
     assert (game / 'backups' / safety).is_file()
+
+
+def test_password_cannot_be_inside_server_name(tmp_path, monkeypatch):
+    env = tmp_path / 'server.env'
+    env.write_text('VH_NAME="Norte"\nVH_WORLD="World"\nVH_PORT="2456"\nVH_PASSWORD="secret"\n')
+    launcher = tmp_path / 'launcher.sh'
+    launcher.write_text('args+=(-password "$VH_PASSWORD")\n')
+    monkeypatch.setattr(operacoes, 'GAME', tmp_path)
+    monkeypatch.setattr(operacoes, 'ENV', env)
+    monkeypatch.setattr(operacoes, 'PROFILE', tmp_path / 'profile.json')
+    monkeypatch.setattr(operacoes, '_launcher', lambda: launcher)
+    monkeypatch.setattr(operacoes, 'online', lambda: False)
+    with pytest.raises(operacoes.Problem):
+        operacoes.server_save({'nome': 'Secret Club'})
+    with pytest.raises(operacoes.Problem):
+        operacoes.server_save({'senha': 'norte'})
+    operacoes.server_save({'nome': 'Clube do Norte', 'senha': 'machado'})
+    assert 'VH_PASSWORD="machado"' in env.read_text()
+
+
+def test_password_removal_needs_blank_password_mod(tmp_path, monkeypatch):
+    game = tmp_path / 'game'
+    plugins = game / 'current/BepInEx/plugins/1010101110-serverblankpassword'
+    env = game / 'server.env'
+    game.mkdir()
+    env.write_text('VH_NAME="Norte"\nVH_WORLD="World"\nVH_PASSWORD="secret"\nVH_BEPINEX="1"\n')
+    launcher = tmp_path / 'launcher.sh'
+    launcher.write_text('args+=(-password "$VH_PASSWORD")\n')
+    monkeypatch.setattr(operacoes, 'GAME', game)
+    monkeypatch.setattr(operacoes, 'ENV', env)
+    monkeypatch.setattr(operacoes, 'PROFILE', tmp_path / 'profile.json')
+    monkeypatch.setattr(operacoes, '_launcher', lambda: launcher)
+    monkeypatch.setattr(operacoes, 'online', lambda: False)
+    with pytest.raises(operacoes.Problem):
+        operacoes.server_save({'remover_senha': True})
+    assert 'VH_PASSWORD="secret"' in env.read_text()
+    plugins.mkdir(parents=True)
+    (plugins / 'serverblankpassword.dll').write_bytes(b'dll')
+    assert operacoes.server_read()['mod_sem_senha'] == 'serverblankpassword'
+    operacoes.server_save({'remover_senha': True})
+    assert 'VH_PASSWORD=""' in env.read_text()
+    assert operacoes.server_read()['senha_definida'] is False

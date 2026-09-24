@@ -21,7 +21,7 @@ import quick_tunnel
 
 def choices(**updates):
     values = dict(domain='play.example.org', server_address='', server_name='Example Server',
-                  world='ExampleWorld', port=2456, game_password='', public=True,
+                  world='ExampleWorld', port=2456, game_password='odin-guard', public=True,
                   crossplay=False, bepinex=False, modpack='', features=['servidor'],
                   panel_user='jarl', panel_password='a sufficiently long password',
                   tls=False, email='', start_game=False)
@@ -248,3 +248,13 @@ class CommandRunnerTests(unittest.TestCase):
             engine.command('services', ['sh', '-c', 'echo "ERROR! broken"; exec 1>&- 2>&-; sleep 1; exit 3'],
                            timeout=10)
         self.assertIn('ERROR! broken', str(caught.exception))
+
+
+class GamePasswordTests(unittest.TestCase):
+    def test_game_password_is_required(self):
+        for bad in ('', '1234', 'x' * 101):
+            with self.subTest(password=bad), self.assertRaises(installer.InstallError):
+                choices(game_password=bad)
+        with self.assertRaises(installer.InstallError):
+            choices(game_password='Example', server_name='Example Server')
+        self.assertEqual(choices(game_password='odin-guard').game_password, 'odin-guard')

@@ -108,9 +108,10 @@ class Choices:
             raise InstallError('The server name accepts dots; the world name accepts letters, numbers, spaces, _ and -.')
         if not 1024 <= port <= 65534:
             raise InstallError('Game port must be between 1024 and 65534.')
-        if game_password and (len(game_password) < 5 or len(game_password) > 100 or '\n' in game_password):
+        # Vanilla Valheim should never run open; a passwordless server needs a mod for that.
+        if len(game_password) < 5 or len(game_password) > 100 or '\n' in game_password:
             raise InstallError('Game password must have at least 5 characters and no newline.')
-        if game_password and game_password.casefold() in server_name.casefold():
+        if game_password.casefold() in server_name.casefold():
             raise InstallError('Game password cannot appear in the server name.')
         if not re.fullmatch(r'[a-z_][a-z0-9_-]{2,30}', system_user) or system_user in {
             'root', 'valheim', 'www-data', 'nobody', 'daemon',

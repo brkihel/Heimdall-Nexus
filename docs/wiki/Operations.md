@@ -2,7 +2,7 @@
 
 ## Server Config
 
-Open **Server Config** to review startup arguments and edit the server name, world, port, public listing, crossplay, description and game password. The current password is never displayed. Leave the field empty to keep it. The description goes into the site's status feed; Valheim has no dedicated description startup flag.
+Open **Server Config** to review startup arguments and edit the server name, world, port, public listing, crossplay, description and game password. The current password is never displayed. Leave the field empty to keep it. A password is required: it can be removed only when a passwordless-server mod (for example `serverblankpassword`) is installed, which shows the **Servidor sem senha** option. Valheim also rejects a password contained in the server name. The description goes into the site's status feed; Valheim has no dedicated description startup flag.
 
 Changes to game arguments require a game restart. The panel offers **Restart to apply** when the game is running. Changing the world name can create a new world at next startup. **Reinstall server** requires the panel administrator password, stops the game if it is running, then verifies official files through SteamCMD. Saves, configurations and mods live separately. Make a backup first. The game remains stopped after reinstalling.
 

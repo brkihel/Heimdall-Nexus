@@ -11,7 +11,7 @@
     wizard:'SETUP WIZARD', hero:'Your server, site and panel in one place.', heroText:'This wizard installs SteamCMD, Valheim Dedicated Server, the panel and the site. Choose which features to enable.',
     stepSite:'Site', stepSiteHint:'Address and HTTPS', stepGame:'Server', stepGameHint:'World and access', stepOptions:'Features', stepOptionsHint:'Mods and live data', stepAdmin:'Administrator', stepAdminHint:'Linux account and panel login', stepReview:'Review', stepReviewHint:'Install and monitor', localOnly:'Temporary wizard · private HTTPS link',
     siteTitle:'Where will the site live?', siteIntro:'Enter the domain pointing to this machine. You may also use an IP address and configure HTTPS later.', domain:'Site domain or IP', domainHint:'The wizard configures Nginx for this address.', gameAddress:'Game connection address', gameAddressHint:'Leave blank to use the site domain.', https:'Configure HTTPS automatically', httpsHint:'DNS must point to this server and TCP port 80 must be reachable. Certbot will request a Let’s Encrypt certificate.', email:'Certificate email', emailHint:'Used by Let’s Encrypt for renewal notices.', siteNoteTitle:'Before continuing', siteNote:'The temporary link uses Cloudflare and closes with the installer. Keep the token URL private. To avoid this external service, run install.sh with --local-only and use SSH.',
-    gameTitle:'Your Valheim world', gameIntro:'SteamCMD downloads the official dedicated server. Your world is saved in /srv/valheim/saves, separate from game files.', serverName:'Server name', world:'World name', gamePort:'UDP port', portHint:'Valheim uses this port and the next.', gamePassword:'Game password', passwordHint:'Leave empty for a server without a password.', public:'Appear in server listings', publicHint:'Players can also join through the direct address.', crossplay:'Enable crossplay', crossplayHint:'Allows players from other platforms; uses the PlayFab backend.', portsTitle:'Network', portsNote:'With the Steam backend, forward the selected UDP port and the next through your firewall and router. With crossplay, Valheim uses a relay.',
+    gameTitle:'Your Valheim world', gameIntro:'SteamCMD downloads the official dedicated server. Your world is saved in /srv/valheim/saves, separate from game files.', serverName:'Server name', world:'World name', gamePort:'UDP port', portHint:'Valheim uses this port and the next.', gamePassword:'Game password', passwordHint:'Required: at least 5 characters, not contained in the server name. Players type it to join.', public:'Appear in server listings', publicHint:'Players can also join through the direct address.', crossplay:'Enable crossplay', crossplayHint:'Allows players from other platforms; uses the PlayFab backend.', portsTitle:'Network', portsNote:'With the Steam backend, forward the selected UDP port and the next through your firewall and router. With crossplay, Valheim uses a relay.',
     optionsTitle:'Choose the features', optionsIntro:'Install what makes sense for your server. Edit pages and layouts later in the panel.', bepinexHint:'Installs the Valheim pack for server mods. Unchecked means a vanilla server.', modpack:'Modpack', modpackHint:'Optional. Paste the modpack page link from Thunderstore or Hexium. Author/Modpack or the full path of a .zip uploaded to the server (with private mods) also work. A published modpack also fills the site mod list.', installModpack:'Install the modpack on the server', installModpackHint:'Downloads dependencies in one batch. If required versions conflict, uses the highest. Explicit client-only packages are skipped.', liveTitle:'Live data in the editor', liveHint:'These groups appear as draggable elements. Mod-dependent features require their matching configuration.', featureServer:'Server status', featurePlayers:'Online players', featureWorld:'World and day', featureSeasons:'Seasons (mod)', featureResources:'Resource rate', featureSaga:'Character saga (mod)',
     adminTitle:'Secure the panel', adminIntro:'Choose a Linux account for the panel service and a separate login for its website. The panel password is stored as a hash.', systemUser:'Linux service account', systemUserHint:'Created on the VM to run the panel; separate from the browser login below. The game uses another account.', adminUser:'Administrator username', adminPassword:'Panel password', adminPasswordAgain:'Repeat password', adminNoteTitle:'Access', adminNote:'After installation, open /jarl/entrar. The visual page editor is available after sign-in.',
     reviewTitle:'Ready to install', reviewIntro:'Review your choices. Downloading Valheim may take several minutes; follow each step here.', startGame:'Start Valheim after installation and at boot', startGameHint:'Leave unchecked to start it manually from the panel.', reviewNoteTitle:'What will be installed', reviewNote:'SteamCMD, Valheim Dedicated Server, a systemd service, Nginx, the site and panel. BepInEx is included if selected.', back:'Back', next:'Continue', install:'Install everything', progressNumber:'INSTALLATION', progressTitle:'Preparing your server…', progressHint:'Keep the terminal and this page open. Follow the steps below.', successTitle:'Heimdall Nexus is ready', successHint:'Use the panel to edit the site and control the server.', footer:'Heimdall Nexus · created by BRKiHeL', officialGuide:'Official Valheim guide ↗'
@@ -30,7 +30,7 @@
     });
     document.querySelectorAll('[data-lang]').forEach(button => button.classList.toggle('active', button.dataset.lang === language));
     $('server_address').placeholder = language === 'pt' ? 'Igual ao domínio do site' : 'Same as site domain';
-    $('game_password').placeholder = language === 'pt' ? 'Opcional' : 'Optional';
+    $('game_password').placeholder = language === 'pt' ? 'Mínimo 5 caracteres' : 'At least 5 characters';
     if (step === 4) review();
   }
   document.querySelectorAll('[data-i18n]').forEach(el => el.dataset.pt = el.textContent);
@@ -38,6 +38,7 @@
     language = button.dataset.lang;
     localStorage.setItem('heimdall_setup_language', language);
     translate();
+    if ($('progress-title')) $('progress-title').dataset.running = $('progress-title').textContent;
   }));
 
   function showStep(number) {
@@ -155,6 +156,10 @@
     });
     log.scrollTop = log.scrollHeight;
     $('spinner').hidden = !data.running;
+    if (!data.error) {
+      $('retry-button')?.remove(); $('progress-error').hidden = true;
+      if (data.running) $('progress-title').textContent = $('progress-title').dataset.running || $('progress-title').textContent;
+    }
     if (data.done) {
       clearInterval(polling); polling=null;
       $('progress-title').textContent = language === 'pt' ? 'Instalação concluída' : 'Installation complete';
@@ -167,7 +172,7 @@
       clearInterval(polling); polling=null;
       $('progress-title').textContent=t('installFailed');
       $('progress-error').textContent=`${t('failed')} ${data.error}`; $('progress-error').hidden=false;
-      if (!$('retry-button')) { const button=document.createElement('button'); button.id='retry-button'; button.className='button secondary'; button.textContent=t('retry'); button.addEventListener('click',()=>{ $('progress').hidden=true; $('setup-form').hidden=false; $('progress-error').hidden=true; showStep(4); }); $('progress').append(button); }
+      if (!$('retry-button')) { const button=document.createElement('button'); button.id='retry-button'; button.className='button secondary'; button.textContent=t('retry'); button.addEventListener('click',()=>{ button.remove(); $('progress').hidden=true; $('setup-form').hidden=false; $('progress-error').hidden=true; showStep(4); }); $('progress').append(button); }
     }
   }
   async function poll() {
@@ -187,5 +192,6 @@
     finally { $('install').disabled=false; }
   });
   translate(); showStep(0);
+  $('progress-title').dataset.running = $('progress-title').textContent;
   state().then(data=>{ if(data.running||data.done||data.error){ renderStatus(data); if(data.running) polling=setInterval(poll,1500); } }).catch(()=>{});
 })();

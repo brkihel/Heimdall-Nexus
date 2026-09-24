@@ -94,6 +94,28 @@ def _launcher():
     return Path(match.group(1)) if match else None
 
 
+# Mods that let players join a server with no password. Vanilla Valheim does
+# not; without one of these, the panel never lets the password be removed.
+BLANK_PASSWORD_MODS = {'serverblankpassword.dll': 'serverblankpassword'}
+
+
+def blank_password_mod() -> str | None:
+    plugins = GAME / 'current/BepInEx/plugins'
+    try:
+        if _env().get('VH_BEPINEX') == '0' or not plugins.is_dir():
+            return None
+    except OSError:
+        return None
+    try:
+        for dll in plugins.rglob('*.dll'):
+            name = BLANK_PASSWORD_MODS.get(dll.name.lower())
+            if name:
+                return name
+    except OSError:
+        pass
+    return None
+
+
 def server_read():
     env = _env()
     launcher = _launcher()
@@ -116,6 +138,7 @@ def server_read():
             'crossplay': env.get('VH_CROSSPLAY') == '1',
             'senha_definida': bool(env.get('VH_PASSWORD')),
             'senha_suportada': supports_password,
+            'mod_sem_senha': blank_password_mod(),
             'descricao': _json(PROFILE, {}).get('description', ''),
             'comando': [str(launcher or 'valheim-launch.sh'), '→', *args],
             'ativo': online()}
@@ -139,6 +162,13 @@ def server_save(data: dict):
             if not isinstance(data[key], bool):
                 raise Problem(f'{key} inválido')
             changes[env_key] = '1' if data[key] else '0'
+    if data.get('remover_senha') is True:
+        if not blank_password_mod():
+            raise Problem('a senha só pode ser removida com um mod de servidor sem senha instalado, '
+                          'como o serverblankpassword')
+        if data.get('senha'):
+            raise Problem('escolha entre trocar ou remover a senha')
+        changes['VH_PASSWORD'] = ''
     if data.get('senha'):
         value = str(data['senha'])
         if not current['senha_suportada']:
@@ -146,6 +176,11 @@ def server_save(data: dict):
         if len(value) < 5 or len(value) > 100 or '\n' in value or '\r' in value:
             raise Problem('a senha do jogo precisa de 5 a 100 caracteres')
         changes['VH_PASSWORD'] = value
+    env = _env()
+    final_name = changes.get('VH_NAME', env.get('VH_NAME', ''))
+    final_password = changes.get('VH_PASSWORD', env.get('VH_PASSWORD', ''))
+    if final_password and final_password.casefold() in final_name.casefold():
+        raise Problem('o Valheim não aceita a senha dentro do nome do servidor; mude um dos dois')
     description = str(data.get('descricao', current['descricao'])).strip()
     if len(description) > 500 or any(ord(c) < 32 and c not in '\n\t' for c in description):
         raise Problem('descrição inválida')
