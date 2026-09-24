@@ -1,0 +1,13 @@
+[Unit]
+Description=Heimdall Nexus scheduled Valheim tasks
+After=network.target
+
+[Service]
+Type=oneshot
+TimeoutStartSec=0
+EnvironmentFile=/etc/heimdall-nexus/heimdall.env
+ExecStart=/usr/bin/python3 @ROOT@/servicos/painel/run-schedules.py
+User=root
+Group=root
+NoNewPrivileges=true
+PrivateTmp=true

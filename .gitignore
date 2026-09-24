@@ -1,0 +1,33 @@
+# Host-specific configuration and credentials
+.env
+.env.*
+!.env.example
+*.secret
+secrets/
+credentials/
+
+# Server state, worlds, backups and downloads
+/dados/
+*.db-wal
+*.db-shm
+*.log
+
+# Generated site data
+site/web/mods.json
+site/web/*.bak*
+site/web/**/*.bak*
+site/web/assets/mods/*.webp
+
+# Local development/runtime files
+**/.venv/
+**/__pycache__/
+**/*.py[cod]
+**/node_modules/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+
+# Local editor/assistant state
+.claude/
+.serena/
+.mcp.json

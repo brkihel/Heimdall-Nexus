@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block titulo %}Server Config{% endblock %}
+{% block corpo %}
+<div class="topo"><h1>Server Config</h1><span id="status" class="pastilha meio">Lendo…</span></div>
+<div class="cartao" style="max-width:850px">
+  <h2>Identidade e acesso</h2>
+  <p>Estas opções são lidas pelo lançador quando o Valheim inicia. Salvar uma mudança no jogo oferece reinício quando ele está ligado.</p>
+  <div class="grade-cfg">
+    <label>Nome do servidor<input id="nome" maxlength="80"></label>
+    <label>Mundo<input id="mundo" maxlength="40"></label>
+    <label>Porta UDP<input id="porta" type="number" min="1024" max="65534"></label>
+    <label>Nova senha do jogo<input id="senha" type="password" autocomplete="new-password" placeholder="Deixe vazio para manter a atual"></label>
+    <label class="alavanca"><input id="publico" type="checkbox" role="switch"> Mostrar na lista pública</label>
+    <label class="alavanca"><input id="crossplay" type="checkbox" role="switch"> Crossplay</label>
+  </div>
+  <label>Descrição para o painel e o site<textarea id="descricao" maxlength="500" rows="2" style="min-height:0;height:4.2rem;resize:vertical;font-family:inherit"></textarea></label>
+  <p id="senha-aviso"></p>
+  <div class="acoes"><button id="salvar" class="btn bom">Salvar</button><button id="reiniciar" class="btn" hidden>Reiniciar para aplicar</button></div>
+  <p id="mensagem" role="status"></p>
+</div>
+<div class="cartao" style="max-width:850px">
+  <h2>Inicialização atual</h2><p>Prévia dos argumentos efetivos. A senha é sempre ocultada.</p>
+  <pre id="comando" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre>
+</div>
+<div class="cartao" style="max-width:850px;border-color:#9b5944">
+  <h2>Reinstalar servidor</h2>
+  <p>Reinstalar o seu servidor irá interrompê-lo e, em seguida, executar novamente o script de instalação usado na configuração inicial.</p>
+  <p>Alguns arquivos podem ser excluídos ou modificados durante esse processo. Faça backup dos seus dados antes de continuar.</p>
+  <p>Esta ação verifica novamente os arquivos oficiais pelo SteamCMD. Se estiver ligado, o servidor é desligado primeiro e continuará desligado até você ligá-lo manualmente.</p>
+  <button id="reinstalar" class="btn ruim">Reinstalar servidor</button>
+</div>
+<dialog id="confirmar-reinstalacao" style="background:#111c24;color:#f0e5cf;border:1px solid #9b5944;border-radius:9px;max-width:480px">
+  <h2>Confirme a reinstalação</h2><p>Digite a senha do administrador do painel. A senha do jogo é diferente.</p>
+  <input id="senha-admin" type="password" autocomplete="current-password" style="padding:.6rem;width:100%;box-sizing:border-box">
+  <div class="acoes" style="margin-top:1rem"><button id="confirmar-acao" class="btn ruim">Confirmar</button><button id="cancelar-acao" class="btn">Cancelar</button></div>
+</dialog>
+<style>
+.grade-cfg{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin:1rem 0}
+.grade-cfg label:not(.alavanca),.cartao>label{display:grid;gap:.3rem} .grade-cfg .alavanca{align-self:center} .grade-cfg input:not([type=checkbox]),.cartao textarea{width:100%;box-sizing:border-box;background:#101b23;color:#f0e5cf;border:1px solid #755c39;border-radius:5px;padding:.6rem;font:inherit}
+</style>
+{% endblock %}
+{% block script %}
+<script>
+const ROOT={{ raiz|tojson }}, $=id=>document.getElementById(id);
+async function api(verbo,dados={}){const r=await fetch(ROOT+'/api/administracao',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({verbo,dados})});const d=await r.json();if(!d.ok)throw Error(d.erro||'Falha');return d}
+async function load(){try{const d=await api('server.config'),c=d.configuracao||d;for(const key of ['nome','mundo','porta','descricao'])$(key).value=c[key]||'';for(const key of ['publico','crossplay'])$(key).checked=!!c[key];$('senha').disabled=!c.senha_suportada;$('senha-aviso').textContent=c.senha_suportada?(c.senha_definida?'Há uma senha configurada. Digite outra para trocar; a senha atual não é exibida.':'Sem senha configurada. Digite uma para definir.'):'O lançador atual não aceita VH_PASSWORD. A troca de senha pelo painel está indisponível nesta instalação.';$('comando').textContent=(c.comando||[]).map(x=>/\s/.test(x)?JSON.stringify(x):x).join(' ');$('status').textContent=c.ativo?'Ligado':'Desligado';}catch(e){$('mensagem').textContent=e.message}}
+$('salvar').onclick=async()=>{try{const data={gravar:true,nome:$('nome').value,mundo:$('mundo').value,porta:$('porta').value,descricao:$('descricao').value,publico:$('publico').checked,crossplay:$('crossplay').checked};if($('senha').value)data.senha=$('senha').value;const d=await api('server.config',data);$('senha').value='';$('mensagem').textContent=d.reinicio_necessario?'Salvo. Reinicie o jogo para aplicar.':'Salvo.';$('reiniciar').hidden=!d.reinicio_necessario;await load()}catch(e){$('mensagem').textContent=e.message}};
+$('reiniciar').onclick=async()=>{if(!confirm('Reiniciar o jogo agora? Jogadores conectados serão desconectados.'))return;const r=await fetch(ROOT+'/api/servico',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'restart'})});const d=await r.json();$('mensagem').textContent=d.ok?'Reinício solicitado.':d.erro};
+$('reinstalar').onclick=()=>{$('senha-admin').value='';$('confirmar-reinstalacao').showModal();$('senha-admin').focus()};
+$('cancelar-acao').onclick=()=>$('confirmar-reinstalacao').close();
+$('confirmar-acao').onclick=async()=>{const senha=$('senha-admin').value;$('senha-admin').value='';$('confirmar-reinstalacao').close();try{const d=await api('server.reinstall',{senha_admin:senha});$('mensagem').textContent='Reinstalação iniciada. Tarefa '+d.tarefa+'. Acompanhe em Mods ou no log do executor.'}catch(e){$('mensagem').textContent=e.message}};
+load();
+</script>
+{% endblock %}

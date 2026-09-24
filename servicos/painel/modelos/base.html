@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>{% block titulo %}Painel{% endblock %} — Heimdall Nexus</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Spectral:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ raiz }}/estatico/painel.css">
+{% block cabeca %}{% endblock %}
+</head>
+<body>
+<div class="tela">
+  <nav class="lado">
+    <div class="marca" title="Heimdall Nexus · BRKiHeL">Heimdall Nexus</div>
+
+    <div class="grupo">Controle</div>
+    <a href="{{ raiz }}/" class="{{ 'ativo' if aba == 'console' }}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m4 17 6-5-6-5M12 19h8"/></svg>Console</a>
+    <a href="{{ raiz }}/arquivos" class="{{ 'ativo' if aba == 'arquivos' }}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>Arquivos</a>
+    <a href="{{ raiz }}/mundo" class="{{ 'ativo' if aba == 'mundo' }}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z"/></svg>Mundo</a>
+
+    <a href="{{ raiz }}/server-config" class="{{ 'ativo' if aba == 'server-config' }}">⚙ Server Config</a>
+    <a href="{{ raiz }}/configuracoes" class="{{ 'ativo' if aba == 'configuracoes' }}">◇ Mod Config</a>
+    <a href="{{ raiz }}/mods" class="{{ 'ativo' if aba == 'mods' }}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2 3 7v10l9 5 9-5V7Zm0 0v20M3 7l9 5 9-5"/></svg>Mods</a>
+
+    <div class="grupo">Administração</div>
+    <a href="{{ raiz }}/site" class="{{ 'ativo' if aba == 'site' }}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20h4L19 9l-4-4L4 16Zm9-13 4 4M14 20h6"/></svg>Site</a>
+    <a href="{{ raiz }}/aparencia" class="{{ 'ativo' if aba == 'aparencia' }}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.9 1.4-2l-.3-.8c-.4-1.1.4-2.2 1.6-2.2H17a4 4 0 0 0 4-4c0-5-4-9-9-9Z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></svg>Aparência</a>
+    <a href="{{ raiz }}/cronica" class="{{ 'ativo' if aba == 'cronica' }}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 19V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2Zm0 0a2 2 0 0 1 2-2h12M8 7h7M8 11h5"/></svg>Crônica</a>
+    <a href="{{ raiz }}/tarefas" class="{{ 'ativo' if aba == 'tarefas' }}">◷ Tarefas</a>
+    <a href="{{ raiz }}/backups" class="{{ 'ativo' if aba == 'backups' }}">▣ Backups</a>
+    <a href="{{ raiz }}/auditoria" class="{{ 'ativo' if aba == 'auditoria' }}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>Auditoria</a>
+
+    <div class="rodape-lado">
+      <div class="quem"><span>{{ (usuario or '?')[0]|upper }}</span>{{ usuario or '—' }}</div>
+      <a class="botao-lado" href="/" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 12H5m0 0 6-6m-6 6 6 6"/></svg>
+        Voltar ao site</a>
+      <a class="botao-lado" href="{{ raiz }}/sair">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        Sair</a>
+    </div>
+  </nav>
+
+  <main class="corpo">{% block corpo %}{% endblock %}</main>
+</div>
+{% block script %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,5 @@
+{
+  "package": "Autor/NomeDoModpack",
+  "description_overrides": "/var/lib/heimdall-nexus/site/descricoes-pt.json",
+  "note": "A consulta lê o último release do modpack no Hexium. Revise a prévia antes de usar --apply."
+}

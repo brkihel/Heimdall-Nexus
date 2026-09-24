@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Editor do site — Heimdall Nexus</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Spectral:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ raiz }}/estatico/site-admin.css">
+<link rel="stylesheet" href="{{ raiz }}/estatico/editor.css">
+</head>
+<body class="jarl-shell">
+<aside class="lateral" data-jarl-ui>
+  <header class="lat-topo">
+    <a class="jarl-brand" href="{{ raiz }}/" title="Painel do servidor"><span class="jarl-rune">ᛃ</span>Jarl</a>
+    <select id="pagina" title="Página em edição"></select>
+  </header>
+  <div class="lat-acoes">
+    <button class="jarl-btn" id="b-desfazer" title="Desfazer (Ctrl+Z)">↶</button>
+    <button class="jarl-btn" id="b-refazer" title="Refazer (Ctrl+Shift+Z)">↷</button>
+    <button class="jarl-btn" id="b-previa" title="Link para mostrar as alterações antes de publicar">Prévia</button>
+    <button class="jarl-btn" id="b-descartar">Descartar</button>
+    <button class="jarl-btn jarl-primary" id="b-salvar" title="Salvar (Ctrl+S)">Salvar <span class="jarl-count" id="contador">0</span></button>
+  </div>
+  <nav class="abas" role="tablist">
+    <button data-aba="editar" class="on">Editar</button>
+    <button data-aba="elementos">Elementos</button>
+    <button data-aba="vivo">Ao vivo</button>
+    <button data-aba="estrutura">Estrutura</button>
+    <button data-aba="pagina">Página</button>
+    <button data-aba="versoes">Versões</button>
+  </nav>
+
+  <section class="aba on" data-aba="editar">
+    <div class="selecionado" id="selecionado"></div>
+    <div id="ferramentas" class="jarl-toolbar jarl-shell-toolbar"></div>
+  </section>
+
+  <section class="aba" data-aba="elementos">
+    <p class="dica">Arraste para a página: a linha dourada mostra onde entra. Um clique adiciona logo
+      depois do bloco selecionado.</p>
+    <div id="lista-elementos"></div>
+  </section>
+
+  <section class="aba" data-aba="vivo">
+    <p class="dica">Dados que o site já recebe do servidor. Arraste para dentro de um texto e o valor
+      entra ali; arraste entre blocos e vira um quadro novo. Um clique insere onde está o cursor.</p>
+    <div id="lista-vivo"></div>
+  </section>
+
+  <section class="aba" data-aba="estrutura">
+    <p class="dica">As seções da página, de cima para baixo. Clique para ir até ela e selecioná-la.</p>
+    <div id="lista-secoes"></div>
+  </section>
+
+  <section class="aba" data-aba="pagina">
+    <p class="dica">Como a página aparece na aba do navegador, no Google e ao ser compartilhada.
+      Salva e publica na hora, separado das edições da página.</p>
+    <div id="cabeca"></div>
+  </section>
+
+  <section class="aba" data-aba="versoes">
+    <p class="dica">Cada publicação vira uma versão. Veja como a página estava e, se quiser, volte
+      para ela: restaurar também vira uma versão, então dá para desfazer.</p>
+    <div id="lista-versoes"></div>
+  </section>
+
+  <footer class="lat-rodape">
+    <div class="telas" role="group" aria-label="Tamanho da tela">
+      <button data-largura="" class="on" title="Computador">▭</button>
+      <button data-largura="820" title="Tablet">▯</button>
+      <button data-largura="390" title="Celular">▮</button>
+    </div>
+    <a class="jarl-btn" id="b-ver" target="_blank" rel="noopener">Ver página</a>
+    <a class="jarl-btn" href="{{ raiz }}/site">Aba Site</a>
+  </footer>
+</aside>
+
+<main class="palco">
+  <div class="moldura" id="moldura"><iframe id="quadro" title="Página em edição"></iframe></div>
+</main>
+<div class="jarl-toasts" id="avisos" data-jarl-ui></div>
+
+<script>
+const RAIZ = {{ raiz|tojson }};
+const $ = s => document.querySelector(s);
+const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const quadro = $('#quadro');
+const ed = () => { try { return quadro.contentWindow.jarlEditor; } catch { return null; } };
+let paginas = [], atual = null, ultimo = null;
+
+function aviso(texto, tipo = 'ok') {
+  const box = document.createElement('div');
+  box.className = `jarl-toast jarl-${tipo}`;
+  box.textContent = texto;
+  $('#avisos').append(box);
+  setTimeout(() => box.remove(), tipo === 'erro' ? 9000 : 5000);
+}
+
+async function api(caminho, corpo) {
+  const opcoes = {credentials: 'same-origin'};
+  if (corpo !== undefined) Object.assign(opcoes, {method: 'POST',
+    headers: {'Content-Type': 'application/json'}, body: JSON.stringify(corpo)});
+  const r = await fetch(RAIZ + caminho, opcoes);
+  if (r.status === 401) { location.href = `${RAIZ}/entrar`; return null; }
+  const d = await r.json();
+  if (!d.ok) { aviso(d.erro || 'não deu', 'erro'); return null; }
+  return d;
+}
+
+// ---------------------------------------------------------------- the bridge the page script looks for
+window.jarlShell = {
+  toolbarHost: $('#ferramentas'),
+  toasts: $('#avisos'),
+  dragging: null,
+  empty(host) {
+    // Nothing selected: never an empty panel — the sections are right here.
+    host.innerHTML = '<p class="dica">Clique em qualquer texto da página para editar. Ou escolha uma seção:</p>';
+    const lista = document.createElement('div');
+    lista.className = 'lista-secoes';
+    host.append(lista);
+    desenhaSecoes(lista, (ultimo && ultimo.sections) || []);
+  },
+  update(st) {
+    ultimo = st;
+    $('#contador').textContent = st.pending;
+    $('#b-salvar').disabled = !st.pending || st.busy;
+    $('#b-descartar').disabled = !st.pending || st.busy;
+    $('#b-desfazer').disabled = !st.canUndo;
+    $('#b-previa').disabled = !st.pending;
+    $('#b-refazer').disabled = !st.canRedo;
+    $('#selecionado').textContent = st.selected ? `Selecionado: ${st.selected}` : '';
+    desenhaSecoes($('#lista-secoes'), st.sections);
+    if (!$('#lista-elementos').dataset.feito && st.models) desenhaElementos(st.models);
+  },
+};
+
+// ---------------------------------------------------------------- sidebar lists
+function desenhaSecoes(alvo, secoes) {
+  const chave = JSON.stringify(secoes.map(s => s.token + s.label));
+  if (alvo.dataset.chave === chave) return;
+  alvo.dataset.chave = chave;
+  alvo.innerHTML = secoes.map((s, i) =>
+    `<button class="item-lista" data-token="${esc(s.token)}"><span class="num">${i + 1}</span>${esc(s.label)}</button>`).join('')
+    || '<p class="dica">Carregando…</p>';
+  alvo.querySelectorAll('[data-token]').forEach(b => b.onclick = () => {
+    const e = ed(); if (e) { e.selectSection(b.dataset.token); trocaAba('editar'); }
+  });
+}
+
+function arrastavel(el, item) {
+  el.draggable = true;
+  el.addEventListener('dragstart', e => {
+    window.jarlShell.dragging = item;
+    e.dataTransfer.effectAllowed = 'copy';
+    e.dataTransfer.setData('text/plain', item.chave);
+    document.body.classList.add('arrastando');
+  });
+  el.addEventListener('dragend', () => {
+    window.jarlShell.dragging = null;
+    document.body.classList.remove('arrastando');
+  });
+}
+
+const ICONES = {paragrafo: '¶', titulo: 'H', botao: '▭', 'botao-fantasma': '▯', caixa: '▣', alerta: '⚠',
+                secao: '▤', 'cartao-vivo': '◉', 'faixa-quadros': '▦', 'dado-vivo': '◉', link: '🔗'};
+function desenhaElementos(modelos) {
+  const alvo = $('#lista-elementos');
+  alvo.dataset.feito = '1';
+  const grupos = {};
+  for (const m of modelos) (grupos[m.categoria] ||= []).push(m);
+  alvo.innerHTML = '';
+  for (const [grupo, lista] of Object.entries(grupos)) {
+    const bloco = document.createElement('div');
+    bloco.innerHTML = `<h3 class="grupo">${esc(grupo)}</h3><div class="grade-el"></div>`;
+    for (const m of lista) {
+      const b = document.createElement('button');
+      b.className = 'elemento';
+      b.innerHTML = `<span class="ico">${ICONES[m.chave] || '◆'}</span><span>${esc(m.rotulo)}</span>`;
+      b.title = m.vivo ? 'Pede um dado ao vivo ao soltar' : (m.secao ? 'Entra entre as seções' : 'Arraste para a página');
+      arrastavel(b, {tipo: 'modelo', chave: m.chave});
+      b.onclick = () => { const e = ed(); if (e) e.insertAfterSelection(m.chave); };
+      bloco.querySelector('.grade-el').append(b);
+    }
+    alvo.append(bloco);
+  }
+}
+
+function desenhaVivo() {
+  const e = ed();
+  const cat = e ? e.catalog() : {};
+  const alvo = $('#lista-vivo');
+  const grupos = {};
+  for (const [chave, item] of Object.entries(cat)) (grupos[item.grupo] ||= []).push([chave, item]);
+  if (!Object.keys(grupos).length) { alvo.innerHTML = '<p class="dica">Esta página não carrega dados ao vivo.</p>'; return; }
+  if (alvo.dataset.feito) {
+    alvo.querySelectorAll('[data-chave]').forEach(b => { b.querySelector('.agora').textContent = e.liveValue(b.dataset.chave); });
+    return;
+  }
+  alvo.dataset.feito = '1';
+  alvo.innerHTML = '';
+  for (const [grupo, lista] of Object.entries(grupos)) {
+    const h = document.createElement('h3'); h.className = 'grupo'; h.textContent = grupo; alvo.append(h);
+    for (const [chave, item] of lista) {
+      const b = document.createElement('button');
+      b.className = 'dado'; b.dataset.chave = chave; b.title = item.descricao;
+      b.innerHTML = `<span class="nome">${esc(item.rotulo)}</span><span class="agora">${esc(e.liveValue(chave))}</span>
+                     <small>${esc(item.descricao)}</small>`;
+      arrastavel(b, {tipo: 'vivo', chave});
+      b.onclick = () => { const x = ed(); if (x) x.insertLive(chave); };
+      alvo.append(b);
+    }
+  }
+}
+setInterval(() => { if ($('[data-aba="vivo"].aba.on')) desenhaVivo(); }, 3000);
+
+// ---------------------------------------------------------------- tabs, actions, keys
+function trocaAba(nome) {
+  document.querySelectorAll('.abas button').forEach(b => b.classList.toggle('on', b.dataset.aba === nome));
+  document.querySelectorAll('.aba').forEach(s => s.classList.toggle('on', s.dataset.aba === nome));
+  if (nome === 'vivo') desenhaVivo();
+  if (nome === 'pagina') desenhaCabeca();
+  if (nome === 'versoes') desenhaVersoes();
+}
+
+// ---------------------------------------------------------------- versions
+function quando(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'}) + ' às ' +
+         d.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+}
+async function desenhaVersoes() {
+  const alvo = $('#lista-versoes');
+  alvo.innerHTML = '<p class="dica">Carregando…</p>';
+  const d = await api(`/api/site/versoes?pagina_id=${encodeURIComponent(atual.id)}`);
+  if (!d) return;
+  if (!d.versoes.length) {
+    alvo.innerHTML = '<p class="dica">Ainda não há versões: a primeira aparece quando você salvar.</p>';
+    return;
+  }
+  alvo.innerHTML = d.versoes.map((v, i) => `
+    <div class="versao${v.id === d.atual ? ' atual' : ''}">
+      <div class="versao-topo"><b>${esc(quando(v.quando))}</b><span>${esc(v.quem)}</span>
+        ${v.id === d.atual ? '<em>no ar</em>' : ''}</div>
+      <ul>${v.resumo.map(r => `<li>${esc(r)}</li>`).join('')}</ul>
+      <div class="versao-acoes">
+        ${v.previa ? `<a class="jarl-btn jarl-small" target="_blank" rel="noopener"
+            href="${RAIZ}/site/versao?pagina_id=${encodeURIComponent(atual.id)}&versao=${encodeURIComponent(v.id)}">Ver</a>` : ''}
+        ${v.id === d.atual ? '' : `<button class="jarl-btn jarl-small" data-restaurar="${esc(v.id)}">Restaurar</button>`}
+      </div>
+    </div>`).join('');
+  alvo.querySelectorAll('[data-restaurar]').forEach(b => b.onclick = async () => {
+    const pendentes = ultimo && ultimo.pending;
+    if (!confirm((pendentes ? `Há ${pendentes} alteração(ões) não salvas, que serão descartadas.\n\n` : '') +
+                 'Voltar a página para esta versão e publicar agora?')) return;
+    b.disabled = true;
+    const r = await api('/api/site/restaurar', {pagina: atual.id, versao: b.dataset.restaurar});
+    if (!r) { b.disabled = false; return; }
+    aviso('Versão restaurada e publicada.');
+    ultimo = null;
+    abrePagina(atual);
+    trocaAba('versoes');
+  });
+}
+document.querySelectorAll('.abas button').forEach(b => b.onclick = () => trocaAba(b.dataset.aba));
+$('#b-salvar').onclick = () => ed() && ed().save();
+$('#b-desfazer').onclick = () => ed() && ed().undo();
+$('#b-refazer').onclick = () => ed() && ed().redo();
+$('#b-descartar').onclick = () => ed() && ed().discardAll();
+$('#b-previa').onclick = () => ed() && ed().makePreview();
+document.querySelectorAll('.telas button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.telas button').forEach(x => x.classList.toggle('on', x === b));
+  $('#moldura').style.maxWidth = b.dataset.largura ? b.dataset.largura + 'px' : '';
+  $('#moldura').classList.toggle('aparelho', !!b.dataset.largura);
+});
+document.addEventListener('keydown', e => {
+  // Shortcuts work with the focus in the sidebar too, except while typing in it.
+  if (e.target.closest('input,select,textarea,[contenteditable="true"]')) return;
+  const x = ed(); if (x) x.handleKey(e);
+});
+addEventListener('beforeunload', e => {
+  if (ultimo && ultimo.pending) { e.preventDefault(); e.returnValue = ''; }
+});
+
+// ---------------------------------------------------------------- pages
+function abrePagina(pagina) {
+  atual = pagina;
+  $('#pagina').value = pagina.id;
+  $('#b-ver').href = pagina.url;
+  $('#lista-elementos').dataset.feito = '';
+  $('#lista-elementos').innerHTML = '';
+  $('#lista-vivo').dataset.feito = '';
+  $('#cabeca').dataset.pagina = '';
+  history.replaceState(null, '', `?pagina=${encodeURIComponent(pagina.id)}`);
+  try { quadro.contentWindow.sessionStorage.setItem('jarl-editando', '1'); } catch {}
+  quadro.src = pagina.url + '?jarl=editar';
+  trocaAba('editar');
+}
+$('#pagina').onchange = () => {
+  const nova = paginas.find(p => p.id === $('#pagina').value);
+  if (ultimo && ultimo.pending &&
+      !confirm(`Há ${ultimo.pending} alteração(ões) não salvas. Trocar de página e descartar?`)) {
+    $('#pagina').value = atual.id; return;
+  }
+  ultimo = null;
+  abrePagina(nova);
+};
+
+// ---------------------------------------------------------------- page tab: title and descriptions
+async function desenhaCabeca() {
+  const alvo = $('#cabeca');
+  if (alvo.dataset.pagina === atual.id) return;
+  const d = await api(`/api/site/campos?pagina_id=${encodeURIComponent(atual.id)}`);
+  if (!d) return;
+  alvo.dataset.pagina = atual.id;
+  const secao = d.secoes.find(s => s.id === 'head');
+  if (!secao) { alvo.innerHTML = '<p class="dica">Esta página não tem título editável.</p>'; return; }
+  alvo.innerHTML = secao.campos.map(c => `<label class="rot">${esc(c.rotulo)}</label>
+      <div class="campo-cab" contenteditable="true" data-id="${esc(c.id)}">${c.html}</div>`).join('') +
+    '<button class="jarl-btn jarl-primary" id="b-cabeca" disabled>Salvar e publicar</button>';
+  alvo.querySelectorAll('[data-marker]').forEach(ch => { ch.contentEditable = 'false'; ch.classList.add('jarl-chip'); });
+  const originais = new Map([...alvo.querySelectorAll('.campo-cab')].map(el => [el.dataset.id, el.innerHTML]));
+  alvo.querySelectorAll('.campo-cab').forEach(el => {
+    el.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
+    el.addEventListener('input', () => {
+      el.classList.toggle('mudou', el.innerHTML !== originais.get(el.dataset.id));
+      $('#b-cabeca').disabled = !alvo.querySelector('.campo-cab.mudou');
+    });
+  });
+  $('#b-cabeca').onclick = async () => {
+    const alteracoes = [...alvo.querySelectorAll('.campo-cab.mudou')].map(el => {
+      const c = secao.campos.find(x => x.id === el.dataset.id);
+      return {campo: c.id, hash: c.hash, html: el.innerHTML};
+    });
+    const r = await api('/api/site/gravar', {pagina: atual.id, alteracoes});
+    if (!r) return;
+    aviso('Título e descrições salvos e publicados.');
+    alvo.dataset.pagina = '';
+    desenhaCabeca();
+  };
+}
+
+(async () => {
+  const d = await api('/api/site/paginas');
+  if (!d) return;
+  paginas = d.paginas.filter(p => !p.somente_leitura);
+  $('#pagina').innerHTML = paginas.map(p => `<option value="${esc(p.id)}">${esc(p.titulo)}</option>`).join('');
+  const q = new URLSearchParams(location.search);
+  const pedida = paginas.find(p => p.id === q.get('pagina')) ||
+                 paginas.find(p => p.url === q.get('url')) || paginas[0];
+  abrePagina(pedida);
+})();
+</script>
+</body>
+</html>

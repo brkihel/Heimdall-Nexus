@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{TITULO}} — Seu Servidor</title>
+<meta name="description" content="{{DESCRICAO}}">
+<link rel="icon" data-identidade="favicon" href="/marca/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#060b10">
+<meta property="og:title" content="{{TITULO}}">
+<meta property="og:description" content="{{DESCRICAO}}">
+<meta property="og:url" data-identidade="url" data-caminho="{{CAMINHO}}" content="{{CAMINHO}}">
+<link rel="canonical" data-identidade="url" data-caminho="{{CAMINHO}}" href="{{CAMINHO}}">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:type" content="website">
+<meta property="og:site_name" data-identidade="nome" content="Seu Servidor">
+<meta name="twitter:card" content="summary">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Spectral:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --breu:#05090d; --noite:#080e14; --carvao:#0d151d; --ardosia:#152029;
+  --borda:#22313d; --borda-viva:#33475a;
+  --ouro:#c8a45c; --ouro-claro:#eeddb0; --ouro-fundo:#7d6331;
+  --brasa:#ff8b3d; --brasa-clara:#ffc477;
+  --osso:#e6e0d2; --texto:#b4bec7; --fraco:#78848f;
+  --imagem-fundo:none;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0; min-height:100svh; display:flex; flex-direction:column; color:var(--texto);
+  background:linear-gradient(180deg,color-mix(in srgb,var(--breu) 55%,transparent),var(--breu) 85%),
+             var(--imagem-fundo) center/cover fixed, var(--breu);
+  font-family:'Spectral',Georgia,serif; font-size:17px; line-height:1.75; -webkit-font-smoothing:antialiased}
+a{color:var(--ouro-claro)}
+.topo{position:sticky; top:0; z-index:40; background:color-mix(in srgb,var(--breu) 90%,transparent);
+  backdrop-filter:blur(8px); border-bottom:1px solid var(--borda)}
+.topo-int{max-width:1100px; margin:0 auto; padding:.85rem 1.25rem; display:flex; align-items:center; gap:1rem; flex-wrap:wrap}
+.voltar{font-family:'Cinzel',serif; font-size:.68rem; letter-spacing:.2em; text-transform:uppercase; text-decoration:none;
+  color:var(--ouro-claro); border:1px solid var(--borda); padding:.45rem .9rem; border-radius:4px}
+.voltar:hover{border-color:var(--ouro); background:color-mix(in srgb,var(--ouro) 10%,transparent)}
+.topo h1{font-family:'Cinzel',serif; font-size:1rem; color:var(--osso); letter-spacing:.14em; text-transform:uppercase; margin:0}
+.topo .ip{margin-left:auto; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.8rem; color:var(--fraco)}
+main{flex:1; width:100%; max-width:900px; margin:0 auto; padding:4rem 1.25rem 5rem}
+section{background:color-mix(in srgb,var(--carvao) 82%,transparent); border:1px solid var(--borda);
+  border-radius:12px; padding:2rem 2.2rem; margin-bottom:2rem; backdrop-filter:blur(4px)}
+h2,h3{font-family:'Cinzel',serif; color:var(--osso); line-height:1.25; margin:0 0 1rem}
+h2{font-size:clamp(1.6rem,4vw,2.3rem); color:var(--ouro-claro)}
+h3{font-size:1.15rem}
+p{margin:0 0 1rem} p:last-child{margin-bottom:0}
+strong{color:var(--osso)}
+.botao{display:inline-block; font-family:'Cinzel',serif; font-size:.7rem; letter-spacing:.16em; text-transform:uppercase;
+  text-decoration:none; color:var(--breu); background:var(--ouro); padding:.75rem 1.4rem; border-radius:4px}
+.botao:hover{background:var(--ouro-claro)}
+footer{border-top:1px solid var(--borda); text-align:center; padding:2.4rem 1.25rem; font-size:.85rem; color:var(--fraco);
+  background:color-mix(in srgb,var(--breu) 92%,transparent)}
+footer strong{color:var(--ouro); font-family:'Cinzel',serif; letter-spacing:.12em}
+@media (max-width:640px){section{padding:1.4rem 1.2rem} main{padding-top:2.2rem}}
+</style>
+<link rel="stylesheet" href="/assets/tema.css">
+</head>
+<body>
+
+<div class="topo" data-bloco="44038ed9"><div class="topo-int" data-bloco="79880cb3">
+  <a class="voltar" href="/">&#8592; <span data-identidade="nome">Seu Servidor</span></a>
+  <h1 data-campo="1bca198a">{{TITULO}}</h1>
+  <span class="ip" id="ip"></span>
+</div></div>
+
+<main data-bloco="33145a8b">
+<section id="inicio" data-bloco="5c9cce1c">
+  <h2 data-campo="7690e2fc">{{TITULO}}</h2>
+  <p data-campo="5d331d61">{{DESCRICAO}}</p>
+</section>
+</main>
+
+<footer data-bloco="5b693ada">
+  <p><strong data-identidade="nome">Seu Servidor</strong><br>
+  <span data-identidade="rodape">Servidor comunitário de Valheim. Não somos afiliados à Iron Gate AB nem à Coffee Stain.</span></p>
+</footer>
+
+<script>
+(function(){
+  var ip = document.getElementById("ip");
+  fetch("/api/status.json", {cache:"no-store"}).then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(s){ if (ip && s && s.servidor && s.servidor.endereco) ip.textContent = s.servidor.endereco; })
+    .catch(function(){});
+  var links = Array.prototype.slice.call(document.querySelectorAll(".indice a[href^='#']"));
+  if (!links.length || !("IntersectionObserver" in window)) return;
+  var porSecao = {};
+  links.forEach(function(a){ porSecao[a.getAttribute("href").slice(1)] = a; });
+  var olho = new IntersectionObserver(function(entradas){
+    entradas.forEach(function(e){
+      if (!e.isIntersecting || !porSecao[e.target.id]) return;
+      links.forEach(function(a){ a.classList.remove("ativo"); });
+      porSecao[e.target.id].classList.add("ativo");
+    });
+  }, {rootMargin:"-30% 0px -60% 0px"});
+  Object.keys(porSecao).forEach(function(id){ var s = document.getElementById(id); if (s) olho.observe(s); });
+})();
+</script>
+<script src="/assets/vivo.js" defer></script>
+<script>/* admin dock: loads only for signed-in panel admins */if(/(^|;\s*)jarl=1/.test(document.cookie)){var j=document.createElement('script');j.src='/jarl/estatico/site-admin.js';j.defer=true;document.head.appendChild(j)}</script>
+</body>
+</html>

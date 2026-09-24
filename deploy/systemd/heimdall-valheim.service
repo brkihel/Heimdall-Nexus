@@ -1,0 +1,25 @@
+[Unit]
+# ManagedBy=HeimdallNexusInstaller
+Description=Valheim Dedicated Server (Heimdall Nexus)
+Documentation=https://valheim.com/support/a-guide-to-dedicated-servers/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=valheim
+Group=valheim
+WorkingDirectory=@GAME_ROOT@/current
+EnvironmentFile=@GAME_ROOT@/server.env
+ExecStart=@LAUNCHER@
+Restart=on-failure
+RestartSec=10
+KillSignal=SIGINT
+TimeoutStopSec=120
+LimitNOFILE=65536
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

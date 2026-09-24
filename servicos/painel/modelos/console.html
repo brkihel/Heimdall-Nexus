@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block titulo %}Console{% endblock %}
+{% block corpo %}
+<div class="topo">
+  <h1 id="nome-servidor">Valheim</h1>
+  <span id="estado-jogo" class="pastilha meio">lendo…</span>
+  <div class="acoes">
+    <button class="btn bom"  data-acao="start">Ligar</button>
+    <button class="btn"      data-acao="restart">Reiniciar</button>
+    <button class="btn ruim" data-acao="stop">Desligar</button>
+  </div>
+</div>
+
+<div class="medidores">
+  <div class="medidor">🌐 <b id="m-endereco">—</b></div>
+  <div class="medidor">🧠 <b id="m-memoria">—</b> <small>de 5,6 GB</small></div>
+  <div class="medidor">⏱ <b id="m-uptime">—</b> <small>no ar</small></div>
+  <div class="medidor">🧍 <b id="m-jogadores">—</b> <small>vikings</small></div>
+  <div class="medidor">🌙 <b id="m-mundo">—</b></div>
+  <div class="medidor" id="medidor-estacao" style="display:none">🍂 <b id="m-estacao">—</b></div>
+</div>
+
+<div class="cartao">
+  <h2>Log ao vivo <span id="m-pausa" style="text-transform:none; letter-spacing:0"></span></h2>
+  <div class="acoes" style="margin:0 0 .8rem">
+    <button class="btn" data-log="game">Jogo</button>
+    <button class="btn" id="btn-rolar">Seguir o fim</button>
+  </div>
+  <div class="console" id="console">carregando…</div>
+</div>
+
+<div class="cartao">
+  <h2>Serviços</h2>
+  <table>
+    <thead><tr><th>Serviço</th><th>Estado</th><th>Memória</th><th>Reinícios</th></tr></thead>
+    <tbody id="tabela-servicos"><tr><td colspan="4" style="color:var(--fraco)">lendo…</td></tr></tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+const RAIZ = {{ raiz|tojson }};
+let servicoDoLog = 'game', seguirFim = true, trabalhando = false;
+
+function recado(texto, tipo='bom'){
+  let caixa = document.getElementById('recados');
+  if (!caixa){
+    caixa = document.createElement('div');
+    caixa.className = 'recados'; caixa.id = 'recados';
+    document.body.append(caixa);
+  }
+  const linha = document.createElement('div');
+  linha.className = 'recado ' + tipo;
+  linha.textContent = texto;
+  caixa.append(linha);
+  setTimeout(() => linha.remove(), 7000);
+}
+
+function mb(bytes){ const n = Number(bytes); return isFinite(n) && n > 0 ? (n/1048576).toFixed(0)+' MB' : '—'; }
+function duracao(seg){
+  if (!isFinite(seg) || seg < 0) return '—';
+  const d = Math.floor(seg/86400), h = Math.floor(seg%86400/3600), m = Math.floor(seg%3600/60);
+  return d ? `${d}d ${h}h` : h ? `${h}h ${m}min` : `${m}min`;
+}
+
+async function lerEstado(){
+  try{
+    const r = await fetch(`${RAIZ}/api/estado`, {credentials:'same-origin'});
+    if (r.status === 401) { location.href = `${RAIZ}/entrar`; return; }
+    const d = await r.json();
+    const jogo = d.servicos.game || {}, publico = d.jogo || {};
+    const vivo = jogo.ActiveState === 'active';
+    if (!trabalhando){
+      const marca = document.getElementById('estado-jogo');
+      const confirmado = vivo && publico.online;
+      marca.textContent = confirmado ? 'no ar' : vivo ? 'ligado · aguardando confirmação' : (jogo.ActiveState || '?');
+      marca.title = confirmado && publico.status_consulta === 'journal'
+        ? 'Servidor pronto pelo log; consulta de jogadores indisponível'
+        : vivo && !confirmado ? 'Processo ativo, mas ainda sem sinal de prontidão' : '';
+      marca.className = 'pastilha ' + (confirmado ? 'viva' : vivo ? 'meio' : 'morta');
+    }
+
+    document.getElementById('m-endereco').textContent = (publico.servidor||{}).endereco || '—';
+    document.getElementById('nome-servidor').textContent = (publico.servidor||{}).nome || 'Valheim';
+    document.getElementById('m-memoria').textContent = mb(jogo.MemoryCurrent);
+    document.getElementById('m-uptime').textContent = duracao((publico.uptime||{}).segundos);
+    const j = publico.jogadores || {};
+    document.getElementById('m-jogadores').textContent = j.online != null ? `${j.online}/${j.maximo}` : '—';
+    const t = publico.tempo_de_jogo || {};
+    document.getElementById('m-mundo').textContent = t.dia ? `dia ${t.dia} · ${t.hora}` : '—';
+    const nomes = {Spring:'Primavera', Summer:'Verão', Fall:'Outono', Winter:'Inverno'};
+    document.getElementById('medidor-estacao').style.display = (d.features||[]).includes('estacoes') ? '' : 'none';
+    document.getElementById('m-estacao').textContent = nomes[(publico.estacoes||{}).atual] || '—';
+
+    document.getElementById('tabela-servicos').innerHTML = Object.entries(d.servicos).map(([nome, s]) => {
+      const ativo = s.ActiveState === 'active';
+      return `<tr><td><b>${nome}</b></td>
+        <td><span class="pastilha ${ativo?'viva':'morta'}">${s.ActiveState||s.erro||'?'}</span> <small style="color:var(--fraco)">${s.SubState||''}</small></td>
+        <td class="num">${mb(s.MemoryCurrent)}</td><td class="num">${s.NRestarts||'0'}</td></tr>`;
+    }).join('');
+  }catch(e){ /* a próxima volta tenta de novo */ }
+}
+
+function pinta(linha){
+  const esc = linha.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  let classe = 'info';
+  if (/\[(Error|Fatal)|ERROR|Traceback/.test(linha)) classe = 'erro';
+  else if (/\[Warning|WARN/.test(linha)) classe = 'aviso';
+  return `<div class="${classe}">${esc}</div>`;
+}
+
+async function lerLog(){
+  try{
+    const r = await fetch(`${RAIZ}/api/log?servico=${servicoDoLog}&linhas=300`, {credentials:'same-origin'});
+    if (r.status === 401) { location.href = `${RAIZ}/entrar`; return; }
+    const d = await r.json();
+    if (!d.ok) return;
+    const caixa = document.getElementById('console');
+    caixa.innerHTML = d.linhas.map(pinta).join('') || '<div class="hora">(sem linhas)</div>';
+    if (seguirFim) caixa.scrollTop = caixa.scrollHeight;
+  }catch(e){}
+}
+
+document.querySelectorAll('[data-acao]').forEach(botao => {
+  botao.addEventListener('click', async () => {
+    const acao = botao.dataset.acao;
+    const nomes = {start:'ligar', restart:'reiniciar', stop:'desligar'};
+    const jogadores = document.getElementById('m-jogadores').textContent;
+    const online = parseInt(jogadores) || 0;
+    let aviso = `Confirma ${nomes[acao]} o servidor?`;
+    if (online > 0 && acao !== 'start') aviso += `\n\nTem ${online} viking(s) dentro do jogo agora.`;
+    if (!confirm(aviso)) return;
+    // O pedido leva minutos (parar salva o mundo, subir registra 81 mods). A
+    // página não espera de braços cruzados: os medidores e o console continuam
+    // atualizando, e uma tarja diz o que está acontecendo.
+    document.querySelectorAll('[data-acao]').forEach(b => b.disabled = true);
+    const marca = document.getElementById('estado-jogo');
+    marca.textContent = {start:'ligando…', restart:'reiniciando…', stop:'desligando…'}[acao];
+    marca.className = 'pastilha meio';
+    trabalhando = true;
+    try{
+      const r = await fetch(`${RAIZ}/api/servico`, {
+        method:'POST', credentials:'same-origin',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({servico:'game', acao})});
+      const d = await r.json();
+      if (!d.ok) recado('Não deu: ' + d.erro, 'ruim');
+      else recado(`Pedido aceito: ${nomes[acao]}. O jogo leva uns minutos para voltar.`);
+    }catch(e){ recado('Falhou: ' + e, 'ruim'); }
+    trabalhando = false;
+    document.querySelectorAll('[data-acao]').forEach(b => b.disabled = false);
+    lerEstado(); lerLog();
+  });
+});
+
+document.querySelectorAll('[data-log]').forEach(botao => {
+  botao.addEventListener('click', () => { servicoDoLog = botao.dataset.log; lerLog(); });
+});
+document.getElementById('btn-rolar').addEventListener('click', () => {
+  seguirFim = !seguirFim;
+  document.getElementById('m-pausa').textContent = seguirFim ? '' : ' — rolagem livre';
+});
+
+lerEstado(); lerLog();
+setInterval(lerEstado, 5000);
+setInterval(lerLog, 4000);
+</script>
+{% endblock %}

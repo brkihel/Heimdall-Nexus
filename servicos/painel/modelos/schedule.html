@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block titulo %}Tarefas{% endblock %}
+{% block corpo %}
+<div class="topo"><h1>Tarefas</h1><div class="acoes"><button class="btn bom" id="novo">Criar rotina</button></div></div>
+<p class="dica-rotinas">Uma rotina roda no horário escolhido e executa suas tarefas na ordem. Os horários seguem o fuso da máquina.</p>
+<div id="lista" class="cartao">Carregando…</div>
+<div id="formulario" class="cartao" hidden>
+  <h2 id="titulo-form">Nova rotina</h2>
+  <label class="campo-rotina">Nome<input id="nome" type="text" maxlength="80" placeholder="Reinício diário"></label>
+  <h3>Quando</h3>
+  <div class="campos-cron">
+    <label>Minuto<input id="minuto" type="text" value="0"></label>
+    <label>Hora<input id="hora" type="text" value="4"></label>
+    <label>Dia do mês<input id="dia" type="text" value="*"></label>
+    <label>Mês<input id="mes" type="text" value="*"></label>
+    <label>Dia da semana<input id="semana" type="text" value="*"></label>
+  </div>
+  <p class="dica-rotinas">Formato cron. <code>0 4 * * *</code> = todo dia às 04:00. <code>*</code> = qualquer valor; aceita listas (<code>1,15</code>), intervalos (<code>1-5</code>) e passos (<code>*/30</code>). Dia da semana: 0 = domingo.</p>
+  <div class="alavancas">
+    <label class="alavanca"><input id="online" type="checkbox" role="switch"> Apenas quando o servidor estiver online</label>
+    <label class="alavanca"><input id="ativo" type="checkbox" role="switch" checked> Rotina ativada</label>
+  </div>
+  <h3>Tarefas desta rotina</h3>
+  <div id="tarefas"></div>
+  <p id="sem-tarefas" class="dica-rotinas">Nenhuma tarefa ainda. Use “Adicionar tarefa” para escolher o que esta rotina faz.</p>
+  <button class="btn" id="adicionar">+ Adicionar tarefa</button>
+  <div class="acoes rodape-form"><button class="btn bom" id="salvar">Salvar rotina</button><button class="btn" id="cancelar">Cancelar</button></div>
+</div>
+<p id="mensagem" role="status"></p>
+<style>
+#formulario{max-width:640px}
+#formulario h3{font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--fraco);margin:1.3rem 0 .6rem}
+.campo-rotina{display:grid;gap:.3rem;max-width:360px}
+.campos-cron{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.5rem;max-width:520px}
+.campos-cron label{display:grid;gap:.25rem;font-size:.72rem;color:var(--fraco);min-width:0}
+.campos-cron input{min-width:0;text-align:center;font-family:ui-monospace,monospace}
+#formulario input[type=text],#formulario input[type=number],#formulario select{width:100%;box-sizing:border-box;background:#04080c;color:var(--texto);border:1px solid var(--borda);border-radius:6px;padding:.45rem .55rem;font-size:.85rem}
+.dica-rotinas{color:var(--fraco);font-size:.8rem;margin:.5rem 0}
+.alavancas{display:flex;flex-wrap:wrap;gap:.8rem 1.6rem;margin-top:1rem}
+.passo-rotina{display:grid;grid-template-columns:1.6rem minmax(0,1fr) auto auto;gap:.6rem;align-items:center;padding:.6rem .7rem;margin:.4rem 0;border:1px solid var(--borda);border-radius:8px;background:rgba(4,8,12,.5)}
+.passo-rotina .ordem{color:var(--fraco);font-variant-numeric:tabular-nums}
+.passo-rotina .atraso{display:flex;align-items:center;gap:.4rem;font-size:.75rem;color:var(--fraco);white-space:nowrap}
+.passo-rotina .atraso input{width:4.6rem}
+.rodape-form{margin:1.2rem 0 0;justify-content:flex-start}
+.rotina{border-bottom:1px solid var(--borda);padding:.9rem 0}.rotina:last-child{border:0}.rotina p{color:var(--fraco);font-size:.82rem;margin:.3rem 0}.rotina .acoes{margin:.4rem 0 0;justify-content:flex-start}
+@media (max-width:560px){.campos-cron{grid-template-columns:repeat(3,minmax(0,1fr))}.passo-rotina{grid-template-columns:1.2rem minmax(0,1fr)}.passo-rotina .atraso,.passo-rotina .btn{grid-column:2}}
+</style>
+{% endblock %}
+{% block script %}
+<script>
+const ROOT={{ raiz|tojson }}, $=id=>document.getElementById(id);
+const ACOES=[['restart','Reiniciar servidor'],['start','Ligar servidor'],['stop','Desligar servidor'],['backup','Criar backup']];
+const NOME_ACAO=Object.fromEntries(ACOES);
+let editing=null,entries=[];
+async function api(dados){const r=await fetch(ROOT+'/api/administracao',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({verbo:'schedules',dados})});const d=await r.json();if(!d.ok)throw Error(d.erro||'Falha');return d}
+function renumber(){const rows=[...document.querySelectorAll('#tarefas .passo-rotina')];rows.forEach((row,i)=>row.querySelector('.ordem').textContent=(i+1)+'.');$('sem-tarefas').hidden=rows.length>0}
+function task(value={acao:'restart',atraso:0}){
+  const row=document.createElement('div');row.className='passo-rotina';
+  const order=document.createElement('span');order.className='ordem';
+  const select=document.createElement('select');select.setAttribute('aria-label','Ação');
+  for(const [key,label] of ACOES)select.add(new Option(label,key));select.value=value.acao;
+  const delay=document.createElement('label');delay.className='atraso';delay.title='Espera antes de executar esta tarefa';
+  const input=document.createElement('input');input.type='number';input.min=0;input.max=3600;input.value=value.atraso||0;
+  delay.append('Esperar',input,'s antes');
+  const remove=document.createElement('button');remove.type='button';remove.className='btn ruim mini';remove.textContent='Remover';
+  remove.onclick=()=>{row.remove();renumber()};
+  row.append(order,select,delay,remove);$('tarefas').append(row);renumber();
+}
+function open(item){
+  editing=item?.id||null;$('titulo-form').textContent=item?'Editar rotina':'Nova rotina';$('nome').value=item?.nome||'';
+  const p=(item?.cron||'0 4 * * *').split(' ');['minuto','hora','dia','mes','semana'].forEach((key,i)=>$(key).value=p[i]);
+  $('online').checked=!!item?.apenas_online;$('ativo').checked=item?.ativo??true;
+  $('tarefas').replaceChildren();for(const t of item?.tarefas||[])task(t);renumber();
+  $('formulario').hidden=false;$('formulario').scrollIntoView({behavior:'smooth'});
+}
+function button(label,onclick,cls='btn mini'){const b=document.createElement('button');b.className=cls;b.textContent=label;b.onclick=onclick;return b}
+async function load(){try{
+  entries=(await api({acao:'listar'})).rotinas;const box=$('lista');box.replaceChildren();
+  if(!entries.length)box.textContent='Nenhuma rotina criada.';
+  for(const item of entries){
+    const row=document.createElement('div');row.className='rotina';
+    const name=document.createElement('b');name.textContent=item.nome;
+    const info=document.createElement('p');info.textContent=`${item.cron} · ${item.ativo?'Ativada':'Desativada'} · ${item.apenas_online?'só com o servidor online':'mesmo com o servidor offline'}`;
+    const steps=document.createElement('p');steps.textContent=item.tarefas.map((t,i)=>`${i+1}. ${NOME_ACAO[t.acao]||t.acao}${t.atraso?` (após ${t.atraso}s)`:''}`).join('  →  ');
+    const actions=document.createElement('div');actions.className='acoes';
+    actions.append(button('Editar',()=>open(item)),
+      button(item.ativo?'Desativar':'Ativar',async()=>{try{await api({acao:'gravar',rotina:{...item,ativo:!item.ativo}});load()}catch(e){$('mensagem').textContent=e.message}}),
+      button('Apagar',async()=>{if(!confirm('Apagar esta rotina?'))return;try{await api({acao:'apagar',id:item.id});load()}catch(e){$('mensagem').textContent=e.message}},'btn ruim mini'));
+    row.append(name,info,steps,actions);box.append(row);
+  }}catch(e){$('mensagem').textContent=e.message}}
+$('novo').onclick=()=>open(null);$('adicionar').onclick=()=>task();$('cancelar').onclick=()=>$('formulario').hidden=true;
+$('salvar').onclick=async()=>{try{
+  const tarefas=[...document.querySelectorAll('#tarefas .passo-rotina')].map(row=>({acao:row.querySelector('select').value,atraso:Number(row.querySelector('input').value)||0}));
+  if(!tarefas.length){$('mensagem').textContent='Adicione ao menos uma tarefa à rotina.';return}
+  const cron=['minuto','hora','dia','mes','semana'].map(k=>$(k).value.trim()).join(' ');
+  await api({acao:'gravar',rotina:{id:editing||undefined,nome:$('nome').value,cron,ativo:$('ativo').checked,apenas_online:$('online').checked,tarefas}});
+  $('formulario').hidden=true;$('mensagem').textContent='Rotina salva.';load();
+}catch(e){$('mensagem').textContent=e.message}};
+load();
+</script>
+{% endblock %}

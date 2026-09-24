@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Entrar — Heimdall Nexus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Spectral:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ raiz }}/estatico/painel.css">
+</head>
+<body>
+<div class="porta">
+  <form method="post" action="{{ raiz }}/entrar">
+    <h1>Salão do Jarl</h1>
+    <p>Valheim Server Management Platform · BRKiHeL</p>
+    {% if erro %}<div class="erro-caixa">{{ erro }}</div>{% endif %}
+    {% if sem_senha %}
+      <div class="aviso-caixa">Nenhuma senha definida ainda. No servidor, rode
+        <code>sudo ./definir-senha.py</code> dentro de <code>painel/</code>.</div>
+    {% endif %}
+    <input type="password" name="senha" placeholder="senha" autocomplete="current-password"
+           autofocus required>
+    <button class="btn" type="submit" style="margin-top:1rem; width:100%">Entrar</button>
+  </form>
+</div>
+</body>
+</html>

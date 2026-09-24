@@ -1,0 +1,195 @@
+{
+  "paginas": [
+    {
+      "id": "inicio",
+      "titulo": "Início",
+      "url": "/",
+      "fonte": "index.html",
+      "publicar": [
+        "inicio",
+        "vivo",
+        "mods",
+        "modpack-ui",
+        "tema",
+        "marca"
+      ],
+      "mods": {
+        "lista": "mods.json",
+        "descricoes": "descricoes-pt.json",
+        "ancora": "mods"
+      },
+      "modelos": {
+        "paragrafo": {
+          "rotulo": "Parágrafo",
+          "html": "<p data-campo=\"{c1}\">Escreva aqui o novo parágrafo.</p>"
+        },
+        "titulo": {
+          "rotulo": "Título",
+          "html": "<h3 data-campo=\"{c1}\">Novo título</h3>"
+        },
+        "botao": {
+          "rotulo": "Botão",
+          "html": "<a class=\"botao\" href=\"/\" data-campo=\"{c1}\">Novo botão</a>"
+        },
+        "botao-fantasma": {
+          "rotulo": "Botão discreto",
+          "html": "<a class=\"botao botao-fantasma\" href=\"/\" data-campo=\"{c1}\">Novo botão</a>"
+        },
+        "secao": {
+          "rotulo": "Seção nova",
+          "secao": true,
+          "html": "<section class=\"faixa secao\" id=\"{id}\" data-bloco=\"{b1}\">\n  <div class=\"container\" data-bloco=\"{b2}\">\n    <h2 class=\"titulo\" data-campo=\"{c1}\">Nova seção</h2>\n    <p class=\"legenda\" data-campo=\"{c2}\">Escreva aqui o texto desta seção.</p>\n  </div>\n</section>"
+        },
+        "cartao-vivo": {
+          "rotulo": "Quadro de dado ao vivo",
+          "vivo": true,
+          "categoria": "Ao vivo",
+          "html": "<div class=\"celula\" data-bloco=\"{b1}\">\n  <div class=\"rotulo\" data-campo=\"{c1}\">Novo dado</div>\n  <div class=\"valor menor\" data-vivo=\"{vivo}\">—</div>\n  <div class=\"nota\" data-campo=\"{c2}\">explique o número</div>\n</div>"
+        },
+        "faixa-quadros": {
+          "rotulo": "Faixa de quadros",
+          "categoria": "Ao vivo",
+          "html": "<div class=\"painel\" data-bloco=\"{b1}\">\n  <div class=\"grade\" data-bloco=\"{b2}\">\n    <div class=\"celula\" data-bloco=\"{b3}\">\n      <div class=\"rotulo\" data-campo=\"{c1}\">Vikings online</div>\n      <div class=\"valor\" data-vivo=\"online\">—</div>\n      <div class=\"nota\" data-vivo=\"vagas_texto\">de 10 lugares</div>\n    </div>\n    <div class=\"celula\" data-bloco=\"{b4}\">\n      <div class=\"rotulo\" data-campo=\"{c2}\">Hora do mundo</div>\n      <div class=\"valor menor\" data-vivo=\"hora\">—</div>\n      <div class=\"nota\" data-vivo=\"dia_detalhe\">—</div>\n    </div>\n  </div>\n</div>"
+        },
+        "link": {
+          "rotulo": "Link",
+          "abrirLink": true,
+          "html": "<p data-campo=\"{c1}\"><a href=\"/\">Novo link</a></p>"
+        }
+      },
+      "saida": "index.html"
+    },
+    {
+      "id": "wiki",
+      "titulo": "Wiki",
+      "url": "/wiki/",
+      "fonte": "wiki.html",
+      "publicar": [
+        "wiki",
+        "vivo",
+        "tema",
+        "marca"
+      ],
+      "modelos": {
+        "paragrafo": {
+          "rotulo": "Parágrafo",
+          "html": "<p data-campo=\"{c1}\">Escreva aqui o novo parágrafo.</p>"
+        },
+        "titulo": {
+          "rotulo": "Título",
+          "html": "<h4 data-campo=\"{c1}\">Novo título</h4>"
+        },
+        "botao": {
+          "rotulo": "Botão",
+          "html": "<p data-campo=\"{c1}\"><a class=\"botao-wiki\" href=\"/wiki/\">Novo botão &#8594;</a></p>"
+        },
+        "caixa": {
+          "rotulo": "Caixa de destaque",
+          "html": "<div class=\"caixa destaque\" data-bloco=\"{b1}\">\n  <h4 data-campo=\"{c1}\">Destaque</h4>\n  <p data-campo=\"{c2}\">Escreva aqui.</p>\n</div>"
+        },
+        "alerta": {
+          "rotulo": "Caixa de alerta",
+          "html": "<div class=\"caixa alerta\" data-bloco=\"{b1}\">\n  <h4 data-campo=\"{c1}\">Atenção</h4>\n  <p data-campo=\"{c2}\">Escreva aqui.</p>\n</div>"
+        },
+        "secao": {
+          "rotulo": "Seção nova",
+          "secao": true,
+          "html": "<section id=\"{id}\" data-bloco=\"{b1}\">\n  <h3 data-campo=\"{c1}\">Nova seção</h3>\n  <p class=\"sub\" data-campo=\"{c2}\">Uma linha de resumo.</p>\n  <p data-campo=\"{c3}\">Escreva aqui o texto desta seção.</p>\n</section>"
+        },
+        "dado-vivo": {
+          "rotulo": "Linha com dado ao vivo",
+          "vivo": true,
+          "categoria": "Ao vivo",
+          "html": "<p data-campo=\"{c1}\">Agora: <strong><span data-vivo=\"{vivo}\">—</span></strong></p>"
+        },
+        "link": {
+          "rotulo": "Link",
+          "abrirLink": true,
+          "html": "<p data-campo=\"{c1}\"><a href=\"/\">Novo link</a></p>"
+        }
+      },
+      "tipo": "wiki",
+      "saida": "wiki.html"
+    }
+  ],
+  "tipos": {
+    "wiki": {
+      "rotulo": "Wiki",
+      "descricao": "Índice lateral, seções, caixas de destaque e tabelas.",
+      "modelo": "modelos-pagina/wiki.html",
+      "modelos": {
+        "paragrafo": {
+          "rotulo": "Parágrafo",
+          "html": "<p data-campo=\"{c1}\">Escreva aqui o novo parágrafo.</p>"
+        },
+        "titulo": {
+          "rotulo": "Título",
+          "html": "<h4 data-campo=\"{c1}\">Novo título</h4>"
+        },
+        "botao": {
+          "rotulo": "Botão",
+          "html": "<p data-campo=\"{c1}\"><a class=\"botao-wiki\" href=\"/wiki/\">Novo botão &#8594;</a></p>"
+        },
+        "caixa": {
+          "rotulo": "Caixa de destaque",
+          "html": "<div class=\"caixa destaque\" data-bloco=\"{b1}\">\n  <h4 data-campo=\"{c1}\">Destaque</h4>\n  <p data-campo=\"{c2}\">Escreva aqui.</p>\n</div>"
+        },
+        "alerta": {
+          "rotulo": "Caixa de alerta",
+          "html": "<div class=\"caixa alerta\" data-bloco=\"{b1}\">\n  <h4 data-campo=\"{c1}\">Atenção</h4>\n  <p data-campo=\"{c2}\">Escreva aqui.</p>\n</div>"
+        },
+        "secao": {
+          "rotulo": "Seção nova",
+          "secao": true,
+          "html": "<section id=\"{id}\" data-bloco=\"{b1}\">\n  <h3 data-campo=\"{c1}\">Nova seção</h3>\n  <p class=\"sub\" data-campo=\"{c2}\">Uma linha de resumo.</p>\n  <p data-campo=\"{c3}\">Escreva aqui o texto desta seção.</p>\n</section>"
+        },
+        "dado-vivo": {
+          "rotulo": "Linha com dado ao vivo",
+          "vivo": true,
+          "categoria": "Ao vivo",
+          "html": "<p data-campo=\"{c1}\">Agora: <strong><span data-vivo=\"{vivo}\">—</span></strong></p>"
+        },
+        "link": {
+          "rotulo": "Link",
+          "abrirLink": true,
+          "html": "<p data-campo=\"{c1}\"><a href=\"/\">Novo link</a></p>"
+        }
+      }
+    },
+    "vazia": {
+      "rotulo": "Página vazia",
+      "descricao": "Só o topo, o fundo e o rodapé do site; você monta o conteúdo.",
+      "modelo": "modelos-pagina/vazia.html",
+      "modelos": {
+        "paragrafo": {
+          "rotulo": "Parágrafo",
+          "html": "<p data-campo=\"{c1}\">Escreva aqui o novo parágrafo.</p>"
+        },
+        "titulo": {
+          "rotulo": "Título",
+          "html": "<h3 data-campo=\"{c1}\">Novo título</h3>"
+        },
+        "botao": {
+          "rotulo": "Botão",
+          "html": "<p data-campo=\"{c1}\"><a class=\"botao\" href=\"/\">Novo botão</a></p>"
+        },
+        "secao": {
+          "rotulo": "Seção nova",
+          "secao": true,
+          "html": "<section id=\"{id}\" data-bloco=\"{b1}\">\n  <h2 data-campo=\"{c1}\">Nova seção</h2>\n  <p data-campo=\"{c2}\">Escreva aqui o texto desta seção.</p>\n</section>"
+        },
+        "dado-vivo": {
+          "rotulo": "Linha com dado ao vivo",
+          "vivo": true,
+          "categoria": "Ao vivo",
+          "html": "<p data-campo=\"{c1}\">Agora: <strong><span data-vivo=\"{vivo}\">—</span></strong></p>"
+        },
+        "link": {
+          "rotulo": "Link",
+          "abrirLink": true,
+          "html": "<p data-campo=\"{c1}\"><a href=\"/\">Novo link</a></p>"
+        }
+      }
+    }
+  }
+}

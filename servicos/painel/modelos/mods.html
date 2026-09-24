@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+{% block titulo %}Mods{% endblock %}
+{% block corpo %}
+<div class="topo">
+  <h1>Mods</h1>
+  <span id="resumo" class="pastilha meio">lendo…</span>
+  <div class="acoes">
+    <button class="btn" id="btn-varredura">Procurar em todas as lojas</button>
+    <button class="btn" id="btn-catalogo">Atualizar catálogo</button>
+  </div>
+</div>
+<p class="dica">
+  O que está instalado sai do <code>mods.lock.json</code> do servidor; o catálogo junta o
+  Hexium e a Thunderstore. Pacote que existe nas duas aparece uma vez, pela loja com a
+  versão mais nova (no empate, o Hexium). Instalar, atualizar e remover param o servidor,
+  fazem backup verificado e religam — tudo sozinho.
+</p>
+
+<div class="abas">
+  <button data-aba="instalados" class="ativa">Instalados <span class="conta" id="c-inst"></span></button>
+  <button data-aba="loja">Catálogo</button>
+</div>
+
+<section id="painel-instalados">
+  <div class="busca">
+    <input type="text" id="filtro-inst" placeholder="filtrar os instalados…" autocomplete="off">
+    <div class="controles">
+      <button class="btn" id="btn-so-atrasados">Só os atrasados</button>
+      <div class="jeito" data-jeito>
+      <button data-modo="blocos" title="em blocos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+      <button data-modo="lista" title="em lista"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
+    </div>
+    </div>
+  </div>
+  <div class="grade" id="grade-inst"><div class="vazio">lendo o servidor…</div></div>
+</section>
+
+<section id="painel-loja" hidden>
+  <div class="busca">
+    <input type="text" id="busca-loja" placeholder="procurar no Hexium e na Thunderstore: nome ou descrição…" autocomplete="off">
+    <div class="controles">
+      <label class="interruptor" title="Só o que a loja marca como feito para o Valheim 1.0">
+        <input type="checkbox" id="so-1-0" checked> feitos para o 1.0
+      </label>
+      <select id="ordem">
+        <option value="relevancia">mais relevantes</option>
+        <option value="rating">melhor avaliados</option>
+        <option value="recentes">atualizados há menos tempo</option>
+      </select>
+      <div class="jeito" data-jeito>
+      <button data-modo="blocos" title="em blocos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+      <button data-modo="lista" title="em lista"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
+    </div>
+    </div>
+  </div>
+  <div style="color:var(--fraco); font-size:.85rem; margin:-.5rem 0 1rem">
+    <span id="conta-loja"></span>
+  </div>
+  <div class="grade" id="grade-loja"><div class="vazio">escreva algo para procurar, ou veja os mais baixados</div></div>
+  <div style="text-align:center; margin-top:1rem">
+    <button class="btn" id="btn-mais" hidden>Ver mais</button>
+  </div>
+</section>
+
+<div class="recados" id="recados"></div>
+{% endblock %}
+
+{% block script %}
+<script>
+const RAIZ = {{ raiz|tojson }};
+let instalados = [], soAtrasados = false, paginaLoja = 0, ultimaBusca = '', tarefaAberta = null;
+
+function recado(texto, tipo='bom'){
+  const caixa = document.createElement('div');
+  caixa.className = 'recado ' + tipo;
+  caixa.textContent = texto;
+  document.getElementById('recados').append(caixa);
+  setTimeout(() => caixa.remove(), 6000);
+}
+
+async function api(caminho, opcoes){
+  const r = await fetch(RAIZ + caminho, {credentials:'same-origin', ...opcoes});
+  if (r.status === 401) { location.href = `${RAIZ}/entrar`; return null; }
+  const d = await r.json();
+  if (!d.ok) { recado(d.erro || 'não deu', 'ruim'); return null; }
+  return d;
+}
+
+const post = (caminho, corpo) => api(caminho, {
+  method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(corpo)});
+
+function quando(iso){
+  if (!iso) return '';
+  const dias = Math.floor((Date.now() - new Date(iso)) / 86400000);
+  if (dias <= 0) return 'hoje';
+  if (dias === 1) return 'ontem';
+  if (dias < 30) return `há ${dias} dias`;
+  if (dias < 365) return `há ${Math.floor(dias/30)} meses`;
+  return `há ${Math.floor(dias/365)} ano(s)`;
+}
+
+// O rodapé mostra o dado pelo qual a lista está ordenada — senão o critério
+// fica invisível e a ordem parece aleatória.
+function etiqueta(m){
+  const ordem = document.getElementById('ordem').value;
+  if (ordem === 'rating') return ` · ★ ${m.nota}`;
+  if (ordem === 'recentes') return ` · ${quando(m.mexido)}`;
+  return m.baixado ? ` · ${m.baixado.toLocaleString('pt-BR')} downloads` : '';
+}
+
+function capa(m){
+  return m.icone ? `<img src="${m.icone}" alt="" loading="lazy">` : '<span class="semcapa"></span>';
+}
+
+// ---------------------------------------------------------------- instalados
+function desenhaInstalados(){
+  const filtro = document.getElementById('filtro-inst').value.trim().toLowerCase();
+  const lista = instalados.filter(m =>
+    (!soAtrasados || m.atrasado) &&
+    (!filtro || m.nome.toLowerCase().includes(filtro)));
+  const grade = document.getElementById('grade-inst');
+  if (!lista.length){ grade.innerHTML = '<div class="vazio">nada aqui com esse filtro</div>'; return; }
+  grade.classList.toggle('lista', (localStorage.getItem('painel-jeito') || 'blocos') === 'lista');
+  grade.innerHTML = lista.map(m => `
+    <div class="mod">
+      ${capa(m)}
+      <div class="mod-txt">
+        <span class="mod-nome">${m.curto}</span>
+        <span class="mod-autor">por ${m.autor} · <b style="color:var(--ouro-claro)">${m.versao}</b></span>
+        ${m.descricao ? `<div class="mod-desc">${m.descricao}</div>` : ''}
+        <div class="mod-pe">
+          ${m.atrasado ? `<span class="selo novo">${m.ultima} disponível</span>` : ''}
+          ${m.versao_incerta ? '<span class="selo novo">versão incerta</span>' : ''}
+          ${m.nosso ? '<span class="selo nosso">peça nossa</span>'
+            : (!m.na_loja ? '<span class="selo">fora das lojas</span>' : '')}
+          ${m.loja === 'thunderstore' ? '<span class="selo">Thunderstore</span>' : ''}
+          ${m.atrasado ? `<button class="btn mini bom" data-atualizar="${m.nome}" data-versao="${m.ultima}">Atualizar</button>` : ''}
+          <button class="btn mini ruim" data-remover="${m.nome}">Remover</button>
+          ${m.url ? `<a class="btn mini" href="${m.url}" target="_blank" rel="noopener">Ver na loja</a>` : ''}
+        </div>
+      </div>
+    </div>`).join('');
+  ligaBotoes();
+}
+
+async function lerInstalados(){
+  const d = await api('/api/mods/instalados');
+  if (!d) return;
+  instalados = d.mods;
+  document.getElementById('c-inst').textContent = d.total;
+  const marca = document.getElementById('resumo');
+  marca.textContent = d.atrasados ? `${d.atrasados} com atualização` : 'tudo em dia';
+  const idade = d.catalogo_ha_seg;
+  if (idade !== null && idade !== undefined){
+    const quando = idade < 90 ? 'agora há pouco'
+      : idade < 5400 ? `há ${Math.round(idade/60)} min`
+      : `há ${Math.round(idade/3600)} h`;
+    document.getElementById('c-inst').title = `catálogos lidos ${quando}`;
+    const alvo = document.getElementById('btn-catalogo');
+    if (alvo) alvo.title = `última leitura ${quando}`;
+  }
+  marca.className = 'pastilha ' + (d.atrasados ? 'meio' : 'viva');
+  desenhaInstalados();
+}
+
+// ---------------------------------------------------------------- loja
+async function procura(nova=true){
+  const busca = document.getElementById('busca-loja').value.trim();
+  if (nova){ paginaLoja = 0; ultimaBusca = busca; }
+  const ordem = document.getElementById('ordem').value;
+  const so = document.getElementById('so-1-0').checked;
+  const d = await api(`/api/mods/procurar?busca=${encodeURIComponent(ultimaBusca)}` +
+                      `&pagina_n=${paginaLoja}&ordem=${ordem}&so_1_0=${so}`);
+  if (!d) return;
+  const grade = document.getElementById('grade-loja');
+  const cartoes = d.itens.map(m => `
+    <div class="mod">
+      ${capa(m)}
+      <div class="mod-txt">
+        <span class="mod-nome">${m.curto}</span>
+        <span class="mod-autor">por ${m.autor} · ${m.versao}${etiqueta(m)}</span>
+        ${m.descricao ? `<div class="mod-desc">${m.descricao}</div>` : ''}
+        <div class="mod-pe">
+          ${m.instalado
+            ? (m.instalado === m.versao
+                ? '<span class="selo ok">instalado</span>'
+                : `<span class="selo novo">instalado: ${m.instalado}</span>
+                   <button class="btn mini bom" data-atualizar="${m.nome}" data-versao="${m.versao}">Atualizar</button>`)
+            : `<button class="btn mini bom" data-instalar="${m.nome}" data-versao="${m.versao}">Instalar</button>`}
+          ${m.loja === 'thunderstore' ? '<span class="selo">Thunderstore</span>' : ''}
+          <a class="btn mini" href="${m.url}" target="_blank" rel="noopener">Ver na loja</a>
+        </div>
+      </div>
+    </div>`).join('');
+  grade.classList.toggle('lista', (localStorage.getItem('painel-jeito') || 'blocos') === 'lista');
+  grade.innerHTML = nova ? (cartoes || '<div class="vazio">nada encontrado</div>')
+                         : grade.innerHTML + cartoes;
+  document.getElementById('conta-loja').textContent = `${d.total} pacotes`;
+  document.getElementById('btn-mais').hidden = !d.tem_mais;
+  ligaBotoes();
+}
+
+// ---------------------------------------------------------------- ações
+function ligaBotoes(){
+  document.querySelectorAll('[data-instalar]').forEach(b => b.onclick = () =>
+    executa('mods.instalar', {nome:b.dataset.instalar, versao:b.dataset.versao},
+            `Instalar ${b.dataset.instalar} ${b.dataset.versao}?\n\nO servidor para, instala e religa.`));
+  document.querySelectorAll('[data-atualizar]').forEach(b => b.onclick = () =>
+    executa('mods.atualizar', {nome:b.dataset.atualizar, versao:b.dataset.versao},
+            `Atualizar ${b.dataset.atualizar} para ${b.dataset.versao}?\n\nO servidor para, atualiza e religa.`));
+  document.querySelectorAll('[data-remover]').forEach(b => b.onclick = () =>
+    executa('mods.remover', {nome:b.dataset.remover},
+            `Remover ${b.dataset.remover}?\n\nA pasta vai para o porão de cópias antes de sumir.`));
+}
+
+async function executa(verbo, dados, pergunta){
+  if (!confirm(pergunta)) return;
+  const d = await post('/api/mods', {verbo, dados});
+  if (d && d.tarefa) acompanha(d.tarefa);
+}
+
+function acompanha(id){
+  if (tarefaAberta) tarefaAberta.remove();
+  const caixa = document.createElement('div');
+  caixa.className = 'tarefa';
+  caixa.innerHTML = `<div class="tarefa-topo"><span class="girando"></span>
+      <span id="t-titulo">trabalhando…</span><button title="fechar">×</button></div>
+    <div class="tarefa-saida" id="t-saida"></div>`;
+  document.body.append(caixa);
+  caixa.querySelector('button').onclick = () => { caixa.remove(); tarefaAberta = null; };
+  tarefaAberta = caixa;
+
+  const relogio = setInterval(async () => {
+    const d = await post('/api/mods', {verbo:'mods.tarefa', dados:{id}});
+    if (!d) { clearInterval(relogio); return; }
+    caixa.querySelector('#t-titulo').textContent = d.titulo;
+    const saida = caixa.querySelector('#t-saida');
+    saida.textContent = (d.saida || []).join('\n');
+    saida.scrollTop = saida.scrollHeight;
+    if (d.estado !== 'andando'){
+      clearInterval(relogio);
+      caixa.querySelector('.girando').replaceWith(
+        Object.assign(document.createElement('span'),
+          {textContent: d.estado === 'pronto' ? '✓' : '✕',
+           style: 'color:' + (d.estado === 'pronto' ? 'var(--bom)' : 'var(--ruim)')}));
+      recado(d.estado === 'pronto' ? 'Feito.' : `Não deu: ${d.erro || d.estado}`,
+             d.estado === 'pronto' ? 'bom' : 'ruim');
+      lerInstalados();
+    }
+  }, 1500);
+}
+
+// ---------------------------------------------------------------- liga tudo
+document.querySelectorAll('.abas button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.abas button').forEach(o => o.classList.toggle('ativa', o === b));
+  const loja = b.dataset.aba === 'loja';
+  document.getElementById('painel-loja').hidden = !loja;
+  document.getElementById('painel-instalados').hidden = loja;
+  if (loja && !document.getElementById('grade-loja').dataset.carregou){
+    document.getElementById('grade-loja').dataset.carregou = '1';
+    procura();
+  }
+});
+
+// ---------------------------------------------------------------- jeito de ver
+function aplicaJeito(modo){
+  document.querySelectorAll('.grade').forEach(g => g.classList.toggle('lista', modo === 'lista'));
+  document.querySelectorAll('[data-jeito] button').forEach(b =>
+    b.classList.toggle('ativo', b.dataset.modo === modo));
+  try { localStorage.setItem('painel-jeito', modo); } catch (e) {}
+}
+document.querySelectorAll('[data-jeito] button').forEach(b =>
+  b.onclick = () => aplicaJeito(b.dataset.modo));
+let jeitoGuardado = 'blocos';
+try { jeitoGuardado = localStorage.getItem('painel-jeito') || 'blocos'; } catch (e) {}
+aplicaJeito(jeitoGuardado);
+
+document.getElementById('ordem').onchange = () => procura();
+document.getElementById('so-1-0').onchange = () => procura();
+
+let espera;
+document.getElementById('busca-loja').oninput = () => {
+  clearTimeout(espera); espera = setTimeout(() => procura(), 350);
+};
+document.getElementById('filtro-inst').oninput = desenhaInstalados;
+document.getElementById('btn-mais').onclick = () => { paginaLoja++; procura(false); };
+document.getElementById('btn-so-atrasados').onclick = evento => {
+  soAtrasados = !soAtrasados;
+  evento.target.classList.toggle('bom', soAtrasados);
+  evento.target.textContent = soAtrasados ? 'Mostrar todos' : 'Só os atrasados';
+  desenhaInstalados();
+};
+document.getElementById('btn-varredura').onclick = async () => {
+  const d = await post('/api/mods', {verbo:'mods.varredura', dados:{}});
+  if (d && d.tarefa) acompanha(d.tarefa);
+};
+document.getElementById('btn-catalogo').onclick = async evento => {
+  // Sem isto o botão fica mudo enquanto trabalha, e um segundo de silêncio
+  // parece uma eternidade — dá vontade de clicar de novo.
+  const botao = evento.target;
+  const antes = botao.textContent;
+  botao.disabled = true; botao.textContent = 'Buscando…';
+  const d = await post('/api/mods', {verbo:'mods.catalogo.atualizar', dados:{}});
+  botao.disabled = false; botao.textContent = antes;
+  if (d){
+    recado(`Catálogos atualizados: Hexium ${d.pacotes}` +
+           (d.thunderstore ? `, Thunderstore ${d.thunderstore}` : '') + ' pacotes.' +
+           (d.aviso ? ` Atenção: ${d.aviso}` : ''));
+    lerInstalados();
+    if (!document.getElementById('painel-loja').hidden) procura();
+  }
+};
+
+lerInstalados();
+</script>
+{% endblock %}

@@ -1,0 +1,1176 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Seu Servidor — servidor de Valheim</title>
+<meta name="description" content="Descreva seu servidor em uma frase: estilo de jogo, mods e comunidade.">
+<meta property="og:title" content="Seu Servidor — servidor de Valheim">
+<meta property="og:description" content="Descreva seu servidor em uma frase: estilo de jogo, mods e comunidade.">
+<link rel="icon" data-identidade="favicon" href="/marca/favicon.svg" type="image/svg+xml">
+<link rel="canonical" data-identidade="url" data-caminho="/" href="/">
+<meta property="og:url" data-identidade="url" data-caminho="/" content="/">
+<meta property="og:image" content="/assets/heroi-1600.webp">
+<meta property="og:site_name" data-identidade="nome" content="Seu Servidor">
+<meta property="og:locale" content="pt_BR">
+<meta name="twitter:card" content="summary_large_image">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#060b10">
+<link rel="preload" as="image" href="/assets/heroi-1600.webp"
+      imagesrcset="/assets/heroi-1024.webp 1024w, /assets/heroi-1600.webp 1600w, /assets/heroi-2560.webp 2560w"
+      imagesizes="100vw">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Spectral:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --breu:#05090d; --noite:#080e14; --carvao:#0d151d; --ardosia:#152029;
+  --borda:#22313d; --borda-viva:#33475a;
+  --ouro:#c8a45c; --ouro-claro:#eeddb0; --ouro-fundo:#7d6331;
+  --brasa:#ff8b3d; --brasa-clara:#ffc477;
+  --osso:#e6e0d2; --texto:#b4bec7; --fraco:#78848f;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+html{
+  scroll-behavior:smooth;
+  /* navegacao por secoes: o scroll nunca descansa entre duas */
+  scroll-snap-type:y mandatory;
+}
+body{margin:0; background:var(--breu); color:var(--texto);
+  font-family:'Spectral',Georgia,serif; font-size:17px; line-height:1.75;
+  -webkit-font-smoothing:antialiased; overflow-x:hidden}
+
+/* Cada secao ocupa a tela inteira e e um ponto de parada obrigatorio. */
+.secao{
+  min-height:100svh;
+  scroll-snap-align:start;
+  scroll-snap-stop:always;
+  display:flex; flex-direction:column; justify-content:center;
+}
+/* Se a secao nao couber na tela (telas baixas ou celular com os cards
+   empilhados), o snap obrigatorio tornaria o conteudo de baixo inalcancavel.
+   Nesses casos ele afrouxa para 'proximity': ainda encaixa, mas deixa rolar. */
+@media (max-height:700px), (max-width:760px){
+  html{scroll-snap-type:y proximity}
+  .secao{scroll-snap-stop:normal}
+}
+
+/* ---- navegacao lateral ---- */
+.bussola{position:fixed; right:max(1.1rem, env(safe-area-inset-right)); top:50%;
+  transform:translateY(-50%); z-index:50; display:flex; flex-direction:column; gap:1.05rem}
+.bussola a{position:relative; width:11px; height:11px; display:block; text-decoration:none}
+.bussola a::after{content:""; position:absolute; inset:0; border-radius:50%;
+  border:1px solid color-mix(in srgb,var(--ouro) 50%,transparent); background:transparent;
+  transition:background .25s, border-color .25s, transform .25s}
+.bussola a:hover::after{border-color:var(--ouro-claro); transform:scale(1.28)}
+.bussola a[aria-current="true"]::after{background:var(--ouro); border-color:var(--ouro-claro);
+  box-shadow:0 0 12px color-mix(in srgb,var(--ouro) 75%,transparent)}
+.bussola span{position:absolute; right:22px; top:50%; transform:translateY(-50%);
+  font-family:'Cinzel',serif; font-size:.6rem; letter-spacing:.18em; text-transform:uppercase;
+  color:#cdd7df; background:color-mix(in srgb,var(--breu) 86%,transparent); border:1px solid var(--borda);
+  padding:.32rem .6rem; border-radius:2px; white-space:nowrap;
+  opacity:0; pointer-events:none; transition:opacity .2s}
+.bussola a:hover span, .bussola a:focus-visible span{opacity:1}
+.bussola a:focus-visible::after{outline:2px solid var(--ouro-claro); outline-offset:3px}
+@media (max-width:760px){ .bussola{display:none} }
+img{max-width:100%; display:block}
+[hidden]{display:none!important}
+a{color:var(--ouro-claro)}
+h2,h3{font-family:'Cinzel',Georgia,serif; color:var(--osso); line-height:1.25; margin:0}
+
+/* ============ HEROI ============ */
+.heroi{position:relative; align-items:center; padding:5rem 1.25rem 8rem;
+  overflow:hidden; isolation:isolate}
+/* a camada existe so para a paralaxe: a foto ja usa o proprio transform no
+   'respira', e os dois no mesmo elemento se anulariam */
+.heroi-camada{position:absolute; inset:-3% -3%; z-index:-3; will-change:transform}
+.heroi-foto{position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+  animation:respira 46s ease-in-out infinite alternate}
+@keyframes respira{from{transform:scale(1.03)} to{transform:scale(1.12)}}
+/* gradacao de cor: puxa a foto para o frio e aprofunda os pretos */
+.heroi::before{content:""; position:absolute; inset:0; z-index:-2; pointer-events:none;
+  background:
+    radial-gradient(ellipse 62% 48% at 56% 74%, rgba(255,150,60,.20), transparent 62%),
+    radial-gradient(ellipse 120% 85% at 50% 42%, transparent 32%, color-mix(in srgb,var(--breu) 62%,transparent) 84%),
+    linear-gradient(180deg, color-mix(in srgb,var(--breu) 86%,transparent) 0%, color-mix(in srgb,var(--breu) 18%,transparent) 28%, color-mix(in srgb,var(--breu) 12%,transparent) 54%, color-mix(in srgb,var(--breu) 82%,transparent) 88%, var(--breu) 100%);
+}
+.heroi::after{content:""; position:absolute; inset:0; z-index:-1; pointer-events:none;
+  background:linear-gradient(180deg,transparent 62%, color-mix(in srgb,var(--breu) 55%,transparent) 86%, var(--breu) 100%)}
+
+.nevoa{position:absolute; left:-30%; width:160%; height:var(--h); top:var(--t);
+  z-index:-1; pointer-events:none; opacity:var(--op);
+  background:radial-gradient(ellipse 50% 50% at 50% 50%, #9fb6c6, transparent 70%);
+  filter:blur(28px); animation:passa var(--dur) linear var(--atraso) infinite}
+@keyframes passa{from{transform:translateX(-22%)} to{transform:translateX(22%)}}
+
+.fornalha{position:absolute; left:56%; bottom:14%; width:16%; height:62svh;
+  transform:translateX(-50%); z-index:0; pointer-events:none}
+.brasa{position:absolute; left:calc(50% + var(--x)); bottom:0;
+  width:var(--tam); height:var(--tam); border-radius:50%;
+  background:var(--brasa-clara); box-shadow:0 0 7px 1.5px rgba(255,140,60,.75);
+  opacity:0; animation:sobe var(--dur) linear var(--atraso) infinite}
+@keyframes sobe{
+  0%{transform:translate(0,0) scale(1); opacity:0}
+  10%{opacity:var(--op)}
+  72%{opacity:calc(var(--op)*.45)}
+  /* a subida e variavel: a fogueira do heroi sobe meia tela, a tocha sobe pouco */
+  100%{transform:translate(var(--desvio),var(--sobe,-58svh)) scale(.3); opacity:0}
+}
+
+.heroi-conteudo{position:relative; z-index:2; text-align:center; width:100%; max-width:980px}
+.marca{margin:0 auto; font:inherit; line-height:1; filter:drop-shadow(0 6px 30px rgba(0,0,0,.55))}
+.marca-logo{display:block; width:auto; max-width:min(84vw,720px); max-height:clamp(96px,22vh,220px); margin:0 auto}
+.marca-nome{display:block; font-family:'Cinzel',serif; font-weight:700; letter-spacing:.08em;
+  font-size:clamp(2.6rem,9vw,6.4rem); color:var(--ouro-claro);
+  background:linear-gradient(180deg,var(--ouro-claro),var(--ouro) 70%,var(--ouro-fundo));
+  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent}
+.marca-logo:not([hidden]) + .marca-nome{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0)}
+.rodape-credito{margin-top:.6rem; opacity:.55; font-size:.8em}
+.tagline{font-family:'Cinzel',serif; text-transform:uppercase; letter-spacing:.44em;
+  font-size:clamp(.58rem,1.8vw,.82rem); color:#a8bac7; margin:1.5rem 0 0;
+  text-indent:.44em; text-shadow:0 2px 14px #000}
+.divisor{display:flex; align-items:center; justify-content:center; gap:16px; margin:1.4rem auto 0; max-width:440px}
+.divisor i{height:1px; flex:1; background:linear-gradient(90deg,transparent,var(--ouro-fundo),transparent)}
+.divisor b{width:6px; height:6px; background:var(--ouro); transform:rotate(45deg); flex:none}
+
+/* ---- painel do heroi: um retangulo unico sobre a foto ---- */
+.pergaminho{
+  margin:2.2rem auto 0; width:min(100%, 650px);
+  display:flex; align-items:stretch; flex-wrap:nowrap;
+  background:linear-gradient(168deg, rgba(14,23,31,.82), color-mix(in srgb,var(--breu) 90%,transparent));
+  border:1px solid color-mix(in srgb,var(--ouro) 28%,transparent); border-radius:4px;
+  box-shadow:0 26px 70px rgba(0,0,0,.72), 0 4px 18px rgba(0,0,0,.5),
+             inset 0 1px 0 rgba(255,238,200,.08);
+  backdrop-filter:blur(10px) saturate(.9); -webkit-backdrop-filter:blur(10px) saturate(.9);
+  overflow:hidden; position:relative;
+}
+.pergaminho::before{content:""; position:absolute; inset:0 0 auto; height:1px;
+  background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--ouro-claro) 60%,transparent),transparent)}
+.pg-item{flex:1 1 0; min-width:0; padding:.78rem .6rem; text-align:center;
+  display:flex; flex-direction:column; justify-content:center; gap:.3rem}
+.pg-item + .pg-item{border-left:1px solid color-mix(in srgb,var(--ouro) 16%,transparent)}
+.pg-rot{font-family:'Cinzel',serif; font-size:.56rem; letter-spacing:.2em;
+  text-transform:uppercase; color:#90a0ac; white-space:nowrap}
+.pg-val{font-family:'Cinzel',serif; font-weight:700; font-size:clamp(.9rem,1.8vw,1.1rem);
+  color:var(--ouro-claro); line-height:1.15; font-variant-numeric:tabular-nums; white-space:nowrap}
+.pg-val.parado{opacity:.55}
+.pg-sub{font-size:.66rem; color:var(--fraco); line-height:1.2}
+.pg-ip{flex:2.15 1 0}   /* o endereco e a coluna mais larga: 23 chars monoespacados */
+.pg-ip .pg-sub{min-height:.9rem}  /* reserva a linha do aviso de "copiado" */
+.pg-ip button{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:clamp(.8rem,1.7vw,.98rem);
+  color:var(--osso); background:transparent; border:none; padding:0; cursor:pointer;
+  display:inline-flex; align-items:center; gap:.45rem; justify-content:center;
+  letter-spacing:.01em; transition:color .15s}
+.pg-ip button:hover{color:var(--ouro-claro)}
+/* o endereco inteiro nao cabe na coluna: host em cima, porta embaixo */
+#ip-heroi,#endereco{display:inline-flex; flex-direction:column; align-items:center;
+  line-height:1.18; min-width:0}
+#ip-host,#end-host{overflow-wrap:anywhere}
+#ip-porta,#end-porta{font-size:.84em; color:var(--fraco); letter-spacing:.06em}
+.pg-ip button svg{width:13px; height:13px; opacity:.55; flex:none}
+.pg-ip button:hover svg{opacity:1}
+.pg-ip button:focus-visible{outline:2px solid var(--ouro-claro); outline-offset:4px; border-radius:2px}
+@media (max-width:760px){
+  .pergaminho{flex-wrap:wrap; width:min(100%,420px); margin-top:1.6rem}
+  .pg-item{flex:1 1 50%; padding:.85rem .5rem}
+  .pg-ip{flex:1 1 100%; border-bottom:1px solid color-mix(in srgb,var(--ouro) 16%,transparent)}
+  .pg-item + .pg-item{border-left:none}
+  .pg-item:nth-child(odd):not(.pg-ip){border-left:1px solid color-mix(in srgb,var(--ouro) 16%,transparent)}
+}
+
+.desce{position:absolute; bottom:1.7rem; left:50%; transform:translateX(-50%); z-index:3;
+  color:#93a3b0; font-size:.66rem; letter-spacing:.32em; text-transform:uppercase;
+  font-family:'Cinzel',serif; text-decoration:none; text-align:center}
+.desce span{display:block; font-size:1.25rem; margin-top:.3rem; animation:flutua 2.6s ease-in-out infinite}
+@keyframes flutua{0%,100%{transform:translateY(0); opacity:.45} 50%{transform:translateY(8px); opacity:1}}
+
+/* ---- botao do mapa ao vivo ---- */
+.feature-disabled{display:none!important}
+.heroi-acoes{display:flex; gap:.6rem; flex-wrap:wrap; justify-content:center; margin-top:1.1rem}
+.heroi-btn{display:inline-flex; align-items:center; gap:.6rem;
+  font-family:'Cinzel',serif; font-size:.68rem; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--ouro-claro); text-decoration:none; padding:.66rem 1.3rem; border-radius:3px;
+  border:1px solid color-mix(in srgb,var(--ouro) 42%,transparent); background:color-mix(in srgb,var(--noite) 62%,transparent);
+  backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  box-shadow:0 10px 30px rgba(0,0,0,.5);
+  transition:border-color .2s, background .2s, transform .15s, box-shadow .2s}
+.heroi-btn svg{width:15px; height:15px; opacity:.85; flex:none}
+.heroi-btn:hover{border-color:var(--ouro); background:rgba(18,28,38,.78);
+  transform:translateY(-2px); box-shadow:0 14px 34px rgba(0,0,0,.6), 0 0 22px color-mix(in srgb,var(--ouro) 18%,transparent)}
+.heroi-btn:hover svg{opacity:1}
+.heroi-btn:focus-visible{outline:2px solid var(--ouro-claro); outline-offset:4px}
+/* o passo a passo e o que um jogador novo precisa primeiro: puxa o olho */
+.heroi-btn.destaque{border-color:color-mix(in srgb,var(--ouro) 70%,transparent); background:color-mix(in srgb,var(--ouro) 13%,transparent);
+  color:#fff3d8; box-shadow:0 10px 30px rgba(0,0,0,.5), 0 0 20px color-mix(in srgb,var(--ouro) 14%,transparent)}
+.heroi-btn.destaque:hover{background:color-mix(in srgb,var(--ouro) 20%,transparent)}
+
+/* ============ TOCHAS ============ */
+/* Ficam fixas nas laterais e so acendem a partir da segunda secao — no heroi
+   elas competiriam com a fogueira da foto. A entrada e por transicao, nao por
+   corte seco. */
+.tochas{position:fixed; inset:0; z-index:40; pointer-events:none;
+  opacity:0; transform:translateY(18px) scale(.94); transform-origin:50% 100%;
+  transition:opacity .85s ease, transform 1.15s cubic-bezier(.2,.75,.25,1);
+  will-change:opacity, transform}
+body.tochas-acesas .tochas{opacity:1; transform:none}
+.tocha{position:absolute; top:22%; width:74px; height:196px}
+/* nas telas largas elas encostam na coluna do conteudo, nao na borda da janela */
+.tocha-esq{left:max(1rem, calc((100vw - 1460px) / 2))}
+.tocha-dir{right:max(1rem, calc((100vw - 1460px) / 2))}
+.tocha-luz{position:absolute; left:50%; bottom:74px; width:300px; height:300px;
+  transform:translateX(-50%); border-radius:50%;
+  background:radial-gradient(circle, rgba(255,152,66,.20), rgba(255,120,40,.06) 44%, transparent 70%);
+  animation:bruxuleia 3.6s ease-in-out infinite}
+@keyframes bruxuleia{0%,100%{opacity:.8; transform:translateX(-50%) scale(1)}
+  50%{opacity:1; transform:translateX(-50%) scale(1.07)}}
+.tocha-cabo{position:absolute; left:50%; bottom:0; width:15px; height:118px;
+  transform:translateX(-50%); border-radius:2px 2px 4px 4px;
+  background:linear-gradient(90deg,#1a120b,#513a22 34%,#6b5031 52%,#382818 76%,#150e08);
+  box-shadow:0 14px 28px rgba(0,0,0,.55)}
+/* amarras de couro */
+.tocha-cabo::before,.tocha-cabo::after{content:""; position:absolute; left:-3px; right:-3px;
+  height:8px; border-radius:2px;
+  background:linear-gradient(90deg,#140e08,#4b3a23 46%,#1d140c)}
+.tocha-cabo::before{top:14px} .tocha-cabo::after{top:34px}
+.tocha-copo{position:absolute; left:50%; bottom:108px; width:36px; height:28px;
+  transform:translateX(-50%); border-radius:5px 5px 11px 11px;
+  background:linear-gradient(180deg,#3d4b57,#151d25 78%);
+  border:1px solid #4a5a66; box-shadow:inset 0 2px 0 rgba(233,244,255,.14),
+  0 0 20px rgba(255,140,60,.28)}
+.tocha-chama{position:absolute; left:50%; bottom:126px; width:52px; height:78px;
+  transform:translateX(-50%)}
+.tocha-chama i{position:absolute; left:50%; bottom:0; display:block;
+  border-radius:50% 50% 44% 44%; filter:blur(3px); mix-blend-mode:screen;
+  transform:translateX(-50%)}
+.tocha-chama i:nth-child(1){width:44px; height:66px;
+  background:radial-gradient(ellipse at 50% 76%, #ff8b3d, rgba(255,90,20,0) 70%);
+  animation:chama 2.7s ease-in-out infinite}
+.tocha-chama i:nth-child(2){width:27px; height:48px;
+  background:radial-gradient(ellipse at 50% 72%, #ffc477, rgba(255,150,60,0) 72%);
+  animation:chama 1.9s ease-in-out infinite reverse}
+.tocha-chama i:nth-child(3){width:13px; height:26px;
+  background:radial-gradient(ellipse at 50% 68%, #fff4d6, rgba(255,222,155,0) 76%);
+  animation:chama 1.25s ease-in-out infinite}
+@keyframes chama{
+  0%,100%{transform:translateX(-50%) scale(1,1)}
+  33%{transform:translateX(-53%) scale(.93,1.12)}
+  66%{transform:translateX(-47%) scale(1.07,.92)}}
+.tocha-brasas{position:absolute; left:50%; bottom:158px; width:26px; height:8px;
+  transform:translateX(-50%)}
+.tocha .brasa{--sobe:-124px}
+/* abaixo disso a tocha encostaria no texto e na bussola */
+@media (max-width:1240px), (max-height:620px){ .tochas{display:none} }
+
+@media (prefers-reduced-motion:reduce){
+  .heroi-foto,.brasa,.nevoa,.desce span,.tocha-chama i,.tocha-luz{animation:none!important}
+  .brasa{opacity:.4} html{scroll-behavior:auto}
+  .tochas{transition:opacity .01s linear; transform:none}
+  .heroi-camada,.heroi-conteudo{transform:none!important}
+}
+
+/* ============ ESTRUTURA ============ */
+.faixa{position:relative; border-top:1px solid var(--borda); background:var(--noite); overflow:hidden}
+.faixa.ilustrada{background:var(--breu)}
+.faixa-foto{position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+  opacity:.23; filter:saturate(.62) contrast(1.02) brightness(1.12); z-index:0}
+.secao#saga{justify-content:space-between; padding-bottom:0}
+.secao#saga > .container{margin-top:auto}
+.rodape-embutido{margin-top:auto}
+.faixa.ilustrada::after{content:""; position:absolute; inset:0; z-index:1; pointer-events:none;
+  background:linear-gradient(180deg,var(--breu),color-mix(in srgb,var(--breu) 74%,transparent) 30%,color-mix(in srgb,var(--breu) 74%,transparent) 70%,var(--breu))}
+.container{position:relative; z-index:2; max-width:1120px; margin:0 auto;
+  padding:clamp(2.5rem,6vh,4.5rem) 1.25rem; width:100%}
+.titulo{text-align:center; font-size:clamp(1.55rem,4vw,2.4rem); letter-spacing:.07em; margin-bottom:.7rem}
+.legenda{text-align:center; color:var(--fraco); margin:0 auto clamp(1.6rem,4vh,2.8rem);
+  max-width:62ch; font-size:1rem}
+
+/* ============ PAINEL DE STATUS ============ */
+.painel{background:linear-gradient(168deg,color-mix(in srgb,var(--ardosia) 94%,transparent),color-mix(in srgb,var(--noite) 97%,transparent));
+  border:1px solid var(--borda); border-radius:3px; position:relative; overflow:hidden;
+  box-shadow:0 22px 60px rgba(0,0,0,.6)}
+.painel::before{content:""; position:absolute; inset:0 0 auto; height:2px;
+  background:linear-gradient(90deg,transparent,var(--ouro),transparent); opacity:.6}
+.grade{display:grid; grid-template-columns:repeat(auto-fit,minmax(212px,1fr)); gap:1px; background:var(--borda)}
+.celula{background:linear-gradient(172deg,#111d27,#0a121a); padding:2rem 1.2rem; text-align:center}
+.rotulo{font-family:'Cinzel',serif; text-transform:uppercase; letter-spacing:.2em;
+  font-size:.64rem; color:var(--fraco); margin-bottom:.8rem}
+.valor{font-family:'Cinzel',serif; font-weight:700; font-size:clamp(1.7rem,4.6vw,2.45rem);
+  color:var(--ouro-claro); line-height:1.1; font-variant-numeric:tabular-nums}
+.valor.menor{font-size:clamp(1.1rem,3vw,1.45rem)}
+.nota{font-size:.8rem; color:var(--fraco); margin-top:.5rem}
+.pulso{display:inline-flex; align-items:center; gap:.55rem; font-family:'Cinzel',serif;
+  font-size:.72rem; letter-spacing:.16em; text-transform:uppercase}
+.ponto{width:9px; height:9px; border-radius:50%; background:var(--fraco); flex:none}
+.ligado .ponto{background:#5fd38a; animation:bate 2.2s infinite} .ligado{color:#93e2b1}
+.desligado .ponto{background:#e0604a} .desligado{color:#f0907f}
+@keyframes bate{0%{box-shadow:0 0 0 0 rgba(95,211,138,.65)}
+  70%{box-shadow:0 0 0 11px rgba(95,211,138,0)} 100%{box-shadow:0 0 0 0 rgba(95,211,138,0)}}
+.conexao{display:flex; flex-wrap:wrap; gap:.8rem; align-items:center; justify-content:center;
+  padding:1.4rem; border-top:1px solid var(--borda); background:color-mix(in srgb,var(--breu) 70%,transparent)}
+.endereco{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:1.02rem;
+  color:var(--osso); background:#04080c; border:1px solid var(--borda);
+  padding:.62rem 1rem; border-radius:2px}
+.botao{font-family:'Cinzel',serif; font-size:.74rem; letter-spacing:.15em; text-transform:uppercase;
+  color:#1c1407; background:linear-gradient(180deg,var(--ouro-claro),var(--ouro) 58%,#9a7a3c);
+  border:none; padding:.74rem 1.35rem; border-radius:2px; cursor:pointer; font-weight:700;
+  box-shadow:0 2px 0 #55431e, 0 10px 26px rgba(0,0,0,.5); transition:filter .12s, transform .1s}
+.botao:hover{filter:brightness(1.09)} .botao:active{transform:translateY(2px); box-shadow:0 0 0 #55431e}
+
+/* ---- chamada da wiki, no salao ---- */
+.convite{display:flex; align-items:center; gap:1.1rem; flex-wrap:wrap;
+  border-top:1px solid var(--borda); padding:1.15rem 1.3rem;
+  background:linear-gradient(120deg, color-mix(in srgb,var(--ouro) 9%,transparent), color-mix(in srgb,var(--breu) 55%,transparent) 60%)}
+.convite-icone{width:34px; height:34px; flex:none; color:var(--ouro)}
+.convite-txt{flex:1 1 300px; min-width:0}
+.convite-txt strong{display:block; font-family:'Cinzel',serif; color:var(--ouro-claro);
+  letter-spacing:.06em; font-size:.95rem; margin-bottom:.15rem}
+.convite-txt p{margin:0; font-size:.88rem; color:var(--texto); line-height:1.55}
+.convite-guias{margin:.55rem 0 0 !important; font-size:.82rem !important; color:var(--fraco) !important}
+.convite-guias a{color:var(--ouro-claro); text-decoration:none; border-bottom:1px solid color-mix(in srgb,var(--ouro) 30%,transparent)}
+.convite-guias a:hover{border-bottom-color:var(--ouro)}
+.convite .botao{flex:none; text-decoration:none; line-height:1;
+  display:inline-flex; align-items:center; white-space:nowrap}
+@media (max-width:640px){ .convite{justify-content:center; text-align:center; padding:1rem} }
+
+/* ---- estacao do ano ---- */
+.estacoes{border-top:1px solid var(--borda); background:color-mix(in srgb,var(--breu) 55%,transparent); padding:1.15rem 1.3rem}
+.est-topo{display:flex; align-items:baseline; gap:.7rem; flex-wrap:wrap; margin-bottom:.85rem}
+.est-icone{width:26px; height:26px; flex:none; color:var(--ouro); align-self:center}
+.est-nome{font-family:'Cinzel',serif; font-size:1.15rem; color:var(--ouro-claro); letter-spacing:.06em}
+.est-dur{font-size:.78rem; color:var(--fraco)}
+.est-efeitos{display:flex; flex-wrap:wrap; gap:.45rem}
+.chip{display:inline-flex; align-items:baseline; gap:.4rem; font-size:.79rem;
+  padding:.3rem .6rem; border-radius:2px; border:1px solid var(--borda);
+  background:color-mix(in srgb,var(--carvao) 80%,transparent); color:var(--texto)}
+.chip b{font-family:'Cinzel',serif; font-weight:700; font-variant-numeric:tabular-nums}
+.chip.bom{border-color:rgba(95,211,138,.4)} .chip.bom b{color:#7fd9a2}
+.chip.ruim{border-color:rgba(224,96,74,.4)} .chip.ruim b{color:#ef8e7c}
+.chip.neutro{color:var(--fraco)}
+/* as outras tres, so para saber o que vem por ai */
+.est-outras{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+  gap:.7rem; margin-top:1.05rem; padding-top:.95rem; border-top:1px solid color-mix(in srgb,var(--borda) 55%,transparent)}
+.est-outra h4{font-family:'Cinzel',serif; font-size:.68rem; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--fraco); margin:0 0 .4rem; font-weight:600}
+.est-outra ul{list-style:none; margin:0; padding:0; font-size:.76rem; line-height:1.6}
+.est-outra li{display:flex; justify-content:space-between; gap:.6rem; color:var(--fraco)}
+.est-outra li b{font-family:'Cinzel',serif; font-weight:700; font-variant-numeric:tabular-nums}
+.est-outra li.bom b{color:#7fd9a2} .est-outra li.ruim b{color:#ef8e7c}
+@media (max-width:640px){ .estacoes{padding:1rem} }
+
+/* ============ CARDS ============ */
+.cartoes{display:grid; grid-template-columns:repeat(auto-fit,minmax(262px,1fr)); gap:1.4rem}
+.cartao{background:linear-gradient(168deg,rgba(18,28,37,.86),color-mix(in srgb,var(--breu) 92%,transparent));
+  border:1px solid var(--borda); border-radius:3px; padding:2rem 1.6rem;
+  transition:border-color .2s, transform .2s}
+.cartao:hover{border-color:var(--borda-viva); transform:translateY(-3px)}
+.cartao h3{font-size:1.04rem; margin-bottom:.7rem; color:var(--ouro-claro); letter-spacing:.05em}
+.cartao p{margin:0; font-size:.94rem}
+.icone{width:32px; height:32px; margin-bottom:1.1rem; color:var(--ouro); opacity:.9}
+/* ---- os mods ---- */
+/* Aviso do Gale: e o caminho recomendado, entao pesa mais que a lista. */
+.gale{display:flex; align-items:center; gap:1.1rem; flex-wrap:wrap;
+  border:1px solid color-mix(in srgb,var(--ouro) 35%,transparent); border-radius:10px; padding:1.05rem 1.3rem;
+  background:linear-gradient(120deg, color-mix(in srgb,var(--ouro) 10%,transparent), rgba(12,20,27,.7) 55%);
+  margin-bottom:1.1rem}
+.gale-icone{width:38px; height:38px; flex:none; color:var(--ouro);
+  display:flex; align-items:center; justify-content:center}
+.gale-icone svg{width:100%; height:100%}
+.gale-txt{flex:1 1 320px; min-width:0}
+.gale-txt strong{display:block; font-family:'Cinzel',serif; color:var(--ouro-claro);
+  letter-spacing:.09em; font-size:.92rem; margin-bottom:.2rem}
+.gale-txt p{margin:0; font-size:.88rem; color:var(--texto); line-height:1.55}
+.gale-acoes{flex:none; display:flex; gap:.6rem; flex-wrap:wrap}
+.gale .botao{white-space:nowrap; text-decoration:none; line-height:1;
+  display:inline-flex; align-items:center}
+/* o Gale e pre-requisito, nao o destino: fica em segundo plano visual */
+.botao-fantasma{background:transparent; color:var(--ouro-claro);
+  border:1px solid color-mix(in srgb,var(--ouro) 45%,transparent); box-shadow:none; font-weight:600}
+.botao-fantasma:hover{filter:none; border-color:var(--ouro);
+  background:color-mix(in srgb,var(--ouro) 10%,transparent)}
+.botao-fantasma:active{box-shadow:none}
+
+.modcaixa{position:relative; border:1px solid var(--borda); border-radius:10px;
+  overflow:hidden; background:linear-gradient(168deg,rgba(15,24,32,.9),color-mix(in srgb,var(--breu) 95%,transparent))}
+/* a sombra na base avisa que a lista continua abaixo */
+.modcaixa::after{content:""; position:absolute; left:0; right:0; bottom:0; height:38px;
+  pointer-events:none; background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--breu) 90%,transparent))}
+.modlista{--alt:5.6rem; max-height:calc(var(--alt) * 3); overflow-y:auto; overscroll-behavior:contain;
+  scrollbar-width:thin; scrollbar-color:color-mix(in srgb,var(--ouro) 50%,transparent) transparent}
+.modlista::-webkit-scrollbar{width:9px}
+.modlista::-webkit-scrollbar-track{background:color-mix(in srgb,var(--breu) 60%,transparent)}
+.modlista::-webkit-scrollbar-thumb{background:linear-gradient(180deg,var(--ouro),#7d6331);
+  border-radius:6px; border:2px solid color-mix(in srgb,var(--breu) 60%,transparent)}
+.modlinha{display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:.95rem;
+  height:var(--alt); padding:0 1.05rem; text-decoration:none; color:inherit;
+  border-bottom:1px solid color-mix(in srgb,var(--borda) 55%,transparent); transition:background .16s}
+.modlinha:last-child{border-bottom:none}
+.modlinha:hover{background:color-mix(in srgb,var(--ouro) 7%,transparent)}
+.modlinha:focus-visible{outline:2px solid var(--ouro-claro); outline-offset:-3px}
+.modcapa{width:48px; height:48px; border-radius:5px; flex:none; object-fit:cover;
+  border:1px solid var(--borda); background:#04080c}
+.modtxt{min-width:0}
+.modnome{display:block; font-family:'Cinzel',serif; font-size:.9rem; color:var(--osso);
+  letter-spacing:.03em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.modnome small{font-family:'Spectral',serif; font-size:.72rem; color:var(--fraco);
+  letter-spacing:0; margin-left:.5rem}
+.moddesc{display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  overflow:hidden; font-size:.83rem; color:var(--texto); line-height:1.45; margin-top:.15rem}
+.modver{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.74rem;
+  color:var(--fraco); flex:none; align-self:center}
+.modrodape{text-align:center; color:var(--fraco); font-size:.78rem; margin:.9rem 0 0}
+.modrodape strong{color:var(--ouro); font-weight:400}
+@media (max-width:640px){
+  .gale-acoes{width:100%; justify-content:center}
+  .modlista{--alt:6.4rem}
+  .modver{display:none}
+  .gale{justify-content:center; text-align:center}
+}
+
+.aviso{border:1px dashed var(--ouro-fundo); border-radius:3px; padding:1.8rem;
+  background:color-mix(in srgb,var(--ouro) 5%,transparent); text-align:center; color:var(--fraco); font-size:.94rem}
+.aviso strong{color:var(--ouro-claro); font-family:'Cinzel',serif; letter-spacing:.06em}
+
+
+/* ---- Saga dos vikings ---- */
+.saga-lista{display:flex; flex-direction:column; gap:.5rem; max-width:760px; margin:0 auto; width:100%}
+.saga-linha{display:grid; grid-template-columns:auto 1fr auto auto; align-items:center; gap:1rem;
+  background:linear-gradient(168deg,rgba(18,28,37,.88),color-mix(in srgb,var(--breu) 93%,transparent));
+  border:1px solid var(--borda); border-radius:3px; padding:.85rem 1.1rem;
+  cursor:pointer; text-align:left; font:inherit; color:inherit; width:100%;
+  transition:border-color .18s, transform .18s, background .18s}
+.saga-linha:hover{border-color:var(--borda-viva); transform:translateX(3px)}
+.saga-linha:focus-visible{outline:2px solid var(--ouro-claro); outline-offset:3px}
+.saga-pos{font-family:'Cinzel',serif; font-weight:700; font-size:1.05rem; color:var(--fraco);
+  min-width:2ch; text-align:center; font-variant-numeric:tabular-nums}
+.saga-linha[data-pos="1"] .saga-pos{color:var(--ouro-claro); text-shadow:0 0 14px color-mix(in srgb,var(--ouro) 60%,transparent)}
+.saga-linha[data-pos="2"] .saga-pos{color:#cfd6dc}
+.saga-linha[data-pos="3"] .saga-pos{color:#c08a5a}
+.saga-nome{font-family:'Cinzel',serif; font-size:1.02rem; color:var(--osso); letter-spacing:.03em;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.saga-sub{display:block; font-family:'Spectral',serif; font-size:.74rem; color:var(--fraco);
+  letter-spacing:0; margin-top:.1rem}
+.saga-total{font-family:'Cinzel',serif; font-weight:700; font-size:1.25rem; color:var(--ouro-claro);
+  font-variant-numeric:tabular-nums; text-align:right; line-height:1.1}
+.saga-total small{display:block; font-family:'Spectral',serif; font-weight:400;
+  font-size:.62rem; color:var(--fraco); letter-spacing:.1em; text-transform:uppercase}
+.saga-seta{color:var(--fraco); font-size:1.1rem; transition:transform .18s, color .18s}
+.saga-linha:hover .saga-seta{color:var(--ouro-claro); transform:translateX(3px)}
+.saga-vazio{text-align:center; color:var(--fraco); font-size:.95rem; padding:1.4rem}
+
+/* ---- guia de como entrar ---- */
+.porque{border-left:2px solid var(--ouro-fundo); background:color-mix(in srgb,var(--ouro) 6%,transparent);
+  padding:.9rem 1.1rem; border-radius:0 4px 4px 0; margin:0 0 1.6rem; font-size:.89rem}
+.porque strong{color:var(--ouro-claro); font-family:'Cinzel',serif; letter-spacing:.05em}
+.passos{list-style:none; counter-reset:passo; margin:0; padding:0}
+.passos li{counter-increment:passo; position:relative; padding:0 0 1.3rem 3.1rem; font-size:.91rem}
+.passos li:last-child{padding-bottom:0}
+.passos li::before{content:counter(passo); position:absolute; left:0; top:-1px;
+  width:2rem; height:2rem; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-family:'Cinzel',serif; font-weight:700; font-size:.86rem; color:var(--ouro-claro);
+  border:1px solid color-mix(in srgb,var(--ouro) 45%,transparent); background:color-mix(in srgb,var(--ouro) 10%,transparent)}
+/* fio ligando um passo ao proximo */
+.passos li:not(:last-child)::after{content:""; position:absolute; left:1rem; top:2.2rem; bottom:.3rem;
+  width:1px; background:linear-gradient(180deg,color-mix(in srgb,var(--ouro) 35%,transparent),transparent)}
+.passos b{display:block; font-family:'Cinzel',serif; color:var(--osso); font-size:.94rem;
+  letter-spacing:.03em; margin-bottom:.25rem}
+.passos code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.84rem;
+  background:#04080c; border:1px solid var(--borda); padding:.12rem .42rem; border-radius:2px;
+  color:var(--osso); white-space:nowrap}
+.passos .obs{display:block; color:var(--fraco); font-size:.82rem; margin-top:.3rem}
+.guia-acoes{display:flex; gap:.7rem; flex-wrap:wrap; margin-top:1.4rem;
+  padding-top:1.3rem; border-top:1px solid var(--borda)}
+.guia-acoes .botao{text-decoration:none; line-height:1; display:inline-flex; align-items:center}
+
+/* ---- ficha do viking ---- */
+.ficha{position:fixed; inset:0; z-index:100; display:none; align-items:center; justify-content:center;
+  padding:1.25rem; background:rgba(3,6,9,.86); backdrop-filter:blur(6px)}
+.ficha[open]{display:flex}
+.ficha-caixa{background:linear-gradient(168deg,rgba(20,31,41,.98),color-mix(in srgb,var(--breu) 99%,transparent));
+  border:1px solid color-mix(in srgb,var(--ouro) 30%,transparent); border-radius:4px; width:min(100%,720px);
+  max-height:88svh; overflow:auto; box-shadow:0 30px 90px rgba(0,0,0,.8); position:relative}
+.ficha-topo{position:sticky; top:0; z-index:2; padding:1.5rem 1.6rem 1.1rem;
+  background:linear-gradient(180deg,rgba(20,31,41,.99),rgba(16,25,34,.97));
+  border-bottom:1px solid var(--borda); display:flex; align-items:flex-start; gap:1rem}
+.ficha-topo h3{font-size:1.4rem; color:var(--ouro-claro); letter-spacing:.04em; flex:1; min-width:0}
+.ficha-topo p{margin:.3rem 0 0; font-size:.82rem; color:var(--fraco)}
+.ficha-fechar{background:transparent; border:1px solid var(--borda); color:var(--texto);
+  width:32px; height:32px; border-radius:2px; cursor:pointer; font-size:1.1rem; line-height:1; flex:none}
+.ficha-fechar:hover{border-color:var(--ouro); color:var(--ouro-claro)}
+.ficha-corpo{padding:1.3rem 1.6rem 1.8rem}
+.ficha-grupo{margin-bottom:1.5rem}
+.ficha-grupo h4{font-family:'Cinzel',serif; font-size:.64rem; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--fraco); margin:0 0 .7rem; font-weight:600}
+.pericia{display:grid; grid-template-columns:1fr auto; gap:.3rem .8rem; align-items:center;
+  padding:.4rem 0; border-bottom:1px solid color-mix(in srgb,var(--borda) 55%,transparent)}
+.pericia:last-child{border-bottom:none}
+.pericia-nome{font-size:.92rem; color:var(--texto)}
+.pericia-nome.desconhecida{color:var(--fraco); font-style:italic}
+.pericia-nivel{font-family:'Cinzel',serif; font-weight:700; font-size:.98rem; color:var(--ouro-claro);
+  font-variant-numeric:tabular-nums}
+.pericia-nivel.zero{color:var(--fraco); font-weight:400}
+.barra{grid-column:1/-1; height:3px; background:color-mix(in srgb,var(--borda) 80%,transparent); border-radius:2px; overflow:hidden}
+.barra i{display:block; height:100%; background:linear-gradient(90deg,var(--ouro-fundo),var(--ouro-claro));
+  border-radius:2px}
+@media (max-width:600px){
+  .saga-linha{grid-template-columns:auto 1fr auto; gap:.7rem; padding:.75rem .85rem}
+  .saga-seta{display:none}
+  .ficha-corpo,.ficha-topo{padding-left:1.1rem; padding-right:1.1rem}
+}
+
+footer{background:color-mix(in srgb,var(--breu) 72%,transparent); border-top:1px solid var(--borda); text-align:center;
+  padding:2.2rem 1.25rem; color:var(--fraco); font-size:.83rem; position:relative; z-index:2;
+  width:100%; backdrop-filter:blur(4px)}
+footer strong{color:var(--ouro); font-family:'Cinzel',serif; letter-spacing:.12em}
+
+@media (max-width:640px){
+  .container{padding:3.4rem 1.1rem}
+  .endereco{width:100%; text-align:center; font-size:.88rem}
+  .tagline{letter-spacing:.3em; text-indent:.3em}
+}
+</style>
+<link rel="stylesheet" href="/assets/tema.css">
+</head>
+<body>
+
+<div class="tochas" aria-hidden="true">
+  <div class="tocha tocha-esq">
+    <span class="tocha-luz"></span>
+    <span class="tocha-chama"><i></i><i></i><i></i></span>
+    <span class="tocha-brasas"><span class="brasa" style="--x:17%;--desvio:11px;--dur:4.25s;--atraso:5.39s;--tam:2.20px;--op:0.66"></span><span class="brasa" style="--x:13%;--desvio:-5px;--dur:2.87s;--atraso:4.47s;--tam:1.23px;--op:0.77"></span><span class="brasa" style="--x:-17%;--desvio:-8px;--dur:4.98s;--atraso:1.82s;--tam:1.32px;--op:0.88"></span><span class="brasa" style="--x:-9%;--desvio:-8px;--dur:4.28s;--atraso:2.69s;--tam:1.43px;--op:0.60"></span><span class="brasa" style="--x:2%;--desvio:15px;--dur:2.59s;--atraso:0.85s;--tam:1.25px;--op:0.79"></span><span class="brasa" style="--x:-15%;--desvio:-4px;--dur:3.66s;--atraso:0.33s;--tam:1.43px;--op:0.75"></span><span class="brasa" style="--x:-15%;--desvio:-14px;--dur:4.08s;--atraso:2.90s;--tam:2.01px;--op:0.56"></span><span class="brasa" style="--x:-21%;--desvio:-10px;--dur:3.92s;--atraso:0.31s;--tam:1.60px;--op:0.78"></span><span class="brasa" style="--x:13%;--desvio:-5px;--dur:3.29s;--atraso:2.42s;--tam:1.24px;--op:0.70"></span><span class="brasa" style="--x:-8%;--desvio:-2px;--dur:3.14s;--atraso:5.38s;--tam:1.64px;--op:0.84"></span><span class="brasa" style="--x:12%;--desvio:-14px;--dur:3.49s;--atraso:4.89s;--tam:1.61px;--op:0.83"></span><span class="brasa" style="--x:9%;--desvio:-4px;--dur:3.91s;--atraso:3.54s;--tam:1.22px;--op:0.50"></span><span class="brasa" style="--x:-2%;--desvio:-2px;--dur:3.38s;--atraso:2.47s;--tam:1.33px;--op:0.84"></span><span class="brasa" style="--x:-5%;--desvio:15px;--dur:4.21s;--atraso:1.67s;--tam:2.06px;--op:0.56"></span></span>
+    <span class="tocha-copo"></span>
+    <span class="tocha-cabo"></span>
+  </div>
+  <div class="tocha tocha-dir">
+    <span class="tocha-luz"></span>
+    <span class="tocha-chama"><i></i><i></i><i></i></span>
+    <span class="tocha-brasas"><span class="brasa" style="--x:6%;--desvio:9px;--dur:2.82s;--atraso:3.54s;--tam:2.29px;--op:0.84"></span><span class="brasa" style="--x:-4%;--desvio:2px;--dur:2.57s;--atraso:0.34s;--tam:1.21px;--op:0.51"></span><span class="brasa" style="--x:-8%;--desvio:14px;--dur:2.47s;--atraso:0.02s;--tam:1.91px;--op:0.72"></span><span class="brasa" style="--x:20%;--desvio:-8px;--dur:2.47s;--atraso:4.46s;--tam:1.74px;--op:0.82"></span><span class="brasa" style="--x:-8%;--desvio:-12px;--dur:2.70s;--atraso:4.66s;--tam:1.12px;--op:0.59"></span><span class="brasa" style="--x:-11%;--desvio:10px;--dur:4.57s;--atraso:1.97s;--tam:1.40px;--op:0.84"></span><span class="brasa" style="--x:8%;--desvio:-2px;--dur:4.10s;--atraso:4.12s;--tam:1.37px;--op:0.53"></span><span class="brasa" style="--x:-18%;--desvio:8px;--dur:2.95s;--atraso:2.39s;--tam:2.15px;--op:0.85"></span><span class="brasa" style="--x:-12%;--desvio:-9px;--dur:5.33s;--atraso:3.94s;--tam:1.67px;--op:0.88"></span><span class="brasa" style="--x:2%;--desvio:8px;--dur:2.55s;--atraso:5.17s;--tam:1.79px;--op:0.64"></span><span class="brasa" style="--x:13%;--desvio:-2px;--dur:4.19s;--atraso:1.06s;--tam:1.20px;--op:0.80"></span><span class="brasa" style="--x:12%;--desvio:3px;--dur:4.00s;--atraso:2.90s;--tam:1.54px;--op:0.53"></span><span class="brasa" style="--x:-4%;--desvio:-6px;--dur:4.08s;--atraso:2.16s;--tam:2.23px;--op:0.59"></span><span class="brasa" style="--x:-18%;--desvio:10px;--dur:2.69s;--atraso:4.50s;--tam:1.34px;--op:0.73"></span></span>
+    <span class="tocha-copo"></span>
+    <span class="tocha-cabo"></span>
+  </div>
+</div>
+
+<nav class="bussola" aria-label="Navegação por seções" data-bloco="01b5c70d">
+  <a href="#topo"   aria-current="true" data-campo="cb99bce9"><span>Início</span></a>
+  <a href="#status" data-campo="0fb2560d"><span>Ao vivo</span></a>
+  <a href="#sobre" data-campo="3c7886ee"><span>O servidor</span></a>
+  <a href="#mods" data-campo="749db4cf"><span>Mods</span></a>
+  <a href="#saga" data-campo="5ece5437"><span>Saga</span></a>
+</nav>
+
+<!-- ============ HEROI ============ -->
+<header class="heroi secao" id="topo" data-bloco="b5e2414d">
+  <div class="heroi-camada">
+    <img class="heroi-foto" alt=""
+         src="/assets/heroi-1600.webp"
+         srcset="/assets/heroi-1024.webp 1024w, /assets/heroi-1600.webp 1600w, /assets/heroi-2560.webp 2560w"
+         sizes="100vw" fetchpriority="high" decoding="async">
+  </div>
+  <span class="nevoa" style="--t:62%;--h:24%;--dur:85s;--atraso:-25s;--op:0.133"></span>
+      <span class="nevoa" style="--t:60%;--h:22%;--dur:100s;--atraso:-6s;--op:0.090"></span>
+      <span class="nevoa" style="--t:77%;--h:23%;--dur:109s;--atraso:-27s;--op:0.148"></span>
+      <span class="nevoa" style="--t:54%;--h:30%;--dur:93s;--atraso:-11s;--op:0.072"></span>
+      <span class="nevoa" style="--t:44%;--h:28%;--dur:104s;--atraso:-50s;--op:0.111"></span>
+      <span class="nevoa" style="--t:72%;--h:32%;--dur:100s;--atraso:-33s;--op:0.053"></span>
+      <span class="nevoa" style="--t:45%;--h:24%;--dur:60s;--atraso:-5s;--op:0.143"></span>
+  <div class="fornalha" aria-hidden="true">
+      <span class="brasa" style="--x:2.1%;--desvio:12px;--dur:10.85s;--atraso:9.74s;--tam:1.87px;--op:0.57"></span>
+      <span class="brasa" style="--x:-6.4%;--desvio:-10px;--dur:6.63s;--atraso:9.57s;--tam:3.08px;--op:0.55"></span>
+      <span class="brasa" style="--x:-5.2%;--desvio:28px;--dur:10.33s;--atraso:9.07s;--tam:1.44px;--op:0.81"></span>
+      <span class="brasa" style="--x:-8.2%;--desvio:26px;--dur:9.52s;--atraso:1.36s;--tam:2.83px;--op:0.89"></span>
+      <span class="brasa" style="--x:-0.1%;--desvio:-40px;--dur:10.88s;--atraso:6.86s;--tam:1.69px;--op:0.85"></span>
+      <span class="brasa" style="--x:2.0%;--desvio:-20px;--dur:5.81s;--atraso:5.14s;--tam:1.76px;--op:0.64"></span>
+      <span class="brasa" style="--x:-4.6%;--desvio:-15px;--dur:6.49s;--atraso:1.19s;--tam:2.29px;--op:0.50"></span>
+      <span class="brasa" style="--x:8.3%;--desvio:-38px;--dur:6.27s;--atraso:6.15s;--tam:2.19px;--op:0.95"></span>
+      <span class="brasa" style="--x:3.4%;--desvio:-18px;--dur:6.46s;--atraso:1.21s;--tam:1.54px;--op:0.64"></span>
+      <span class="brasa" style="--x:6.7%;--desvio:27px;--dur:4.79s;--atraso:1.37s;--tam:2.67px;--op:0.48"></span>
+      <span class="brasa" style="--x:-5.1%;--desvio:28px;--dur:8.33s;--atraso:6.06s;--tam:2.78px;--op:0.71"></span>
+      <span class="brasa" style="--x:1.0%;--desvio:-36px;--dur:10.64s;--atraso:8.33s;--tam:2.20px;--op:0.65"></span>
+      <span class="brasa" style="--x:5.3%;--desvio:-3px;--dur:10.80s;--atraso:1.59s;--tam:2.93px;--op:0.79"></span>
+      <span class="brasa" style="--x:-3.8%;--desvio:28px;--dur:6.85s;--atraso:0.30s;--tam:1.95px;--op:0.74"></span>
+      <span class="brasa" style="--x:5.4%;--desvio:-18px;--dur:6.13s;--atraso:0.90s;--tam:3.18px;--op:0.66"></span>
+      <span class="brasa" style="--x:3.8%;--desvio:32px;--dur:8.25s;--atraso:9.39s;--tam:2.55px;--op:0.86"></span>
+      <span class="brasa" style="--x:-5.8%;--desvio:-19px;--dur:9.30s;--atraso:3.47s;--tam:2.37px;--op:0.67"></span>
+      <span class="brasa" style="--x:-6.4%;--desvio:24px;--dur:9.02s;--atraso:6.39s;--tam:1.82px;--op:0.75"></span>
+      <span class="brasa" style="--x:5.5%;--desvio:-35px;--dur:4.96s;--atraso:4.62s;--tam:1.81px;--op:0.48"></span>
+      <span class="brasa" style="--x:4.3%;--desvio:-15px;--dur:5.20s;--atraso:6.25s;--tam:2.64px;--op:0.56"></span>
+      <span class="brasa" style="--x:8.6%;--desvio:-7px;--dur:10.60s;--atraso:1.59s;--tam:2.05px;--op:0.51"></span>
+      <span class="brasa" style="--x:-1.2%;--desvio:-1px;--dur:5.40s;--atraso:1.81s;--tam:2.77px;--op:0.72"></span>
+      <span class="brasa" style="--x:-8.7%;--desvio:-32px;--dur:8.01s;--atraso:10.82s;--tam:2.63px;--op:0.83"></span>
+      <span class="brasa" style="--x:-3.9%;--desvio:-21px;--dur:7.65s;--atraso:8.30s;--tam:2.48px;--op:0.54"></span>
+      <span class="brasa" style="--x:1.0%;--desvio:-12px;--dur:7.92s;--atraso:3.24s;--tam:3.15px;--op:0.80"></span>
+      <span class="brasa" style="--x:3.4%;--desvio:-36px;--dur:10.15s;--atraso:9.05s;--tam:2.67px;--op:0.65"></span>
+      <span class="brasa" style="--x:0.7%;--desvio:-2px;--dur:7.47s;--atraso:3.86s;--tam:3.02px;--op:0.55"></span>
+      <span class="brasa" style="--x:-7.7%;--desvio:19px;--dur:5.65s;--atraso:0.42s;--tam:2.94px;--op:0.57"></span>
+      <span class="brasa" style="--x:8.5%;--desvio:-26px;--dur:6.64s;--atraso:8.49s;--tam:1.80px;--op:0.71"></span>
+      <span class="brasa" style="--x:-4.4%;--desvio:22px;--dur:7.58s;--atraso:4.35s;--tam:2.47px;--op:0.66"></span>
+  </div>
+
+  <div class="heroi-conteudo" data-bloco="ed505273">
+    <h1 class="marca">
+      <img class="marca-logo" data-identidade="logo" src="" alt="Seu Servidor" hidden="">
+      <span class="marca-nome" data-identidade="nome">Seu Servidor</span>
+    </h1>
+    <p class="tagline" data-identidade="slogan">Escreva aqui o slogan do seu servidor</p>
+    <div class="divisor"><i></i><b></b><i></i></div>
+    <div class="pergaminho" data-bloco="3e258ba1">
+      <div class="pg-item pg-ip" data-bloco="2139964d">
+        <span class="pg-rot" data-campo="2cc9afd9">Endereço</span>
+        <button type="button" id="btn-ip" title="copiar endereço">
+          <span id="ip-heroi"><span id="ip-host">seu-servidor.example.com</span><span id="ip-porta">:2456</span></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+        </button>
+        <span class="pg-sub" id="ip-sub"></span>
+      </div>
+      <div class="pg-item" data-campo="66f0b112">
+        <span class="pg-rot">Online</span>
+        <span class="pg-val" data-vivo="online">—</span>
+      </div>
+      <div class="pg-item" data-campo="7a174ceb">
+        <span class="pg-rot">Hora do mundo</span>
+        <span class="pg-val" data-vivo="hora">—</span>
+        <span class="pg-sub" data-vivo="dia_detalhe">—</span>
+      </div>
+      <div class="pg-item" data-campo="7d5c2a9a">
+        <span class="pg-rot">Recursos</span>
+        <span class="pg-val" data-vivo="recursos">—</span>
+        <span class="pg-sub">coleta</span>
+      </div>
+    </div>
+    <div class="heroi-acoes" data-campo="bbb0c3d9">
+      <a class="heroi-btn destaque" href="#mods">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+          <path d="M12 21 s-7.5-4.7-7.5-10.2A7.5 7.5 0 0 1 12 3.3a7.5 7.5 0 0 1 7.5 7.5C19.5 16.3 12 21 12 21Z"/>
+          <circle cx="12" cy="10.6" r="2.6"/>
+        </svg>
+        Como jogar
+      </a>
+      <a class="heroi-btn" href="/wiki/">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+          <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5V5.5Z"/>
+          <path d="M20 18v3H6.5A2.5 2.5 0 0 1 4 18.5M8 7h8M8 11h6"/>
+        </svg>
+        Wiki
+      </a>
+    </div>
+  </div>
+
+  <a class="desce" href="#status" data-campo="ee6fd769">ver o servidor<span>&#8595;</span></a>
+</header>
+
+<!-- ============ STATUS ============ -->
+<section class="faixa secao" id="status" data-bloco="0c3d1c73">
+  <div class="container" data-bloco="f89fd0c7">
+    <h2 class="titulo" data-campo="94ca3b62">O servidor agora</h2>
+    <p class="legenda" data-campo="32b22a60">Dados ao vivo, atualizados a cada minuto.</p>
+    <div class="painel" data-bloco="0cf50653">
+      <div class="grade" data-bloco="6a7c248f">
+        <div class="celula" data-bloco="9a2b0cc2">
+          <div class="rotulo" data-campo="50d4fbd8">Estado</div>
+          <div class="valor menor"><span class="pulso" data-vivo-pulso><span class="ponto"></span><span data-vivo="estado">verificando…</span></span></div>
+          <div class="nota" data-campo="2f5ae8c1">mundo <span data-vivo="mundo">—</span></div>
+        </div>
+        <div class="celula" data-bloco="47fb7e59">
+          <div class="rotulo" data-campo="0e30d3d9">Jogadores online</div>
+          <div class="valor" data-vivo="online">—</div>
+          <div class="nota" data-vivo="vagas_texto">de 10 lugares</div>
+        </div>
+        <div class="celula" data-bloco="d3cbf668">
+          <div class="rotulo" data-campo="1824cc7b">No ar há</div>
+          <div class="valor menor" data-vivo="uptime">—</div>
+          <div class="nota" data-campo="27499421">desde o último reinício</div>
+        </div>
+        <div class="celula" data-bloco="0d70f172">
+          <div class="rotulo" data-campo="c12d08b9">Próximo reinício</div>
+          <div class="valor menor" data-vivo="reinicio">—</div>
+          <div class="nota" data-vivo="reinicio_horarios">todo dia às 00:00 e 12:00</div>
+        </div>
+      </div>
+      <div class="estacoes" id="estacoes" hidden></div>
+      <div class="convite" data-bloco="ae01d1d6">
+        <svg class="convite-icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true">
+          <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5V5.5Z"/>
+          <path d="M20 18v3H6.5A2.5 2.5 0 0 1 4 18.5M8 7h8M8 11h6"/>
+        </svg>
+        <div class="convite-txt" data-bloco="ca4f6716">
+          <strong data-campo="7116c265">Acabou de desembarcar?</strong>
+          <p data-campo="8892f658">A wiki reúne as regras, o que muda neste mundo e dicas para quem está começando.</p>
+        </div>
+        <a class="botao" href="/wiki/" data-campo="f50322e0">Abrir a wiki</a>
+      </div>
+      <div class="conexao">
+        <span class="endereco" id="endereco"><span id="end-host">seu-servidor.example.com</span><span id="end-porta">:2456</span></span>
+        <button class="botao" id="btn-copiar" type="button">copiar endereço</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SOBRE ============ -->
+<section class="faixa ilustrada secao" id="sobre" data-bloco="1c2620f3">
+  <img class="faixa-foto" alt="" loading="lazy" decoding="async"
+       src="/assets/clareira-1024.webp"
+       srcset="/assets/clareira-1024.webp 1024w, /assets/clareira-1600.webp 1600w" sizes="100vw">
+  <div class="container" data-bloco="36ec48f7">
+    <h2 class="titulo" data-campo="b8e196bc">Sobre o servidor</h2>
+    <p class="legenda" data-campo="4f44e308">Conte aqui o que torna seu mundo especial: o estilo de jogo, as regras principais e o tipo de comunidade que você quer reunir.</p>
+    <div class="cartoes" data-bloco="6dd996e2">
+      <div class="cartao" data-bloco="6bbe3473">
+        <svg class="icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <path d="M12 2 L3 7 v10 l9 5 9-5 V7 Z M12 2 v20 M3 7 l9 5 9-5"/>
+        </svg>
+        <h3 data-campo="73480d16">Mundo sempre online</h3>
+        <p data-campo="17169a9a">Descreva um destaque do servidor. Por exemplo: o mundo roda o dia todo e é salvo antes de cada reinício.</p>
+      </div>
+      <div class="cartao" data-bloco="a7e7cb5c">
+        <svg class="icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <path d="M20 7 L12 3 L4 7 v6 c0 4 3.5 7 8 8 4.5-1 8-4 8-8 Z M9 12 l2 2 4-4"/>
+        </svg>
+        <h3 data-campo="d4e2d70c">Comunidade</h3>
+        <p data-campo="6cc1e27a">Como os jogadores se encontram: eventos, Discord, construções coletivas.</p>
+      </div>
+      <div class="cartao" data-bloco="add0d1f5">
+        <svg class="icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <path d="M4 19 V9 l8-6 8 6 v10 M9 19 v-6 h6 v6 M12 3 v3"/>
+        </svg>
+        <h3 data-campo="dd6a1b85">Como entrar</h3>
+        <p data-campo="e075a570">Explique se o servidor tem senha, lista de convidados ou mods obrigatórios.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MODS ============ -->
+<section class="faixa ilustrada secao" id="mods" data-bloco="ca030667">
+  <img class="faixa-foto" alt="" loading="lazy" decoding="async"
+       src="/assets/mistlands-1024.webp"
+       srcset="/assets/mistlands-1024.webp 1024w, /assets/mistlands-1600.webp 1600w" sizes="100vw">
+  <div class="container" data-bloco="f28bb817">
+    <h2 class="titulo" data-campo="457e6da0">Os mods</h2>
+    <p class="legenda" data-campo="73b26bec">Para entrar, seu jogo precisa dos mesmos mods do servidor, nas mesmas versões. O modpack instala tudo de uma vez.</p>
+    <div class="gale" data-bloco="d61d0bae">
+      <span class="gale-icone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <path d="M21 8 L12 3 L3 8 v8 l9 5 9-5 Z M3 8 l9 5 9-5 M12 13 v8"/>
+        </svg>
+      </span>
+      <div class="gale-txt" data-bloco="fe9f1c98">
+        <strong data-campo="1b1f53c2">Instale pelo Gale</strong>
+        <p data-campo="697584d1">O <a href="https://thunderstore.io/c/valheim/p/Kesomannen/GaleModManager/" target="_blank" rel="noopener">Gale</a>
+           é um gerenciador de mods gratuito. Com ele o modpack do servidor entra inteiro,
+           nas versões certas e com o BepInEx junto — sem precisar fazer nada manualmente.</p>
+      </div>
+      <span class="gale-acoes" data-bloco="a359514e">
+        <a class="botao" href="https://valheim.hexium.gg/" target="_blank" rel="noopener" data-campo="fdfafe0c" data-modpack-link>Instalar modpack</a>
+        <a class="botao botao-fantasma" href="https://github.com/Kesomannen/gale/releases/latest"
+           target="_blank" rel="noopener" data-campo="4fdd0f7c">Baixar o Gale</a>
+        <button class="botao botao-fantasma" type="button" id="btn-guia">Passo a passo</button>
+      </span>
+    </div>
+    <div class="modcaixa" data-bloco="770a4188">
+      <div class="modlista" role="list" tabindex="0" aria-label="Mods do modpack" data-bloco="f8f5c082">
+        <!-- Cards are rendered from /mods.json by assets/modpack.js. -->
+      </div>
+    </div>
+    <p class="modrodape" data-campo="09e86508"><span data-modpack-count>0</span> pacotes · modpack v<span data-modpack-version>—</span> · role a lista para ver todos</p>
+  </div>
+</section>
+
+<!-- ============ HIGHSCORES ============ -->
+<section class="faixa ilustrada secao" id="saga" data-bloco="ad89c1e7">
+  <img class="faixa-foto" alt="" loading="lazy" decoding="async"
+       src="/assets/prados-1024.webp"
+       srcset="/assets/prados-1024.webp 1024w, /assets/prados-1600.webp 1600w" sizes="100vw">
+  <div class="container" data-bloco="1ee597a4">
+    <h2 class="titulo" data-campo="bdc9b1d3">Saga dos jogadores</h2>
+    <p class="legenda" data-campo="92581ca2">O mural dos aventureiros de maior destaque no servidor.</p>
+    <div class="saga-lista" id="saga-lista" data-bloco="9d65c672">
+      <p class="saga-vazio" data-campo="163d37ce">carregando a saga…</p>
+    </div>
+  </div>
+  <footer class="rodape-embutido" data-bloco="339559ea">
+  <p><strong data-identidade="nome">Seu Servidor</strong><br>
+  <span data-identidade="rodape">Servidor comunitário de Valheim. Não somos afiliados à Iron Gate AB nem à Coffee Stain.</span></p>
+  <p class="rodape-credito">Imagens: press kit oficial da Iron Gate. Site feito com <a href="https://github.com/brkihel/Heimdall-Nexus">Heimdall Nexus</a>.</p>
+  <p style="margin-top:1rem;opacity:.6" id="rodape"></p>
+</footer>
+</section>
+
+
+<div class="ficha modal" id="ficha" role="dialog" aria-modal="true" aria-labelledby="ficha-nome">
+  <div class="ficha-caixa">
+    <div class="ficha-topo">
+      <div style="flex:1;min-width:0">
+        <h3 id="ficha-nome">—</h3>
+        <p id="ficha-resumo"></p>
+      </div>
+      <button class="ficha-fechar" id="ficha-fechar" type="button" data-fechar aria-label="Fechar">&#10005;</button>
+    </div>
+    <div class="ficha-corpo" id="ficha-corpo"></div>
+  </div>
+</div>
+
+<div class="ficha modal" id="guia" role="dialog" aria-modal="true" aria-labelledby="guia-titulo" data-bloco="6159e491">
+  <div class="ficha-caixa" data-bloco="7dfd414a">
+    <div class="ficha-topo" data-bloco="5cbbb8b8">
+      <div style="flex:1;min-width:0" data-bloco="20dcb7ff">
+        <h3 id="guia-titulo" data-campo="683676f0">Como entrar no servidor</h3>
+        <p data-campo="d0b76e82">Cinco passos. Quase todo o tempo é espera de download.</p>
+      </div>
+      <button class="ficha-fechar" type="button" data-fechar aria-label="Fechar">&#10005;</button>
+    </div>
+    <div class="ficha-corpo" data-bloco="ca53c17a">
+      <p class="porque" data-campo="ea9697f7"><strong>Por que preciso de mods?</strong><br>
+        O servidor usa mods que mudam o jogo. Seu Valheim precisa da mesma lista, nas mesmas
+       versões. O modpack fixa essa lista, e o Gale instala tudo de uma vez.</p>
+
+      <ol class="passos" data-bloco="01a4cc72">
+        <li data-campo="a62e510e"><b>Instale o Gale</b>
+          Gerenciador de mods gratuito e de código aberto, para Windows e Linux.
+          Baixe a versão mais recente e instale normalmente.
+          <span class="obs">Não há versão para macOS.</span></li>
+
+        <li data-campo="d1ddeeb6"><b>Abra o Gale e escolha Valheim</b>
+          Na primeira vez ele pergunta o jogo e localiza sozinho a pasta da sua instalação.</li>
+
+        <li data-campo="c17ae624"><b>Clique em “Install with Gale” na página do modpack</b>
+          O navegador vai pedir permissão para abrir o Gale — aceite. Ele cria um perfil e
+          baixa todos os pacotes, com o BepInEx junto.
+          <span class="obs">O botão fica no topo da página do modpack, no Hexium.</span></li>
+
+        <li data-campo="af597941"><b>Inicie o jogo pelo Gale</b>
+          Pelo botão de iniciar do próprio Gale, <em>não</em> pelo Steam. Abrindo pelo Steam
+          o Valheim sobe sem nenhum mod.</li>
+
+        <li data-campo="f7d15ad2"><b>Entre no servidor</b>
+          Start Game → escolha o personagem → Join Game. Use “Add server” e cole o endereço
+          mostrado no topo desta página.
+          <span class="obs">Não adicione outros mods nesse perfil do Gale: o servidor pode recusar a entrada.</span></li>
+      </ol>
+
+      <div class="guia-acoes" data-campo="32fa0de2">
+        <a class="botao" href="https://valheim.hexium.gg/" target="_blank" rel="noopener" data-modpack-link>Instalar modpack</a>
+        <a class="botao botao-fantasma" href="https://github.com/Kesomannen/gale/releases/latest"
+           target="_blank" rel="noopener">Baixar o Gale</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+  function periodoDe(h){
+    if (h < 5)  return "madrugada";
+    if (h < 7)  return "amanhecer";
+    if (h < 12) return "manhã";
+    if (h < 14) return "meio-dia";
+    if (h < 18) return "tarde";
+    if (h < 20) return "entardecer";
+    return "noite";
+  }
+  function dur(s){
+    if (s == null || s < 0) return "—";
+    var d = Math.floor(s/86400), h = Math.floor(s%86400/3600), m = Math.floor(s%3600/60);
+    if (d > 0) return d + (d === 1 ? " dia" : " dias") + (h ? " e " + h + "h" : "");
+    if (h > 0) return h + "h" + (m ? " " + String(m).padStart(2,"0") + "min" : "");
+    return m + " min";
+  }
+  function falta(s){
+    if (s == null || s < 0) return "—";
+    var h = Math.floor(s/3600), m = Math.floor(s%3600/60);
+    if (h > 0) return "em " + h + "h " + String(m).padStart(2,"0") + "min";
+    if (m > 0) return "em " + m + " min";
+    return "a qualquer momento";
+  }
+  // o endereco vem inteiro do status.json; a caixa so comporta em duas linhas
+  // Blocks can be removed in the site editor: every write checks its element is
+  // still there, so a missing one never stops the rest of the page updating.
+  function põe(id, texto){ var e = $(id); if (e) e.textContent = texto; }
+  function partirEndereco(texto, idHost, idPorta){
+    var i = texto.lastIndexOf(":");
+    põe(idHost, i > 0 ? texto.slice(0, i) : texto);
+    põe(idPorta, i > 0 ? texto.slice(i) : "");
+  }
+  var est = null, ancora = 0;
+  function pintar(){
+    if (!est) return;
+    var dt = Math.floor((Date.now() - ancora)/1000);
+    var on = !!est.online;
+    // Status cells and the hero's numbers are data-vivo elements, painted by
+    // /assets/vivo.js; only the address (the copy buttons read it) stays here.
+    var s = est.servidor || {};
+    if (s.endereco) partirEndereco(s.endereco, "end-host", "end-porta");
+
+    // card do heroi
+    if (s.endereco) partirEndereco(s.endereco, "ip-host", "ip-porta");
+    // o IP cru fica de plano B na linha de baixo, para o caso de o DNS falhar
+    if (s.endereco_ip) põe("ip-sub", "ou " + s.endereco_ip);
+    pintarEstacoes(est.estacoes);
+    if (est.gerado_em){
+      try{
+        põe("rodape", "Status atualizado às " +
+          new Date(est.gerado_em).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}));
+      }catch(e){}
+    }
+  }
+  // ---------- estacao do ano ----------
+  var ICONES = {
+    Spring: '<path d="M12 20v-7M12 13c0-3 2-5 5-5 0 3-2 5-5 5Zm0 0c0-3-2-5-5-5 0 3 2 5 5 5Zm0-5c1.7 0 3-1.3 3-3s-1.3-3-3-3-3 1.3-3 3 1.3 3 3 3Z"/>',
+    Summer: '<circle cx="12" cy="12" r="4.2"/><path d="M12 2.4v2.4M12 19.2v2.4M2.4 12h2.4M19.2 12h2.4M5.2 5.2l1.7 1.7M17.1 17.1l1.7 1.7M18.8 5.2l-1.7 1.7M6.9 17.1l-1.7 1.7"/>',
+    Fall:   '<path d="M12 21v-6M12 15c4.4 0 8-3.6 8-8 0-1.1-.2-2.1-.6-3-4.9.3-8.8 4.3-8.8 9.2V15Zm0 0c-3 0-5.5-2.5-5.5-5.5 0-.8.2-1.5.4-2.2C9.6 7.6 12 10.3 12 13.5V15Z"/>',
+    Winter: '<path d="M12 2.5v19M3.8 7.2l16.4 9.6M20.2 7.2 3.8 16.8M12 6l-2.2-2.2M12 6l2.2-2.2M12 18l-2.2 2.2M12 18l2.2 2.2"/>'
+  };
+  function chip(f){
+    var cls = f.valor === 1 || f.valor === 0 ? "neutro" : (f.bom ? "bom" : "ruim");
+    return '<span class="chip ' + cls + '">' + esc(f.nome) + ' <b>' + esc(f.texto) + '</b></span>';
+  }
+  function pintarEstacoes(e){
+    var alvo = $("estacoes"); if (!alvo) return;
+    if (!e || !e.lista || !e.lista.length){ alvo.hidden = true; return; }
+    var atual = null, outras = [];
+    e.lista.forEach(function(x){ if (x.atual) atual = x; else outras.push(x); });
+    if (!atual){ alvo.hidden = true; return; }
+
+    var dur = e.duracao_dias_de_jogo
+      ? e.duracao_dias_de_jogo + (e.duracao_dias_de_jogo === 1 ? " dia" : " dias") + " de jogo por estação"
+      : "";
+    var svg = '<svg class="est-icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+              'stroke-width="1.5" stroke-linecap="round" aria-hidden="true">' +
+              (ICONES[atual.chave] || "") + '</svg>';
+
+    var efeitos = e.modificadores_ativos && atual.efeitos.length
+      ? atual.efeitos.map(chip).join("")
+      : '<span class="chip neutro">' +
+        (e.modificadores_ativos ? "sem bônus nem penalidades" : "modificadores desligados") + '</span>';
+
+    var html = '<div class="est-topo">' + svg +
+      '<span class="est-nome">' + esc(atual.nome) + '</span>' +
+      (dur ? '<span class="est-dur">' + esc(dur) + '</span>' : '') + '</div>' +
+      '<div class="est-efeitos">' + efeitos + '</div>';
+
+    if (outras.length){
+      html += '<div class="est-outras">' + outras.map(function(x){
+        var itens = x.efeitos.length
+          ? x.efeitos.map(function(f){
+              return '<li class="' + (f.bom ? "bom" : "ruim") + '"><span>' + esc(f.nome) +
+                     '</span><b>' + esc(f.texto) + '</b></li>';
+            }).join("")
+          : '<li><span>sem efeitos</span></li>';
+        return '<div class="est-outra"><h4>' + esc(x.nome) + '</h4><ul>' + itens + '</ul></div>';
+      }).join("") + '</div>';
+    }
+    alvo.innerHTML = html;
+    alvo.hidden = false;
+  }
+
+  function buscar(){
+    fetch("/api/status.json",{cache:"no-store"})
+      .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+      .then(function(d){ est = d; ancora = Date.now(); pintar(); })
+      .catch(function(){
+        // vivo.js shows the offline state on its own
+      });
+  }
+  buscar(); setInterval(buscar, 60000); setInterval(pintar, 1000);
+
+  // ---------- Saga dos vikings ----------
+  var GRUPOS = [["combate","Combate"],["sobrevivencia","Sobrevivência"],
+                ["coleta","Coleta"],["oficio","Ofício"],["mod","Perícias de mod"],
+                ["outros","Outras"]];
+  var saga = null;
+
+  function esc(t){ var d = document.createElement("div"); d.textContent = t == null ? "" : t; return d.innerHTML; }
+  function nivelTxt(n){ return (Math.round(n * 100) / 100).toString().replace(".", ","); }
+
+  function desenharSaga(d){
+    var alvo = $("saga-lista"); if (!alvo) return;
+    if (!d || !d.jogadores || !d.jogadores.length){
+      alvo.innerHTML = '<p class="saga-vazio">Nenhum viking registrou sua saga ainda. ' +
+                       'Entre no servidor e comece a sua.</p>';
+      return;
+    }
+    alvo.innerHTML = d.jogadores.map(function(j){
+      var topo = j.maior && j.maior.nivel > 0
+        ? esc(j.maior.nome) + " " + nivelTxt(j.maior.nivel)
+        : "sem perícias treinadas";
+      return '<button class="saga-linha" type="button" data-pos="' + j.posicao +
+             '" data-slug="' + esc(j.slug) + '">' +
+               '<span class="saga-pos">' + j.posicao + '</span>' +
+               '<span class="saga-nome">' + esc(j.nome) +
+                 '<span class="saga-sub">' + topo + ' · ' + j.pericias_com_nivel +
+                 (j.pericias_com_nivel === 1 ? " perícia" : " perícias") + '</span></span>' +
+               '<span class="saga-total">' + nivelTxt(j.total_niveis) + '<small>níveis</small></span>' +
+               '<span class="saga-seta" aria-hidden="true">&#8250;</span>' +
+             '</button>';
+    }).join("");
+    Array.prototype.forEach.call(alvo.querySelectorAll(".saga-linha"), function(b){
+      b.addEventListener("click", function(){ abrirFicha(b.getAttribute("data-slug")); });
+    });
+  }
+
+  function abrirFicha(slug){
+    if (!saga) return;
+    var j = null;
+    saga.jogadores.forEach(function(x){ if (x.slug === slug) j = x; });
+    if (!j || !$("ficha") || !$("ficha-nome") || !$("ficha-resumo") || !$("ficha-corpo")) return;
+    $("ficha-nome").textContent = j.nome;
+    $("ficha-resumo").textContent = j.posicao + "º na saga · " + nivelTxt(j.total_niveis) +
+      " níveis somados · " + j.pericias.length + " perícias registradas";
+    var html = "";
+    GRUPOS.forEach(function(g){
+      var lista = j.pericias.filter(function(p){ return p.grupo === g[0]; });
+      if (!lista.length) return;
+      html += '<div class="ficha-grupo"><h4>' + g[1] + '</h4>';
+      lista.forEach(function(p){
+        var pct = Math.max(0, Math.min(100, p.nivel));
+        html += '<div class="pericia">' +
+          '<span class="pericia-nome' + (p.conhecida ? '' : ' desconhecida') + '">' + esc(p.nome) + '</span>' +
+          '<span class="pericia-nivel' + (p.nivel > 0 ? '' : ' zero') + '">' + nivelTxt(p.nivel) + '</span>' +
+          (p.nivel > 0 ? '<span class="barra"><i style="width:' + pct + '%"></i></span>' : '') +
+          '</div>';
+      });
+      html += '</div>';
+    });
+    $("ficha-corpo").innerHTML = html;
+    abrirModal($("ficha"));
+  }
+
+  // ---------- modais (ficha do viking e guia de entrada) ----------
+  var focoAnterior = null;
+  function abrirModal(el){
+    focoAnterior = document.activeElement;
+    el.setAttribute("open", "");
+    var f = el.querySelector("[data-fechar]"); if (f) f.focus();
+  }
+  function fecharModal(el){
+    el.removeAttribute("open");
+    // devolve o foco a quem abriu, senao ele volta para o topo da pagina
+    if (focoAnterior && focoAnterior.focus) focoAnterior.focus();
+    focoAnterior = null;
+  }
+  Array.prototype.forEach.call(document.querySelectorAll(".modal"), function(m){
+    m.addEventListener("click", function(e){ if (e.target === m) fecharModal(m); });
+    var f = m.querySelector("[data-fechar]");
+    if (f) f.addEventListener("click", function(){ fecharModal(m); });
+  });
+  document.addEventListener("keydown", function(e){
+    if (e.key !== "Escape") return;
+    Array.prototype.forEach.call(document.querySelectorAll(".modal[open]"), fecharModal);
+  });
+  var btnGuia = $("btn-guia");
+  if (btnGuia) btnGuia.addEventListener("click", function(){ abrirModal($("guia")); });
+
+  function buscarSaga(){
+    fetch("/api/saga.json", {cache:"no-store"})
+      .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+      .then(function(d){ saga = d; desenharSaga(d); })
+      .catch(function(){
+        var a = $("saga-lista");
+        if (a && !saga) a.innerHTML = '<p class="saga-vazio">Não consegui carregar a saga agora.</p>';
+      });
+  }
+  buscarSaga(); setInterval(buscarSaga, 300000);
+
+  // marca na bussola a secao visivel
+  var elos = Array.prototype.slice.call(document.querySelectorAll(".bussola a"));
+  var secoes = elos.map(function(a){ return document.querySelector(a.getAttribute("href")); });
+  if (window.IntersectionObserver){
+    var obs = new IntersectionObserver(function(entradas){
+      entradas.forEach(function(e){
+        if (!e.isIntersecting) return;
+        var i = secoes.indexOf(e.target);
+        elos.forEach(function(a, k){
+          if (k === i) a.setAttribute("aria-current","true");
+          else a.removeAttribute("aria-current");
+        });
+      });
+    }, {threshold:.55});
+    secoes.forEach(function(sec){ if (sec) obs.observe(sec); });
+  }
+
+  // ---------- tochas: acendem quando o heroi sai de cena ----------
+  var heroi = $("topo");
+  function acender(sim){ document.body.classList.toggle("tochas-acesas", sim); }
+  if (heroi && window.IntersectionObserver){
+    new IntersectionObserver(function(e){ acender(!e[0].isIntersecting); },
+                             {threshold:.02}).observe(heroi);
+  } else {
+    window.addEventListener("scroll", function(){
+      acender(window.pageYOffset > window.innerHeight * .7);
+    }, {passive:true});
+  }
+
+  // ---------- paralaxe do heroi ----------
+  // A foto e o conteudo andam em sentidos opostos, com amortecimento: o mouse
+  // move o alvo, e a posicao real persegue o alvo a cada quadro. Sem isso o
+  // movimento fica preso ao ponteiro e parece brusco.
+  (function(){
+    var suave = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var fino  = window.matchMedia && window.matchMedia("(pointer: fine)").matches;
+    var camada = document.querySelector(".heroi-camada");
+    var conteudo = document.querySelector(".heroi-conteudo");
+    if (suave || !fino || !camada || !conteudo) return;
+    var aX = 0, aY = 0, cX = 0, cY = 0, rodando = false, visivel = true;
+    if (heroi && window.IntersectionObserver){
+      new IntersectionObserver(function(e){ visivel = e[0].isIntersecting; },
+                               {threshold:.05}).observe(heroi);
+    }
+    function quadro(){
+      cX += (aX - cX) * .07; cY += (aY - cY) * .07;
+      camada.style.transform   = "translate3d(" + (cX * 16).toFixed(2) + "px," + (cY * 11).toFixed(2) + "px,0)";
+      conteudo.style.transform = "translate3d(" + (cX * -7).toFixed(2) + "px," + (cY * -5).toFixed(2) + "px,0)";
+      if (Math.abs(aX - cX) > .0015 || Math.abs(aY - cY) > .0015) requestAnimationFrame(quadro);
+      else rodando = false;
+    }
+    function empurra(){ if (!rodando){ rodando = true; requestAnimationFrame(quadro); } }
+    window.addEventListener("mousemove", function(e){
+      if (!visivel) return;
+      aX = (e.clientX / window.innerWidth  - .5) * 2;
+      aY = (e.clientY / window.innerHeight - .5) * 2;
+      empurra();
+    }, {passive:true});
+    // ponteiro fora da janela: volta ao repouso em vez de congelar torto
+    document.addEventListener("mouseleave", function(){ aX = aY = 0; empurra(); });
+  })();
+
+  function ligarCopia(idBotao, idTexto, aoCopiar){
+    var btn = $(idBotao); if (!btn) return;
+    btn.addEventListener("click", function(){
+      var fonte = $(idTexto); if (!fonte) return;
+      var txt = fonte.textContent.trim();
+      function ok(){ aoCopiar(btn); }
+      if (navigator.clipboard && navigator.clipboard.writeText)
+        navigator.clipboard.writeText(txt).then(ok, function(){ velho(txt, ok); });
+      else velho(txt, ok);
+    });
+  }
+  ligarCopia("btn-copiar", "endereco", function(b){
+    var o = b.textContent; b.textContent = "copiado!";
+    setTimeout(function(){ b.textContent = o; }, 1800);
+  });
+  ligarCopia("btn-ip", "ip-heroi", function(){
+    var sub = $("ip-sub"); if (!sub) return;
+    var o = sub.textContent;
+    sub.textContent = "endereço copiado!"; sub.style.color = "var(--ouro-claro)";
+    setTimeout(function(){ sub.textContent = o; sub.style.color = ""; }, 1800);
+  });
+  function velho(txt, ok){
+    try{
+      var a = document.createElement("textarea");
+      a.value = txt; a.setAttribute("readonly","");
+      a.style.position = "absolute"; a.style.left = "-9999px";
+      document.body.appendChild(a); a.select(); document.execCommand("copy");
+      document.body.removeChild(a); ok();
+    }catch(e){}
+  }
+})();
+</script>
+<script src="/assets/modpack.js" defer></script>
+<script src="/assets/vivo.js" defer></script>
+<script>/* admin dock: loads only for signed-in panel admins */if(/(^|;\s*)jarl=1/.test(document.cookie)){var j=document.createElement('script');j.src='/jarl/estatico/site-admin.js';j.defer=true;document.head.appendChild(j)}</script>
+</body>
+</html>

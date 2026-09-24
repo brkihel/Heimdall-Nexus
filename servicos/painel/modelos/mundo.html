@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% block titulo %}Mundo{% endblock %}
+{% block corpo %}
+<div class="topo">
+  <h1>Mundo</h1>
+  <span id="resumo" class="pastilha meio">lendo…</span>
+</div>
+
+<p class="dica">
+  Wipe e troca de mundo param o servidor, fazem o backup completo de sempre e só então
+  mexem. Nada é apagado: o que sai vai para <code>/srv/valheim/wipes/</code>, com data,
+  e dá para voltar pela aba Arquivos.
+</p>
+
+<div class="cartao">
+  <h2>Mundo atual</h2>
+  <table class="ficha" id="ficha"><tbody><tr><td>lendo…</td></tr></tbody></table>
+</div>
+
+<div class="cartao">
+  <h2>Wipe</h2>
+  <div class="opcoes-wipe">
+    <label class="interruptor"><input type="checkbox" id="w-mundo" checked> Apagar o mundo</label>
+    <label class="interruptor"><input type="checkbox" id="w-personagens"> Apagar os personagens</label>
+    <label class="interruptor"><input type="checkbox" id="w-religar" checked> Religar ao terminar</label>
+  </div>
+  <div class="nota" id="nota-personagens">
+    Mantendo os personagens, todo mundo entra no mundo novo com o personagem de sempre.
+  </div>
+  <div class="linha-campos" id="linha-seed">
+    <label>Seed <small>vazio = o servidor sorteia</small>
+      <input type="text" id="w-seed" maxlength="32" placeholder="ex.: HkQ7dPz2Lx" autocomplete="off"></label>
+    <button class="btn" id="btn-sortear" type="button">Sortear</button>
+  </div>
+  <div class="linha-campos">
+    <label>Para confirmar, escreva o nome do mundo
+      <input type="text" id="w-confirmar" autocomplete="off"></label>
+    <button class="btn ruim" id="btn-wipe" type="button" disabled>Fazer wipe</button>
+  </div>
+</div>
+
+<div class="cartao">
+  <h2>Usar um mundo gerado no jogo</h2>
+  <p class="dica" style="margin-top:0">
+    No seu PC, com o modpack instalado, crie o mundo com a seed que quiser, entre uma vez
+    e saia. Compacte a pasta dele em <code>.zip</code> — fica em
+    <code>%userprofile%\AppData\LocalLow\IronGate\Valheim\worlds_local\&lt;nome&gt;</code>
+    — e mande aqui. Ele substitui o mundo atual; o nome é ajustado sozinho. Os personagens
+    ficam como estão.
+  </p>
+  <div class="linha-campos">
+    <label>Arquivo .zip da pasta do mundo
+      <input type="file" id="m-arquivo" accept=".zip"></label>
+  </div>
+  <div class="linha-campos">
+    <label>Para confirmar, escreva o nome do mundo
+      <input type="text" id="m-confirmar" autocomplete="off"></label>
+    <button class="btn ruim" id="btn-enviar" type="button" disabled>Enviar e instalar</button>
+  </div>
+  <div class="progresso" id="m-progresso" hidden><div></div><span></span></div>
+</div>
+
+<div class="cartao">
+  <h2>Wipes anteriores</h2>
+  <table id="historico"><tbody><tr><td style="color:var(--fraco)">lendo…</td></tr></tbody></table>
+</div>
+
+<div class="recados" id="recados"></div>
+{% endblock %}
+
+{% block script %}
+<script>
+const RAIZ = {{ raiz|tojson }};
+let MUNDO = null, tarefaAberta = null;
+
+function recado(texto, tipo='bom'){
+  const caixa = document.createElement('div');
+  caixa.className = 'recado ' + tipo;
+  caixa.textContent = texto;
+  document.getElementById('recados').append(caixa);
+  setTimeout(() => caixa.remove(), 8000);
+}
+
+async function post(corpo){
+  const r = await fetch(`${RAIZ}/api/mundo`, {method:'POST', credentials:'same-origin',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify(corpo)});
+  if (r.status === 401) { location.href = `${RAIZ}/entrar`; return null; }
+  const d = await r.json();
+  if (!d.ok) { recado(d.erro || 'não deu', 'ruim'); return null; }
+  return d;
+}
+
+const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const mb = n => n == null ? '—' : (n / 1048576).toFixed(1).replace('.', ',') + ' MB';
+const data = s => s ? new Date(s * 1000).toLocaleString('pt-BR') : '—';
+
+async function ler(){
+  const d = await post({verbo:'mundo.estado'});
+  if (!d) return;
+  MUNDO = d.mundo;
+  const r = document.getElementById('resumo');
+  r.textContent = d.ativo ? 'servidor no ar' : 'servidor parado';
+  r.className = 'pastilha ' + (d.ativo ? 'viva' : 'morta');
+  const linhas = [
+    ['Mundo', esc(d.mundo)],
+    ['Seed', d.seed ? `<code>${esc(d.seed)}</code>` : (d.existe ? '—' : 'ainda não existe')],
+    ['UID', d.uid ? `<code>${esc(d.uid)}</code>` : '—'],
+    ['Gerador', d.riverheim ? 'Riverheim' : (d.seed ? '<span style="color:var(--ruim)">padrão do jogo — sem Riverheim</span>' : '—')],
+    ['Terreno', d.gerado ? 'gerado' : (d.existe ? 'será gerado ao ligar' : '—')],
+    ['Tamanho', mb(d.tamanho)],
+    ['Último save', data(d.salvo_em)],
+    ['Personagens no servidor', d.personagens.length
+        ? d.personagens.map(p => esc(p.replace(/^Steam_\d+_/, '').replace(/\.fch$/, ''))).join(', ')
+        : 'nenhum'],
+  ];
+  document.querySelector('#ficha tbody').innerHTML =
+    linhas.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('');
+  document.getElementById('w-confirmar').placeholder = MUNDO;
+  document.getElementById('m-confirmar').placeholder = MUNDO;
+  document.querySelector('#historico tbody').innerHTML = d.wipes.length
+    ? d.wipes.map(w => `<tr><td class="num">${new Date(w.quando).toLocaleString('pt-BR')}</td>
+        <td>${w.motivo === 'mundo-enviado' ? 'mundo enviado' :
+              [w.mundo && 'mundo', w.personagens && 'personagens'].filter(Boolean).join(' + ')}</td>
+        <td>${w.mundo_anterior && w.mundo_anterior.seed ? 'seed anterior <code>' + esc(w.mundo_anterior.seed) + '</code>' : ''}</td>
+        <td><a href="${RAIZ}/arquivos?caminho=${encodeURIComponent(w.pasta)}">abrir</a></td></tr>`).join('')
+    : '<tr><td style="color:var(--fraco)">nenhum pelo painel ainda</td></tr>';
+  confere();
+}
+
+function confere(){
+  const mundo = document.getElementById('w-mundo').checked;
+  const pers = document.getElementById('w-personagens').checked;
+  document.getElementById('linha-seed').style.opacity = mundo ? 1 : .4;
+  document.getElementById('w-seed').disabled = !mundo;
+  document.getElementById('btn-sortear').disabled = !mundo;
+  document.getElementById('nota-personagens').textContent = pers
+    ? 'Apagando os personagens, todo mundo precisa criar um personagem novo: o ServerCharacters recusa qualquer personagem que já tenha entrado em outro mundo.'
+    : 'Mantendo os personagens, todo mundo entra no mundo novo com o personagem de sempre.';
+  document.getElementById('btn-wipe').disabled =
+    !(mundo || pers) || document.getElementById('w-confirmar').value.trim() !== MUNDO;
+  document.getElementById('btn-enviar').disabled =
+    !document.getElementById('m-arquivo').files.length ||
+    document.getElementById('m-confirmar').value.trim() !== MUNDO;
+}
+['w-mundo','w-personagens','w-confirmar','m-confirmar','m-arquivo'].forEach(id => {
+  document.getElementById(id).addEventListener('input', confere);
+  document.getElementById(id).addEventListener('change', confere);
+});
+
+document.getElementById('btn-sortear').onclick = async () => {
+  const d = await post({verbo:'mundo.seed'});
+  if (d) document.getElementById('w-seed').value = d.seed;
+};
+
+function acompanha(id){
+  if (tarefaAberta) tarefaAberta.remove();
+  const caixa = document.createElement('div');
+  caixa.className = 'tarefa';
+  caixa.innerHTML = `<div class="tarefa-topo"><span class="girando"></span>
+      <span class="t-titulo">trabalhando…</span><button title="fechar">×</button></div>
+    <div class="tarefa-saida"></div>`;
+  document.body.append(caixa);
+  caixa.querySelector('button').onclick = () => { caixa.remove(); tarefaAberta = null; };
+  tarefaAberta = caixa;
+  const relogio = setInterval(async () => {
+    const d = await post({verbo:'tarefa', dados:{id}});
+    if (!d) { clearInterval(relogio); return; }
+    caixa.querySelector('.t-titulo').textContent = d.titulo;
+    const saida = caixa.querySelector('.tarefa-saida');
+    saida.textContent = (d.saida || []).join('\n') + (d.erro ? '\n!! ' + d.erro : '');
+    saida.scrollTop = saida.scrollHeight;
+    if (d.estado !== 'andando'){
+      clearInterval(relogio);
+      caixa.querySelector('.girando').replaceWith(Object.assign(document.createElement('span'),
+        {textContent: d.estado === 'pronto' ? '✓' : '✕',
+         style: 'color:' + (d.estado === 'pronto' ? 'var(--bom)' : 'var(--ruim)')}));
+      recado(d.estado === 'pronto' ? 'Feito.' : `Não deu: ${d.erro || d.estado}`,
+             d.estado === 'pronto' ? 'bom' : 'ruim');
+      ler();
+    }
+  }, 1500);
+}
+
+document.getElementById('btn-wipe').onclick = async () => {
+  const mundo = document.getElementById('w-mundo').checked;
+  const personagens = document.getElementById('w-personagens').checked;
+  const seed = document.getElementById('w-seed').value.trim();
+  const o_que = [mundo && 'o MUNDO', personagens && 'os PERSONAGENS'].filter(Boolean).join(' e ');
+  if (!confirm(`Wipe de ${o_que} de ${MUNDO}.\n\nO servidor vai parar, fazer backup e voltar ` +
+               (mundo ? (seed ? `com a seed ${seed}.` : 'com uma seed sorteada.') : 'com o mesmo mundo.') +
+               '\n\nContinuar?')) return;
+  const d = await post({verbo:'mundo.wipe', dados:{mundo, personagens, seed,
+    confirmar: document.getElementById('w-confirmar').value.trim(),
+    religar: document.getElementById('w-religar').checked}});
+  if (d && d.tarefa){ document.getElementById('w-confirmar').value = ''; confere(); acompanha(d.tarefa); }
+};
+
+document.getElementById('btn-enviar').onclick = () => {
+  const arquivo = document.getElementById('m-arquivo').files[0];
+  if (!confirm(`Trocar ${MUNDO} pelo mundo de ${arquivo.name}?\n\nO mundo atual vai para o arquivo de wipes.`)) return;
+  const corpo = new FormData();
+  corpo.append('destino', 'mundo');
+  corpo.append('confirmar', document.getElementById('m-confirmar').value.trim());
+  corpo.append('religar', document.getElementById('w-religar').checked ? '1' : '0');
+  corpo.append('arquivo', arquivo);
+  const barra = document.getElementById('m-progresso');
+  barra.hidden = false;
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', `${RAIZ}/api/enviar`);
+  xhr.upload.onprogress = e => {
+    if (!e.lengthComputable) return;
+    const p = Math.round(e.loaded / e.total * 100);
+    barra.querySelector('div').style.width = p + '%';
+    barra.querySelector('span').textContent = p < 100 ? `enviando… ${p}%` : 'conferindo o zip…';
+  };
+  xhr.onload = () => {
+    barra.hidden = true;
+    if (xhr.status === 401) { location.href = `${RAIZ}/entrar`; return; }
+    let d; try { d = JSON.parse(xhr.responseText); } catch { d = {ok:false, erro:'resposta estranha do servidor'}; }
+    if (!d.ok) { recado(d.erro, 'ruim'); return; }
+    document.getElementById('m-confirmar').value = ''; confere();
+    acompanha(d.tarefa);
+  };
+  xhr.onerror = () => { barra.hidden = true; recado('o envio caiu no meio', 'ruim'); };
+  xhr.send(corpo);
+};
+
+ler();
+</script>
+{% endblock %}

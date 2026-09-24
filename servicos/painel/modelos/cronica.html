@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block titulo %}Crônica{% endblock %}
+{% block corpo %}
+<div class="topo">
+  <h1>Crônica</h1>
+  <span id="resumo" class="pastilha meio">lendo…</span>
+  <div class="acoes">
+    <label class="interruptor" title="Relê a sessão a cada 5 segundos">
+      <input type="checkbox" id="seguir" checked> acompanhar
+    </label>
+  </div>
+</div>
+<p class="dica">
+  O chat de dentro do jogo e as ações de administração, gravados pelo servidor.
+  Uma sessão por reinício. <b>Spawn, god e fly não aparecem aqui</b> — esses rodam no
+  cliente e nunca chegam a ser um pedido ao servidor.
+</p>
+
+<div class="busca">
+  <select id="sessao" style="flex:1 1 320px"></select>
+  <div class="controles">
+    <select id="tipo">
+      <option value="">tudo</option>
+      <option value="chat">só chat</option>
+      <option value="admin">só administração</option>
+      <option value="sessao">marcos da sessão</option>
+    </select>
+    <input type="text" id="busca" placeholder="procurar no texto…" autocomplete="off"
+           style="flex:1 1 200px">
+  </div>
+</div>
+
+<div class="cartao">
+  <div class="console" id="linhas" style="height:min(64vh,640px)">lendo…</div>
+</div>
+<div class="recados" id="recados"></div>
+{% endblock %}
+
+{% block script %}
+<script>
+const RAIZ = {{ raiz|tojson }};
+let ultimaContagem = -1;
+
+function esc(t){ return (t||'').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+async function api(caminho){
+  const r = await fetch(RAIZ + caminho, {credentials:'same-origin'});
+  if (r.status === 401) { location.href = `${RAIZ}/entrar`; return null; }
+  const d = await r.json();
+  if (!d.ok) return null;
+  return d;
+}
+
+function quando(iso){ return (iso || '').slice(11, 19); }
+
+function desenha(d){
+  const caixa = document.getElementById('linhas');
+  const noFim = caixa.scrollTop + caixa.clientHeight >= caixa.scrollHeight - 40;
+  if (!d.linhas.length){ caixa.innerHTML = '<div class="hora">(nada nesta sessão com esse filtro)</div>'; return; }
+  caixa.innerHTML = d.linhas.map(e => {
+    const hora = `<span class="hora">${quando(e.quando)}</span> `;
+    if (e.tipo === 'chat')
+      return `<div class="info">${hora}<b style="color:var(--osso)">${esc(e.jogador)}</b>: ${esc(e.texto)}</div>`;
+    if (e.tipo === 'admin')
+      return `<div class="aviso">${hora}⚠ <b>${esc(e.quem)}</b> usou <b>${esc(e.acao)}</b>${e.alvo ? ' em <b>' + esc(e.alvo) + '</b>' : ''}</div>`;
+    return `<div class="hora">${hora}— ${esc(e.evento || e.tipo)} —</div>`;
+  }).join('');
+  if (noFim) caixa.scrollTop = caixa.scrollHeight;
+
+  const marca = document.getElementById('resumo');
+  marca.textContent = `${d.total} linha${d.total === 1 ? '' : 's'}`;
+  marca.className = 'pastilha viva';
+}
+
+async function lerSessoes(){
+  const d = await api('/api/cronica/sessoes');
+  if (!d) return;
+  const escolha = document.getElementById('sessao');
+  const antes = escolha.value;
+  escolha.innerHTML = d.sessoes.map((s, i) => {
+    const data = new Date(s.quando * 1000).toLocaleString('pt-BR');
+    return `<option value="${s.nome}">${i === 0 ? '● sessão atual' : 'sessão'} · ${data} · ${(s.tamanho/1024).toFixed(1)} KB</option>`;
+  }).join('') || '<option value="">nenhuma sessão gravada ainda</option>';
+  if (antes && d.sessoes.some(s => s.nome === antes)) escolha.value = antes;
+}
+
+async function ler(){
+  const sessao = document.getElementById('sessao').value;
+  if (!sessao) return;
+  const tipo = document.getElementById('tipo').value;
+  const busca = document.getElementById('busca').value.trim();
+  const d = await api(`/api/cronica?sessao=${encodeURIComponent(sessao)}` +
+                      `&tipo=${tipo}&busca=${encodeURIComponent(busca)}`);
+  if (d) desenha(d);
+}
+
+document.getElementById('sessao').onchange = ler;
+document.getElementById('tipo').onchange = ler;
+let espera;
+document.getElementById('busca').oninput = () => { clearTimeout(espera); espera = setTimeout(ler, 300); };
+
+(async () => { await lerSessoes(); await ler(); })();
+setInterval(async () => {
+  if (!document.getElementById('seguir').checked) return;
+  await lerSessoes();
+  await ler();
+}, 5000);
+</script>
+{% endblock %}

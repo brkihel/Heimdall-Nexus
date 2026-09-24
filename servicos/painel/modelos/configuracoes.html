@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% block titulo %}Mod Config{% endblock %}
+{% block cabeca %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" integrity="sha384-zaeBlB/vwYsDRSlFajnDd7OydJ0cWk+c2OWybl3eSUf6hW2EbhlCsQPqKr3gkznT" crossorigin="anonymous" referrerpolicy="no-referrer">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.css" integrity="sha384-MomRjC6IKuGHk2XIFKXAwFx0gytd6+ZsF9pnFM3JWZV5izBqPgoLapxRqG1h5IKm" crossorigin="anonymous" referrerpolicy="no-referrer">
+{% endblock %}
+{% block corpo %}
+<div class="topo">
+  <h1>Mod Config</h1>
+  <span id="estado" class="pastilha meio">lendo…</span>
+  <div class="acoes">
+    <button class="btn" id="btn-reiniciar">Reiniciar servidor</button>
+  </div>
+</div>
+
+<div class="aviso-caixa">
+  <b>Algumas configurações só entram em vigor quando o servidor é reiniciado.</b>
+  A maioria dos mods lê o arquivo ao ligar; poucos percebem a mudança sozinhos. Na dúvida,
+  grave e reinicie. E com o servidor no ar, ele pode regravar o arquivo com o que tem na
+  memória — mexa e reinicie logo em seguida. Os itens marcados
+  <code>[Synced with Server]</code> valem para todos os jogadores: o servidor manda o valor
+  dele para quem entra.
+</div>
+
+<div class="config-layout">
+  <aside class="cartao config-lista">
+    <input type="text" id="filtro" placeholder="procurar mod ou arquivo…" autocomplete="off">
+    <label class="interruptor" style="margin:.6rem 0 .4rem">
+      <input type="checkbox" id="copias"> mostrar cópias .bak</label>
+    <div id="arvore"><div class="vazio">lendo…</div></div>
+  </aside>
+
+  <section class="cartao config-editor">
+    <div class="editor-topo">
+      <div>
+        <h2 id="nome">Escolha um arquivo</h2>
+        <div class="editor-info" id="info">Os arquivos são os do servidor, em <code>BepInEx/config</code>.</div>
+      </div>
+      <div class="acoes">
+        <span class="sujo" id="sujo" hidden>alterado</span>
+        <button class="btn" id="btn-formatar" hidden>Formatar JSON</button>
+        <button class="btn" id="btn-buscar" disabled>Buscar</button>
+        <button class="btn" id="btn-descartar" disabled>Descartar</button>
+        <button class="btn bom" id="btn-gravar" disabled>Gravar</button>
+      </div>
+    </div>
+    <div id="editor"></div>
+    <div class="editor-rodape">
+      <span><kbd>Ctrl</kbd>+<kbd>S</kbd> grava · <kbd>Ctrl</kbd>+<kbd>F</kbd> busca ·
+        <kbd>Alt</kbd>+<kbd>G</kbd> vai para a linha · <kbd>Tab</kbd> indenta</span>
+      <span id="cursor"></span>
+    </div>
+  </section>
+</div>
+
+<div class="recados" id="recados"></div>
+{% endblock %}
+
+{% block script %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js" integrity="sha384-ZYmwuq4n2gOcNxMSiJ6jyTj+BbIrilr7p6dlq6q5nmSWKmsH9UU4K1qqjycMkfmR" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/simple.min.js" integrity="sha384-5+aYjV0V2W3IwhAYp/9WOrGMv1TaYkCjnkkW7Hv3yJQo28MergRCSRaUIUzDUs2J" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js" integrity="sha384-9q49Jm3hZMwxEMLImsxPxLiaptHpFz1PVa26Dg6SVIO+rj5kx0cgOM2+4ikKJFH9" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js" integrity="sha384-g0o+WW9mdIxA7LaaCKTkRm0M5TVT+Bb4s9eocxPsI2G0Xm0POG9iD6G6qP1IIsfS" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/searchcursor.min.js" integrity="sha384-ILkploZWukdp1VMmzMnE+32H0mgy2e+w29evc4grALGOqIRGBgbBGrwkX7a6zK7y" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.js" integrity="sha384-3COleknUtlGKoEOR9Wm7WKVRyS6ljwYU2x1ebD8nd6ujaLMqwY+q3F8+yDcefbXr" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/search.min.js" integrity="sha384-v64L7YTJ/ullw5v36qIJcvWAxuEnRGu9E326vUV3Ro7sx4HCZHIDTphKO53htazT" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/jump-to-line.min.js" integrity="sha384-Hs0iLvujdeUuFY+vs6PlDtVV6VUJpKfJUAnjL6C84Xq4qjsVuCPKbm6ISywgDzP0" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js" integrity="sha384-hcxaXyAtJ30s2NeDu1OHWsQRiHiWuYLTbI596+YFb+f2pFhzO0mDuahZziRPPDxg" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js" integrity="sha384-LjCI3E8qhhxXZvu7+FCvqx9eZYSowFvuJ7z54KsgI/BDPGKEuysqCg/vYiKHvC4Y" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+const RAIZ = {{ raiz|tojson }};
+let arquivos = [], aberto = null, original = '', separador = '\n';
+
+function recado(texto, tipo='bom'){
+  const caixa = document.createElement('div');
+  caixa.className = 'recado ' + tipo;
+  caixa.textContent = texto;
+  document.getElementById('recados').append(caixa);
+  setTimeout(() => caixa.remove(), 7000);
+}
+
+async function peca(verbo, dados){
+  const r = await fetch(`${RAIZ}/api/arquivo`, {method:'POST', credentials:'same-origin',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify({verbo, dados})});
+  if (r.status === 401) { location.href = `${RAIZ}/entrar`; return null; }
+  const d = await r.json();
+  if (!d.ok) { recado(d.erro || 'não deu', 'ruim'); return null; }
+  return d;
+}
+const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// ---------------------------------------------------------------- linguagem do .cfg do BepInEx
+CodeMirror.defineMode('bepinex', () => ({
+  startState: () => ({valor: false, doc: false}),
+  token(stream, st){
+    if (stream.sol()){
+      st.valor = false; st.doc = false;
+      if (stream.match(/^\s*##/)) { st.doc = true; return 'comment doc'; }
+      if (stream.match(/^\s*#\s*(Setting type|Default value|Acceptable values?|Acceptable value range|Multiple values)\b.*/))
+        return 'meta';
+      if (stream.match(/^\s*[#;].*/)) return 'comment';
+      if (stream.match(/^\s*\[[^\]]*\]/)) { stream.skipToEnd(); return 'header'; }
+      if (stream.match(/^[^=#]+?(?=\s*=)/)) return 'property';
+      stream.skipToEnd(); return null;
+    }
+    if (st.doc){
+      if (stream.match(/\[(Not )?Synced with Server\]/)) return 'tag';
+      if (stream.match(/\[(restart|logout)[^\]]*\]/i)) return 'tag aviso';
+      stream.next();
+      while (!stream.eol() && stream.peek() !== '[') stream.next();
+      return 'comment doc';
+    }
+    if (!st.valor){
+      if (stream.eatSpace()) return null;
+      if (stream.eat('=')) { st.valor = true; return 'operator'; }
+      stream.skipToEnd(); return null;
+    }
+    if (stream.eatSpace()) return null;
+    if (stream.match(/^(true|false|on|off)\s*$/i)) return 'atom';
+    if (stream.match(/^-?\d+(\.\d+)?([eE][-+]?\d+)?\s*$/)) return 'number';
+    stream.skipToEnd(); return 'string';
+  },
+  lineComment: '#',
+}));
+
+const editor = CodeMirror(document.getElementById('editor'), {
+  value: '', mode: 'bepinex', theme: 'heimdall', lineNumbers: true, readOnly: 'nocursor',
+  styleActiveLine: true, matchBrackets: true, indentUnit: 2, tabSize: 2, indentWithTabs: false,
+  lineWrapping: false,
+  extraKeys: {
+    'Ctrl-S': () => grava(), 'Cmd-S': () => grava(),
+    'Tab': cm => cm.somethingSelected() ? cm.indentSelection('add')
+                                        : cm.replaceSelection(' '.repeat(cm.getOption('indentUnit')), 'end'),
+    'Shift-Tab': cm => cm.indentSelection('subtract'),
+  },
+});
+editor.on('change', () => marcaSujo());
+editor.on('cursorActivity', () => {
+  const c = editor.getCursor();
+  document.getElementById('cursor').textContent = aberto ? `linha ${c.line + 1}, coluna ${c.ch + 1}` : '';
+});
+
+function modoDe(caminho){
+  if (/\.ya?ml$/i.test(caminho)) return {mode: 'yaml', unidade: 2, rotulo: 'YAML'};
+  if (/\.json$/i.test(caminho)) return {mode: {name: 'javascript', json: true}, unidade: 2, rotulo: 'JSON'};
+  if (/\.cfg$/i.test(caminho)) return {mode: 'bepinex', unidade: 4, rotulo: 'BepInEx cfg'};
+  return {mode: null, unidade: 2, rotulo: 'texto'};
+}
+
+function marcaSujo(){
+  const sujo = !!aberto && editor.getValue(separador) !== original;
+  document.getElementById('sujo').hidden = !sujo;
+  document.getElementById('btn-gravar').disabled = !sujo;
+  document.getElementById('btn-descartar').disabled = !sujo;
+  document.querySelectorAll('#arvore a.ativo').forEach(a => a.classList.toggle('sujo-item', sujo));
+}
+addEventListener('beforeunload', e => { if (aberto && editor.getValue(separador) !== original) { e.preventDefault(); e.returnValue = ''; } });
+
+// ---------------------------------------------------------------- lista
+async function lista(){
+  const d = await peca('config.listar', {copias: document.getElementById('copias').checked});
+  if (!d) return;
+  arquivos = d.itens;
+  desenha();
+}
+function desenha(){
+  const filtro = document.getElementById('filtro').value.trim().toLowerCase();
+  const grupos = {};
+  for (const a of arquivos){
+    if (filtro && !a.relativo.toLowerCase().includes(filtro)) continue;
+    const pasta = a.relativo.includes('/') ? a.relativo.split('/')[0] : 'Mods';
+    (grupos[pasta] ||= []).push(a);
+  }
+  const nomes = Object.keys(grupos).sort((x, y) => x === 'Mods' ? -1 : y === 'Mods' ? 1 : x.localeCompare(y));
+  const arvore = document.getElementById('arvore');
+  if (!nomes.length) { arvore.innerHTML = '<div class="vazio">nada com esse nome</div>'; return; }
+  arvore.innerHTML = nomes.map(g => `<div class="grupo-cfg">${esc(g)} <small>${grupos[g].length}</small></div>` +
+    grupos[g].map(a => {
+      const rotulo = g === 'Mods' ? a.relativo : a.relativo.slice(g.length + 1);
+      return `<a href="#" data-caminho="${esc(a.caminho)}" class="${a.caminho === aberto ? 'ativo' : ''}${a.copia ? ' copia' : ''}"
+                 title="${esc(a.relativo)}">${esc(rotulo)}</a>`;
+    }).join('')).join('');
+  arvore.querySelectorAll('a').forEach(a => a.onclick = e => { e.preventDefault(); abre(a.dataset.caminho); });
+}
+document.getElementById('filtro').addEventListener('input', desenha);
+document.getElementById('copias').addEventListener('change', lista);
+
+// ---------------------------------------------------------------- abrir e gravar
+async function abre(caminho){
+  if (aberto && editor.getValue(separador) !== original &&
+      !confirm('Tem alteração não gravada neste arquivo. Descartar e abrir outro?')) return;
+  const d = await peca('arquivo.ler', {caminho});
+  if (!d) return;
+  if (d.binario) { recado('Esse arquivo não é texto.', 'ruim'); return; }
+  const texto = d.texto;
+  // O editor separa linha em qualquer quebra; ao gravar, usa a que o arquivo já tinha
+  // (a da maioria — o ZenRaids, por exemplo, mistura CRLF e LF).
+  const crlf = (texto.match(/\r\n/g) || []).length, lf = (texto.match(/\n/g) || []).length;
+  separador = crlf > lf / 2 ? '\r\n' : '\n';
+  const m = modoDe(caminho);
+  editor.setOption('mode', m.mode);
+  editor.setOption('indentUnit', m.unidade);
+  editor.setOption('readOnly', false);
+  editor.setValue(texto);
+  editor.clearHistory();
+  original = editor.getValue(separador);
+  aberto = caminho;
+  const info = arquivos.find(a => a.caminho === caminho);
+  document.getElementById('nome').textContent = caminho.split('/').pop();
+  document.getElementById('info').innerHTML =
+    `${m.rotulo} · ${editor.lineCount().toLocaleString('pt-BR')} linhas` +
+    (info ? ` · modificado ${new Date(info.modificado * 1000).toLocaleString('pt-BR')}` : '') +
+    ` · <code>${esc(caminho)}</code>`;
+  document.getElementById('btn-formatar').hidden = !/\.json$/i.test(caminho);
+  document.getElementById('btn-buscar').disabled = false;
+  marcaSujo(); desenha();
+  editor.focus();
+  history.replaceState(null, '', `?arquivo=${encodeURIComponent(caminho)}`);
+}
+
+async function grava(){
+  if (!aberto || editor.getValue(separador) === original) return;
+  if (/\.json$/i.test(aberto)) {
+    try { JSON.parse(editor.getValue()); }
+    catch (erro) { if (!confirm(`O JSON não é válido (${erro.message}).\n\nGravar mesmo assim?`)) return; }
+  }
+  const d = await peca('arquivo.gravar', {caminho: aberto, texto: editor.getValue(separador)});
+  if (!d) return;
+  original = editor.getValue(separador);
+  marcaSujo();
+  recado(`Gravado. Cópia do anterior em ${d.copia || '—'}. Reinicie o servidor para garantir que vale.`);
+  const item = arquivos.find(a => a.caminho === aberto);
+  if (item) item.modificado = Math.floor(Date.now() / 1000);
+}
+document.getElementById('btn-gravar').onclick = grava;
+document.getElementById('btn-descartar').onclick = () => {
+  if (confirm('Descartar as alterações deste arquivo?')) { editor.setValue(original); marcaSujo(); }
+};
+document.getElementById('btn-buscar').onclick = () => editor.execCommand('find');
+document.getElementById('btn-formatar').onclick = () => {
+  try { editor.setValue(JSON.stringify(JSON.parse(editor.getValue()), null, 2)); }
+  catch (erro) { recado(`JSON inválido: ${erro.message}`, 'ruim'); }
+};
+
+// ---------------------------------------------------------------- servidor
+async function estado(){
+  const r = await fetch(`${RAIZ}/api/estado`, {credentials:'same-origin'});
+  if (!r.ok) return;
+  const d = await r.json();
+  const ativo = ((d.servicos || {}).game || {}).ActiveState === 'active';
+  const e = document.getElementById('estado');
+  e.textContent = ativo ? 'servidor no ar' : 'servidor parado';
+  e.className = 'pastilha ' + (ativo ? 'viva' : 'morta');
+}
+document.getElementById('btn-reiniciar').onclick = async () => {
+  if (aberto && editor.getValue(separador) !== original &&
+      !confirm('Tem alteração NÃO gravada. Reiniciar mesmo assim (ela não vai valer)?')) return;
+  if (!confirm('Reiniciar o servidor agora? Quem estiver online cai por um ou dois minutos.')) return;
+  const r = await fetch(`${RAIZ}/api/servico`, {method:'POST', credentials:'same-origin',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify({servico:'game', acao:'restart'})});
+  const d = await r.json();
+  if (d.ok) recado('Servidor reiniciando. As configurações gravadas passam a valer quando ele subir.');
+  else recado(d.erro || 'não deu', 'ruim');
+  setTimeout(estado, 3000);
+};
+
+lista().then(() => {
+  const pedido = new URLSearchParams(location.search).get('arquivo');
+  if (pedido) abre(pedido);
+});
+estado();
+</script>
+{% endblock %}

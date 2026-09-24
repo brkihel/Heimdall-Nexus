@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{TITULO}} — Seu Servidor</title>
+<meta name="description" content="{{DESCRICAO}}">
+<link rel="icon" data-identidade="favicon" href="/marca/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#060b10">
+<meta property="og:title" content="{{TITULO}}">
+<meta property="og:description" content="{{DESCRICAO}}">
+<meta property="og:url" data-identidade="url" data-caminho="{{CAMINHO}}" content="{{CAMINHO}}">
+<link rel="canonical" data-identidade="url" data-caminho="{{CAMINHO}}" href="{{CAMINHO}}">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:type" content="website">
+<meta property="og:site_name" data-identidade="nome" content="Seu Servidor">
+<meta name="twitter:card" content="summary">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Spectral:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --breu:#05090d; --noite:#080e14; --carvao:#0d151d; --ardosia:#152029;
+  --borda:#22313d; --borda-viva:#33475a;
+  --ouro:#c8a45c; --ouro-claro:#eeddb0; --ouro-fundo:#7d6331;
+  --osso:#e6e0d2; --texto:#b4bec7; --fraco:#78848f;
+  --bom:#7fd9a2; --ruim:#ef8e7c;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+.feature-disabled{display:none!important}
+html{scroll-behavior:smooth; scroll-padding-top:5.5rem}
+body{margin:0; background:var(--breu); color:var(--texto);
+  font-family:'Spectral',Georgia,serif; font-size:17px; line-height:1.75;
+  -webkit-font-smoothing:antialiased}
+img{max-width:100%; display:block}
+a{color:var(--ouro-claro)}
+
+/* ---- topo ---- */
+.topo{position:sticky; top:0; z-index:40; background:color-mix(in srgb,var(--breu) 93%,transparent);
+  backdrop-filter:blur(10px); border-bottom:1px solid var(--borda)}
+.topo-int{max-width:1180px; margin:0 auto; padding:.85rem 1.25rem;
+  display:flex; align-items:center; gap:1rem; flex-wrap:wrap}
+.voltar{font-family:'Cinzel',serif; font-size:.68rem; letter-spacing:.2em;
+  text-transform:uppercase; color:var(--ouro-claro); text-decoration:none;
+  border:1px solid color-mix(in srgb,var(--ouro) 42%,transparent); padding:.5rem 1rem; border-radius:3px;
+  transition:border-color .2s, background .2s}
+.voltar:hover{border-color:var(--ouro); background:color-mix(in srgb,var(--ouro) 10%,transparent)}
+.topo h1{font-family:'Cinzel',serif; font-size:1rem; color:var(--osso);
+  letter-spacing:.14em; text-transform:uppercase; margin:0; font-weight:600}
+.topo .ip{margin-left:auto; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:.82rem; color:var(--fraco)}
+@media (max-width:640px){ .topo .ip{display:none} }
+
+/* ---- estrutura ---- */
+.capa{max-width:1180px; margin:0 auto; padding:3rem 1.25rem 1.5rem}
+.capa h2{font-family:'Cinzel',serif; font-size:clamp(1.8rem,5vw,2.6rem);
+  color:var(--osso); letter-spacing:.06em; margin:0 0 .6rem; line-height:1.2}
+.capa p{max-width:62ch; margin:0; color:var(--fraco)}
+.corpo{max-width:1180px; margin:0 auto; padding:1rem 1.25rem 5rem;
+  display:grid; grid-template-columns:230px 1fr; gap:2.6rem; align-items:start}
+@media (max-width:900px){ .corpo{grid-template-columns:1fr; gap:1.4rem} }
+
+/* ---- indice ---- */
+.indice{position:sticky; top:5rem}
+@media (max-width:900px){
+  .indice{position:static; border:1px solid var(--borda); border-radius:6px;
+    padding:1rem 1.1rem; background:var(--carvao)}
+}
+.indice h3{font-family:'Cinzel',serif; font-size:.62rem; letter-spacing:.2em;
+  text-transform:uppercase; color:var(--fraco); margin:0 0 .8rem; font-weight:600}
+.indice a{display:block; padding:.34rem 0 .34rem .8rem; font-size:.88rem;
+  color:var(--texto); text-decoration:none; border-left:2px solid var(--borda);
+  transition:color .15s, border-color .15s}
+.indice a:hover{color:var(--ouro-claro); border-left-color:var(--ouro-fundo)}
+.atalho{display:inline-flex; align-items:center; gap:.45rem; font-family:'Cinzel',serif;
+  font-size:.66rem; letter-spacing:.17em; text-transform:uppercase; color:var(--ouro-claro);
+  text-decoration:none; border:1px solid var(--ouro-fundo); border-radius:3px;
+  padding:.42rem .75rem; transition:border-color .15s, background .15s}
+.atalho:hover{border-color:var(--ouro); background:color-mix(in srgb,var(--ouro) 8%,transparent)}
+.atalho svg{width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:1.4; stroke-linejoin:round}
+.nota-botao{display:block; font-size:.8rem; color:var(--fraco); margin-top:.5rem}
+.botao-wiki{display:inline-block; font-family:'Cinzel',serif; font-size:.68rem;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--ouro-claro);
+  text-decoration:none; border:1px solid var(--ouro-fundo); border-radius:3px;
+  padding:.6rem 1rem; margin-top:.4rem; transition:border-color .15s, background .15s}
+.botao-wiki:hover{border-color:var(--ouro); background:color-mix(in srgb,var(--ouro) 8%,transparent)}
+.indice a.ativo{color:var(--ouro-claro); border-left-color:var(--ouro)}
+
+/* ---- secoes ---- */
+section{margin-bottom:3.2rem}
+section h3{font-family:'Cinzel',serif; font-size:1.35rem; color:var(--ouro-claro);
+  letter-spacing:.05em; margin:0 0 .3rem; display:flex; align-items:center; gap:.7rem}
+section h3 svg{width:20px; height:20px; color:var(--ouro); opacity:.85; flex:none}
+.sub{color:var(--fraco); font-size:.92rem; margin:0 0 1.3rem}
+section h4{font-family:'Cinzel',serif; font-size:.95rem; color:var(--osso);
+  letter-spacing:.04em; margin:1.8rem 0 .5rem}
+p{margin:0 0 1rem}
+ul,ol{margin:0 0 1rem; padding-left:1.3rem}
+li{margin-bottom:.45rem}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.86em;
+  background:#04080c; border:1px solid var(--borda); padding:.1rem .4rem;
+  border-radius:2px; color:var(--osso)}
+strong{color:var(--osso)}
+
+.caixa{border:1px solid var(--borda); border-radius:6px; padding:1.1rem 1.3rem;
+  background:linear-gradient(168deg,rgba(18,28,37,.7),color-mix(in srgb,var(--breu) 85%,transparent)); margin:0 0 1.2rem}
+.caixa.destaque{border-color:color-mix(in srgb,var(--ouro) 40%,transparent); background:color-mix(in srgb,var(--ouro) 6%,transparent)}
+.caixa.alerta{border-color:rgba(239,142,124,.45); background:rgba(239,142,124,.07)}
+.caixa.alerta strong{color:var(--ruim)}
+.caixa p+p{margin-top:.8rem}
+.caixa h4{margin-top:0}
+.caixa p:last-child,.caixa ul:last-child{margin-bottom:0}
+
+table{width:100%; border-collapse:collapse; margin:0 0 1.2rem; font-size:.88rem}
+th,td{text-align:left; padding:.55rem .7rem; border-bottom:1px solid color-mix(in srgb,var(--borda) 70%,transparent)}
+th{font-family:'Cinzel',serif; font-size:.64rem; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--fraco); font-weight:600}
+td b{font-family:'Cinzel',serif; font-variant-numeric:tabular-nums}
+.bom{color:var(--bom)} .ruim{color:var(--ruim)}
+.vivo{color:var(--ouro-claro); font-family:'Cinzel',serif; font-weight:700;
+  font-variant-numeric:tabular-nums}
+tr.agora{background:color-mix(in srgb,var(--ouro) 7%,transparent)}
+tr.agora td:first-child{color:var(--ouro-claro)}
+
+footer{border-top:1px solid var(--borda); text-align:center; padding:2.4rem 1.25rem;
+  color:var(--fraco); font-size:.83rem}
+footer strong{color:var(--ouro); font-family:'Cinzel',serif; letter-spacing:.12em}
+</style>
+<link rel="stylesheet" href="/assets/tema.css">
+</head>
+<body>
+
+<div class="topo" data-bloco="58ea20b3"><div class="topo-int" data-bloco="0f721dd1">
+  <a class="voltar" href="/">&#8592; <span data-identidade="nome">Seu Servidor</span></a>
+  <h1 data-campo="c1faa029">{{TITULO}}</h1>
+  <span class="ip" id="ip"></span>
+</div></div>
+
+<div class="capa" data-bloco="90399438">
+  <h2 data-campo="9bd50dd2">{{TITULO}}</h2>
+  <p data-campo="59988c72">{{DESCRICAO}}</p>
+</div>
+
+<div class="corpo" data-bloco="ec7336ab">
+  <nav class="indice" id="indice" data-bloco="a0412e3b">
+    <h3 data-campo="828eda91">Nesta página</h3>
+    <a href="#comecando" data-campo="04b82193">Primeiros passos</a>
+    <a href="#regras" data-campo="bd627f9c">Regras</a>
+    <a href="#referencia" data-campo="df99d0c5">Referência rápida</a>
+  </nav>
+
+  <main>
+<section id="comecando" data-bloco="a3283c94">
+  <h3 data-campo="f42ee6e1">Primeiros passos</h3>
+  <p class="sub" data-campo="dd0959b5"><i>Uma frase curta que apresenta esta seção.</i></p>
+  <p data-campo="b95081ce">Escreva aqui o que um jogador novo precisa saber assim que chega ao servidor.</p>
+  <h4 data-campo="bd0d38db">Um subtítulo</h4>
+  <ol data-bloco="7a9efad1">
+    <li data-campo="e50a1442">Primeiro passo.</li>
+    <li data-campo="7d376e79">Segundo passo.</li>
+    <li data-campo="1faeeb05">Terceiro passo.</li>
+  </ol>
+  <div class="caixa destaque" data-bloco="2c2fb279">
+    <h4 data-campo="e75193b4">Dica importante</h4>
+    <p data-campo="84031de3">Use caixas de destaque para o que ninguém pode deixar de ler.</p>
+  </div>
+</section>
+
+<section id="regras" data-bloco="f9d17ef8">
+  <h3 data-campo="0cbd1caa">Regras</h3>
+  <p class="sub" data-campo="1c8f2bf4"><i>O que se espera de quem joga aqui.</i></p>
+  <ul data-bloco="c64bba87">
+    <li data-campo="b783bcda">Respeite as construções dos outros jogadores.</li>
+    <li data-campo="0870adfb">Combine antes de mexer em áreas compartilhadas.</li>
+    <li data-campo="7cf151d4">Dúvidas? Fale com a moderação.</li>
+  </ul>
+  <div class="caixa alerta" data-bloco="dca6e571">
+    <p data-campo="e2cb8dd2"><strong>Atenção:</strong> use caixas de alerta para avisos sérios.</p>
+  </div>
+</section>
+
+<section id="referencia" data-bloco="579719dc">
+  <h3 data-campo="12e90e91">Referência rápida</h3>
+  <table data-bloco="5e2efb51">
+    <tr data-bloco="59d379cc"><th data-campo="bb2b2655">Item</th><th data-campo="9a9f1781">Valor</th></tr>
+    <tr data-bloco="7a6ea041"><td data-campo="7e42f232">Endereço</td><td data-campo="f80f6568">veja o topo desta página</td></tr>
+    <tr data-bloco="1402eee4"><td data-campo="b364277d">Reinícios</td><td data-campo="f4a8d81c">escreva aqui os horários</td></tr>
+  </table>
+</section>
+  </main>
+</div>
+
+<footer data-bloco="681393b0">
+  <p><strong data-identidade="nome">Seu Servidor</strong><br>
+  <span data-identidade="rodape">Servidor comunitário de Valheim. Não somos afiliados à Iron Gate AB nem à Coffee Stain.</span></p>
+</footer>
+
+<script>
+(function(){
+  var ip = document.getElementById("ip");
+  fetch("/api/status.json", {cache:"no-store"}).then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(s){ if (ip && s && s.servidor && s.servidor.endereco) ip.textContent = s.servidor.endereco; })
+    .catch(function(){});
+  var links = Array.prototype.slice.call(document.querySelectorAll(".indice a[href^='#']"));
+  if (!links.length || !("IntersectionObserver" in window)) return;
+  var porSecao = {};
+  links.forEach(function(a){ porSecao[a.getAttribute("href").slice(1)] = a; });
+  var olho = new IntersectionObserver(function(entradas){
+    entradas.forEach(function(e){
+      if (!e.isIntersecting || !porSecao[e.target.id]) return;
+      links.forEach(function(a){ a.classList.remove("ativo"); });
+      porSecao[e.target.id].classList.add("ativo");
+    });
+  }, {rootMargin:"-30% 0px -60% 0px"});
+  Object.keys(porSecao).forEach(function(id){ var s = document.getElementById(id); if (s) olho.observe(s); });
+})();
+</script>
+<script src="/assets/vivo.js" defer></script>
+<script>/* admin dock: loads only for signed-in panel admins */if(/(^|;\s*)jarl=1/.test(document.cookie)){var j=document.createElement('script');j.src='/jarl/estatico/site-admin.js';j.defer=true;document.head.appendChild(j)}</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+[Unit]
+Description=Check Heimdall Nexus schedules once per minute
+
+[Timer]
+OnCalendar=*-*-* *:*:00
+Persistent=true
+Unit=heimdall-schedule.service
+
+[Install]
+WantedBy=timers.target

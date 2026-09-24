@@ -1,0 +1,339 @@
+:root{
+  --breu:#05090d; --noite:#080e14; --carvao:#0d151d; --ardosia:#152029;
+  --borda:#22313d; --borda-viva:#33475a;
+  --ouro:#c8a45c; --ouro-claro:#eeddb0; --osso:#e6e0d2;
+  --texto:#b4bec7; --fraco:#78848f;
+  --bom:#7fd9a2; --ruim:#ef8e7c; --atencao:#d8b13f;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--breu); color:var(--texto);
+  font-family:'Spectral',Georgia,serif; font-size:15px; line-height:1.6;
+  -webkit-font-smoothing:antialiased}
+a{color:var(--ouro-claro); text-decoration:none}
+h1,h2,h3{font-family:'Cinzel',serif; color:var(--osso); letter-spacing:.04em; margin:0}
+
+.tela{display:grid; grid-template-columns:232px 1fr; min-height:100vh}
+@media (max-width:860px){ .tela{grid-template-columns:1fr} .lado{position:static !important} }
+
+/* ---- barra lateral ---- */
+.lado{background:var(--noite); border-right:1px solid var(--borda);
+  padding:1.4rem 0; position:sticky; top:0; height:100vh; overflow:auto}
+.marca{font-family:'Cinzel',serif; color:var(--ouro-claro); font-size:1.05rem;
+  letter-spacing:.14em; text-transform:uppercase; padding:0 1.3rem 1.2rem;
+  border-bottom:1px solid var(--borda); margin-bottom:1rem}
+.grupo{font-family:'Cinzel',serif; font-size:.6rem; letter-spacing:.2em;
+  text-transform:uppercase; color:var(--fraco); padding:1rem 1.3rem .4rem}
+.lado a{display:flex; align-items:center; gap:.7rem; padding:.55rem 1.3rem;
+  color:var(--texto); border-left:2px solid transparent; font-size:.92rem}
+.lado a:hover{color:var(--ouro-claro); background:rgba(200,164,92,.05)}
+.lado a.ativo{color:var(--ouro-claro); border-left-color:var(--ouro);
+  background:rgba(200,164,92,.08)}
+.lado svg{width:17px; height:17px; flex:none; opacity:.85}
+.rodape-lado{margin-top:auto; padding:1.2rem 1.3rem; font-size:.8rem; color:var(--fraco)}
+
+/* ---- conteúdo ---- */
+.corpo{padding:1.6rem 2rem 4rem; max-width:1500px}
+@media (max-width:860px){ .corpo{padding:1.2rem} }
+.topo{display:flex; align-items:center; gap:1rem; flex-wrap:wrap;
+  background:var(--carvao); border:1px solid var(--borda); border-radius:10px;
+  padding:1rem 1.3rem; margin-bottom:1rem}
+.topo h1{font-size:1.5rem}
+.acoes{margin-left:auto; display:flex; gap:.5rem; flex-wrap:wrap}
+.btn{font-family:'Cinzel',serif; font-size:.68rem; letter-spacing:.14em;
+  text-transform:uppercase; padding:.6rem 1.1rem; border-radius:5px; cursor:pointer;
+  border:1px solid var(--borda-viva); background:var(--ardosia); color:var(--osso);
+  transition:border-color .15s, background .15s}
+.btn:hover{border-color:var(--ouro); background:rgba(200,164,92,.1)}
+.btn.bom{border-color:rgba(127,217,162,.5); color:var(--bom)}
+.btn.ruim{border-color:rgba(239,142,124,.5); color:var(--ruim)}
+.btn:disabled{opacity:.45; cursor:not-allowed}
+
+.medidores{display:flex; gap:.6rem; flex-wrap:wrap; margin-bottom:1rem}
+.medidor{background:var(--carvao); border:1px solid var(--borda); border-radius:8px;
+  padding:.55rem 1rem; display:flex; align-items:center; gap:.6rem; font-size:.88rem}
+.medidor b{font-family:'Cinzel',serif; color:var(--ouro-claro); font-variant-numeric:tabular-nums}
+.medidor small{color:var(--fraco)}
+
+.cartao{background:var(--carvao); border:1px solid var(--borda); border-radius:10px;
+  padding:1.1rem 1.3rem; margin-bottom:1rem}
+.cartao h2{font-size:.95rem; margin-bottom:.8rem; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--fraco); font-size:.65rem}
+
+.pastilha{display:inline-block; font-family:'Cinzel',serif; font-size:.6rem;
+  letter-spacing:.12em; text-transform:uppercase; padding:.2rem .6rem; border-radius:99px;
+  border:1px solid currentColor}
+.pastilha.viva{color:var(--bom)} .pastilha.morta{color:var(--ruim)}
+.pastilha.meio{color:var(--atencao)}
+
+/* ---- console ---- */
+.console{background:#03070a; border:1px solid var(--borda); border-radius:8px;
+  padding:.9rem 1rem; height:min(58vh,560px); overflow:auto;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.79rem;
+  line-height:1.55; white-space:pre-wrap; word-break:break-word}
+.console .info{color:var(--texto)}
+.console .aviso{color:var(--atencao)}
+.console .erro{color:var(--ruim)}
+.console .hora{color:var(--fraco)}
+
+/* ---- tabelas ---- */
+table{width:100%; border-collapse:collapse; font-size:.88rem}
+th,td{text-align:left; padding:.5rem .7rem; border-bottom:1px solid rgba(34,49,61,.7)}
+th{font-family:'Cinzel',serif; font-size:.6rem; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--fraco)}
+tbody tr:hover{background:rgba(200,164,92,.04)}
+td.num{font-variant-numeric:tabular-nums; color:var(--fraco); white-space:nowrap}
+.linha-arq a{display:flex; align-items:center; gap:.55rem}
+.linha-arq svg{width:15px; height:15px; color:var(--ouro); opacity:.8; flex:none}
+
+.caminho{display:flex; align-items:center; gap:.4rem; flex-wrap:wrap;
+  font-family:ui-monospace,monospace; font-size:.85rem; margin-bottom:.9rem}
+.caminho a{color:var(--ouro-claro)}
+.caminho span{color:var(--fraco)}
+
+/* ---- entrar ---- */
+.porta{min-height:100vh; display:grid; place-items:center; padding:1.5rem}
+.porta form{background:var(--carvao); border:1px solid var(--borda); border-radius:12px;
+  padding:2.2rem 2rem; width:min(400px,100%)}
+.porta h1{font-size:1.3rem; margin-bottom:.3rem}
+.porta p{color:var(--fraco); font-size:.88rem; margin:.2rem 0 1.4rem}
+input[type=password],input[type=text],textarea{width:100%; background:#04080c;
+  border:1px solid var(--borda); border-radius:6px; padding:.7rem .9rem; color:var(--osso);
+  font-family:inherit; font-size:.95rem}
+input:focus,textarea:focus{outline:none; border-color:var(--ouro-fundo,#7d6331)}
+textarea{font-family:ui-monospace,monospace; font-size:.82rem; line-height:1.5; min-height:60vh}
+.erro-caixa{border:1px solid rgba(239,142,124,.45); background:rgba(239,142,124,.08);
+  color:var(--ruim); border-radius:6px; padding:.6rem .8rem; font-size:.86rem; margin-bottom:1rem}
+.aviso-caixa{border:1px solid rgba(216,177,63,.4); background:rgba(216,177,63,.07);
+  color:var(--atencao); border-radius:6px; padding:.6rem .8rem; font-size:.86rem; margin-bottom:1rem}
+
+/* ================= refino: mais ar, menos aresta ================= */
+body{font-size:15.5px}
+.corpo{padding:2rem 2.2rem 5rem}
+.topo{border-radius:14px; padding:1.15rem 1.4rem; margin-bottom:1.2rem;
+  background:linear-gradient(170deg,rgba(21,32,41,.9),rgba(13,21,29,.95))}
+.cartao{border-radius:14px; padding:1.3rem 1.4rem; margin-bottom:1.2rem}
+.cartao h2{margin-bottom:1rem}
+.btn{border-radius:8px; padding:.62rem 1.15rem; letter-spacing:.1em; font-size:.66rem}
+.btn:active{transform:translateY(1px)}
+.medidor{border-radius:10px; padding:.6rem 1.05rem}
+
+/* dica embaixo do título de cada página */
+.dica{color:var(--fraco); font-size:.9rem; margin:.15rem 0 1.2rem; max-width:72ch}
+
+/* pastilha com bolinha */
+.pastilha{display:inline-flex; align-items:center; gap:.4rem}
+.pastilha::before{content:''; width:6px; height:6px; border-radius:50%;
+  background:currentColor; box-shadow:0 0 8px currentColor}
+
+/* ---- abas ---- */
+.abas{display:flex; gap:.4rem; border-bottom:1px solid var(--borda); margin-bottom:1.2rem}
+.abas button{background:none; border:none; border-bottom:2px solid transparent;
+  color:var(--fraco); font-family:'Cinzel',serif; font-size:.72rem; letter-spacing:.14em;
+  text-transform:uppercase; padding:.75rem 1.1rem; cursor:pointer}
+.abas button:hover{color:var(--osso)}
+.abas button.ativa{color:var(--ouro-claro); border-bottom-color:var(--ouro)}
+.abas .conta{font-family:'Spectral',serif; font-size:.78rem; letter-spacing:0;
+  color:var(--fraco); margin-left:.4rem}
+
+/* ---- busca ---- */
+.busca{display:flex; gap:.6rem; align-items:center; margin-bottom:1.1rem; flex-wrap:wrap}
+.busca input{flex:1 1 280px; padding:.75rem 1rem; border-radius:10px}
+
+/* ---- grade de mods ---- */
+.grade{display:grid; gap:.8rem; grid-template-columns:repeat(auto-fill,minmax(330px,1fr))}
+.mod{display:flex; gap:.9rem; align-items:flex-start; background:var(--carvao);
+  border:1px solid var(--borda); border-radius:12px; padding:.9rem 1rem;
+  transition:border-color .15s, transform .15s}
+.mod:hover{border-color:var(--borda-viva); transform:translateY(-1px)}
+.mod img,.mod .semcapa{width:48px; height:48px; border-radius:9px; flex:none;
+  background:var(--ardosia); border:1px solid var(--borda); object-fit:cover}
+.mod-txt{min-width:0; flex:1}
+.mod-nome{display:block; font-family:'Cinzel',serif; color:var(--osso); font-size:.95rem;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.mod-autor{color:var(--fraco); font-size:.78rem}
+.mod-desc{color:var(--texto); font-size:.83rem; margin-top:.35rem;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+.mod-pe{display:flex; align-items:center; gap:.5rem; margin-top:.6rem; flex-wrap:wrap}
+.selo{font-family:'Cinzel',serif; font-size:.58rem; letter-spacing:.1em; text-transform:uppercase;
+  border:1px solid currentColor; border-radius:99px; padding:.15rem .55rem; color:var(--fraco)}
+.selo.novo{color:var(--atencao)} .selo.ok{color:var(--bom)} .selo.nosso{color:var(--ouro)}
+.btn.mini{padding:.34rem .75rem; font-size:.6rem}
+
+/* ---- tarefa ---- */
+.tarefa{position:fixed; right:1.2rem; bottom:1.2rem; width:min(520px,calc(100vw - 2.4rem));
+  background:var(--noite); border:1px solid var(--borda-viva); border-radius:14px;
+  box-shadow:0 18px 50px rgba(0,0,0,.6); overflow:hidden; z-index:50}
+.tarefa-topo{display:flex; align-items:center; gap:.6rem; padding:.8rem 1rem;
+  border-bottom:1px solid var(--borda); font-family:'Cinzel',serif; font-size:.78rem;
+  color:var(--osso)}
+.tarefa-topo button{margin-left:auto; background:none; border:none; color:var(--fraco);
+  cursor:pointer; font-size:1.1rem; line-height:1}
+.tarefa-saida{max-height:240px; overflow:auto; padding:.7rem 1rem; font-size:.76rem;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--texto);
+  white-space:pre-wrap; word-break:break-word}
+.girando{display:inline-block; width:11px; height:11px; border-radius:50%;
+  border:2px solid rgba(200,164,92,.25); border-top-color:var(--ouro);
+  animation:gira .8s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
+
+/* ---- recado ---- */
+.recados{position:fixed; top:1rem; right:1rem; display:flex; flex-direction:column;
+  gap:.5rem; z-index:60}
+.recado{background:var(--carvao); border:1px solid var(--borda-viva); border-left-width:3px;
+  border-radius:9px; padding:.7rem 1rem; font-size:.87rem; max-width:360px;
+  animation:entra .2s ease-out}
+.recado.bom{border-left-color:var(--bom)} .recado.ruim{border-left-color:var(--ruim)}
+@keyframes entra{from{opacity:0; transform:translateX(12px)}}
+.vazio{color:var(--fraco); text-align:center; padding:2.4rem 1rem; font-size:.9rem}
+
+/* ---- rodapé da barra lateral ---- */
+.rodape-lado{display:flex; flex-direction:column; gap:.5rem; padding:1.2rem 1.1rem}
+.rodape-lado .quem{display:flex; align-items:center; gap:.5rem; font-size:.84rem;
+  color:var(--osso); padding:0 .2rem .2rem}
+.rodape-lado .quem span{width:24px; height:24px; border-radius:50%; flex:none;
+  background:var(--ardosia); border:1px solid var(--borda-viva); display:grid;
+  place-items:center; font-family:'Cinzel',serif; font-size:.68rem; color:var(--ouro)}
+.botao-lado{display:flex; align-items:center; justify-content:center; gap:.45rem;
+  font-family:'Cinzel',serif; font-size:.62rem; letter-spacing:.12em; text-transform:uppercase;
+  padding:.55rem .7rem; border:1px solid var(--borda); border-radius:8px;
+  background:var(--ardosia); color:var(--texto) !important; transition:all .15s}
+.botao-lado:hover{border-color:var(--ouro); color:var(--ouro-claro) !important;
+  background:rgba(200,164,92,.08)}
+.botao-lado svg{width:14px; height:14px}
+.lado a.botao-lado{border-left:1px solid var(--borda)}
+.lado a.botao-lado:hover{border-left-color:var(--ouro)}
+
+/* ---- controles da lista ---- */
+.controles{display:flex; gap:.5rem; align-items:center; flex-wrap:wrap}
+select{background:#04080c; border:1px solid var(--borda); border-radius:8px;
+  color:var(--osso); font-family:inherit; font-size:.86rem; padding:.62rem .8rem}
+select:focus{outline:none; border-color:var(--borda-viva)}
+.interruptor{display:inline-flex; align-items:center; gap:.5rem; font-size:.86rem;
+  color:var(--texto); cursor:pointer; user-select:none; white-space:nowrap}
+.interruptor input{appearance:none; width:36px; height:20px; border-radius:99px;
+  background:var(--ardosia); border:1px solid var(--borda); position:relative;
+  cursor:pointer; transition:background .15s, border-color .15s; margin:0}
+.interruptor input::after{content:''; position:absolute; top:2px; left:2px; width:14px;
+  height:14px; border-radius:50%; background:var(--fraco); transition:transform .15s, background .15s}
+.interruptor input:checked{background:rgba(200,164,92,.22); border-color:var(--ouro)}
+.interruptor input:checked::after{transform:translateX(16px); background:var(--ouro)}
+
+.jeito{display:inline-flex; border:1px solid var(--borda); border-radius:8px; overflow:hidden}
+.jeito button{background:var(--ardosia); border:none; padding:.55rem .7rem; cursor:pointer;
+  color:var(--fraco); display:grid; place-items:center}
+.jeito button+button{border-left:1px solid var(--borda)}
+.jeito button.ativo{color:var(--ouro-claro); background:rgba(200,164,92,.12)}
+.jeito svg{width:16px; height:16px}
+
+/* ---- modo lista ---- */
+.grade.lista{grid-template-columns:1fr; gap:.45rem}
+.lista .mod{align-items:center; padding:.6rem .9rem; gap:.75rem}
+.lista .mod img,.lista .mod .semcapa{width:34px; height:34px; border-radius:7px}
+.lista .mod-txt{display:flex; align-items:center; gap:.7rem; flex-wrap:wrap}
+.lista .mod-nome{display:inline; font-size:.9rem}
+.lista .mod-desc{display:none}
+.lista .mod-pe{margin-top:0; margin-left:auto}
+@media (max-width:700px){ .lista .mod-pe{margin-left:0; width:100%} }
+
+/* ---- mundo ---- */
+.ficha th{text-align:left; font-weight:400; color:var(--fraco); width:220px; padding:.35rem .8rem .35rem 0}
+.ficha td{padding:.35rem 0; color:var(--osso)}
+.opcoes-wipe{display:flex; gap:1.4rem; flex-wrap:wrap; margin-bottom:.8rem}
+.nota{color:var(--fraco); font-size:.88rem; margin:0 0 1rem; max-width:70ch}
+.linha-campos{display:flex; gap:.7rem; align-items:flex-end; flex-wrap:wrap; margin-bottom:.9rem}
+.linha-campos label{display:flex; flex-direction:column; gap:.35rem; flex:1 1 320px;
+  font-size:.86rem; color:var(--texto)}
+.linha-campos label small{color:var(--fraco)}
+.linha-campos input[type=text]{padding:.65rem .9rem; border-radius:8px}
+input[type=file]{color:var(--texto); font-family:inherit; font-size:.86rem}
+input[type=file]::file-selector-button{font-family:'Cinzel',serif; font-size:.66rem; letter-spacing:.1em;
+  text-transform:uppercase; background:var(--ardosia); color:var(--osso); border:1px solid var(--borda);
+  border-radius:8px; padding:.55rem .9rem; margin-right:.8rem; cursor:pointer}
+.progresso{position:relative; height:26px; border:1px solid var(--borda); border-radius:8px;
+  background:#04080c; overflow:hidden; margin:.2rem 0 1rem}
+.progresso div{height:100%; width:0; background:rgba(200,164,92,.28); transition:width .2s}
+.progresso span{position:absolute; inset:0; display:grid; place-items:center; font-size:.8rem;
+  color:var(--osso)}
+
+/* ---- arquivos: menu do botão direito ---- */
+.menu-ctx{position:fixed; z-index:50; min-width:210px; background:var(--carvao);
+  border:1px solid var(--borda-viva); border-radius:10px; padding:.35rem;
+  box-shadow:0 12px 32px rgba(0,0,0,.55)}
+.menu-ctx button{display:block; width:100%; text-align:left; background:none; border:none;
+  color:var(--texto); font-family:inherit; font-size:.9rem; padding:.45rem .75rem;
+  border-radius:6px; cursor:pointer}
+.menu-ctx button:hover{background:rgba(200,164,92,.1); color:var(--ouro-claro)}
+.menu-ctx button.perigo{color:var(--ruim)}
+.menu-ctx button.perigo:hover{background:rgba(239,142,124,.1)}
+.menu-ctx hr{border:none; border-top:1px solid var(--borda); margin:.3rem .2rem}
+#lista-arquivos.soltando{border-color:var(--ouro); background:rgba(200,164,92,.05)}
+tr[data-caminho]{cursor:context-menu}
+
+/* ---- configurações ---- */
+.config-layout{display:grid; grid-template-columns:300px 1fr; gap:1.2rem; align-items:start}
+@media (max-width:1100px){ .config-layout{grid-template-columns:1fr} }
+.config-lista{position:sticky; top:1rem; max-height:calc(100vh - 2rem); overflow:auto; padding:1rem}
+.config-lista input[type=text]{padding:.6rem .8rem; border-radius:8px}
+.config-lista .grupo-cfg{font-family:'Cinzel',serif; font-size:.62rem; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--fraco); margin:1rem 0 .3rem}
+.config-lista .grupo-cfg small{font-family:'Spectral',serif; letter-spacing:0; opacity:.7}
+.config-lista a{display:block; padding:.28rem .55rem; border-radius:6px; font-size:.84rem;
+  color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.config-lista a:hover{background:rgba(200,164,92,.07); color:var(--ouro-claro)}
+.config-lista a.ativo{background:rgba(200,164,92,.13); color:var(--ouro-claro)}
+.config-lista a.copia{opacity:.55; font-style:italic}
+.config-lista a.sujo-item::after{content:' •'; color:var(--atencao)}
+.config-lista .vazio{color:var(--fraco); font-size:.86rem}
+.config-editor{padding:1rem 1rem .6rem; min-width:0}
+.editor-topo{display:flex; gap:1rem; align-items:flex-start; flex-wrap:wrap; margin-bottom:.8rem}
+.editor-topo h2{margin-bottom:.2rem; text-transform:none; letter-spacing:.04em}
+.editor-info{color:var(--fraco); font-size:.8rem; word-break:break-all}
+.sujo{align-self:center; color:var(--atencao); font-size:.8rem; font-family:'Cinzel',serif;
+  letter-spacing:.12em; text-transform:uppercase}
+.editor-rodape{display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap;
+  color:var(--fraco); font-size:.76rem; margin-top:.5rem}
+kbd{font-family:ui-monospace,monospace; font-size:.72rem; border:1px solid var(--borda);
+  border-bottom-width:2px; border-radius:4px; padding:0 .3rem; color:var(--texto)}
+#editor .CodeMirror{height:calc(100vh - 330px); min-height:420px; border:1px solid var(--borda);
+  border-radius:10px; font-family:ui-monospace,'Cascadia Code','Fira Code',monospace;
+  font-size:.82rem; line-height:1.55}
+
+/* tema do editor, nas cores do painel */
+.cm-s-heimdall.CodeMirror{background:#04080c; color:var(--osso)}
+.cm-s-heimdall .CodeMirror-gutters{background:#060b10; border-right:1px solid var(--borda)}
+.cm-s-heimdall .CodeMirror-linenumber{color:#4a5661}
+.cm-s-heimdall .CodeMirror-cursor{border-left:2px solid var(--ouro)}
+.cm-s-heimdall .CodeMirror-activeline-background{background:rgba(200,164,92,.06)}
+.cm-s-heimdall .CodeMirror-selected, .cm-s-heimdall .CodeMirror-focused .CodeMirror-selected{background:rgba(120,160,200,.22)}
+.cm-s-heimdall .CodeMirror-matchingbracket{color:var(--bom) !important; text-decoration:underline}
+.cm-s-heimdall .cm-comment{color:#5f6b76}
+.cm-s-heimdall .cm-comment.cm-doc{color:#8a96a1; font-style:italic}
+.cm-s-heimdall .cm-meta{color:#a88a4c}
+.cm-s-heimdall .cm-header{color:var(--ouro-claro); font-weight:600}
+.cm-s-heimdall .cm-property{color:#8fc1e3}
+.cm-s-heimdall .cm-operator{color:#6b7782}
+.cm-s-heimdall .cm-string{color:var(--osso)}
+.cm-s-heimdall .cm-string-2{color:#d7c49a}
+.cm-s-heimdall .cm-atom{color:var(--bom)}
+.cm-s-heimdall .cm-number{color:#e0b85c}
+.cm-s-heimdall .cm-keyword{color:#c792ea}
+.cm-s-heimdall .cm-def{color:#8fc1e3}
+.cm-s-heimdall .cm-tag{color:#6fd3c7; font-style:normal}
+.cm-s-heimdall .cm-tag.cm-aviso{color:var(--atencao)}
+.cm-s-heimdall .cm-variable-2{color:#8fc1e3}
+.cm-s-heimdall .cm-searching{background:rgba(216,177,63,.3)}
+.CodeMirror-dialog{background:var(--carvao); color:var(--texto); border-bottom:1px solid var(--borda)}
+.CodeMirror-dialog input{background:#04080c; color:var(--osso); border:1px solid var(--borda) !important;
+  border-radius:6px; padding:.2rem .4rem; width:18em}
+
+/* Toggle switch: a checkbox styled as a sliding switch. */
+.alavanca{display:inline-flex; align-items:center; gap:.65rem; cursor:pointer; user-select:none}
+.alavanca input{appearance:none; -webkit-appearance:none; flex:none; width:2.5rem; height:1.35rem; margin:0;
+  border-radius:1rem; background:#0b141b; border:1px solid var(--borda); position:relative; cursor:pointer;
+  transition:background .15s, border-color .15s}
+.alavanca input::after{content:''; position:absolute; top:.15rem; left:.15rem; width:.95rem; height:.95rem;
+  border-radius:50%; background:var(--fraco); transition:transform .15s, background .15s}
+.alavanca input:checked{background:rgba(127,217,162,.18); border-color:rgba(127,217,162,.6)}
+.alavanca input:checked::after{transform:translateX(1.15rem); background:var(--bom)}
+.alavanca input:focus-visible{outline:2px solid var(--ouro); outline-offset:2px}

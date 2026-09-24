@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh optional character ranking every five minutes
+
+[Timer]
+OnBootSec=90s
+OnUnitActiveSec=300s
+AccuracySec=10s
+Unit=heimdall-saga.service
+
+[Install]
+WantedBy=timers.target

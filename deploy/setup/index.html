@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Heimdall Nexus · Instalação</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="intro">
+      <div class="brand"><span class="mark">ᚺ</span><div><strong>Heimdall Nexus</strong><small>Valheim Server Management Platform</small></div></div>
+      <div class="intro-copy">
+        <span class="eyebrow" data-i18n="wizard">ASSISTENTE DE INSTALAÇÃO</span>
+        <h1 data-i18n="hero">Seu servidor, site e painel em um só lugar.</h1>
+        <p data-i18n="heroText">Este assistente instala SteamCMD, Valheim Dedicated Server, o painel e o site. Você decide quais recursos ativar.</p>
+      </div>
+      <ol class="steps" id="steps">
+        <li class="current" data-step-label="0"><span>01</span><div><b data-i18n="stepSite">Site</b><small data-i18n="stepSiteHint">Endereço e HTTPS</small></div></li>
+        <li data-step-label="1"><span>02</span><div><b data-i18n="stepGame">Servidor</b><small data-i18n="stepGameHint">Mundo e acesso</small></div></li>
+        <li data-step-label="2"><span>03</span><div><b data-i18n="stepOptions">Recursos</b><small data-i18n="stepOptionsHint">Mods e dados ao vivo</small></div></li>
+        <li data-step-label="3"><span>04</span><div><b data-i18n="stepAdmin">Administrador</b><small data-i18n="stepAdminHint">Conta Linux e login do painel</small></div></li>
+        <li data-step-label="4"><span>05</span><div><b data-i18n="stepReview">Revisão</b><small data-i18n="stepReviewHint">Instalar e acompanhar</small></div></li>
+      </ol>
+      <div class="credits">BRKiHeL</div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar"><div><span class="status-dot"></span><span data-i18n="localOnly">Assistente temporário · link HTTPS privado</span></div><div class="langs"><button type="button" data-lang="pt">PT</button><button type="button" data-lang="en">EN</button></div></header>
+      <div class="content">
+        <form id="setup-form" autocomplete="off">
+          <section class="page" data-step="0">
+            <span class="number">01 / 05</span><h2 data-i18n="siteTitle">Onde o site vai morar?</h2>
+            <p class="lead" data-i18n="siteIntro">Informe o domínio que apontará para esta máquina. Você também pode usar um IP e configurar HTTPS depois.</p>
+            <div class="field"><label for="domain" data-i18n="domain">Domínio ou IP do site</label><input id="domain" name="domain" type="text" required placeholder="valheim.exemplo.com" spellcheck="false"><small data-i18n="domainHint">O assistente configurará o Nginx para este endereço.</small></div>
+            <div class="field"><label for="server_address" data-i18n="gameAddress">Endereço de conexão do jogo</label><input id="server_address" name="server_address" type="text" placeholder="Igual ao domínio do site" spellcheck="false"><small data-i18n="gameAddressHint">Deixe em branco para usar o mesmo domínio.</small></div>
+            <label class="check prominent"><input id="tls" name="tls" type="checkbox" checked><span><b data-i18n="https">Configurar HTTPS automaticamente</b><small data-i18n="httpsHint">O DNS precisa apontar para este servidor e a porta 80/TCP deve estar acessível. O Certbot solicitará um certificado Let’s Encrypt.</small></span></label>
+            <div class="field" id="email-field"><label for="email" data-i18n="email">E-mail para o certificado</label><input id="email" name="email" type="email" placeholder="voce@exemplo.com"><small data-i18n="emailHint">Usado pelo Let’s Encrypt para avisos de renovação.</small></div>
+            <div class="note"><b data-i18n="siteNoteTitle">Antes de continuar</b><p data-i18n="siteNote">O link temporário usa a rede Cloudflare e termina quando o instalador fecha. Guarde o endereço com token em privado. Para evitar esse serviço externo, rode install.sh com --local-only e use SSH.</p></div>
+          </section>
+
+          <section class="page" data-step="1" hidden>
+            <span class="number">02 / 05</span><h2 data-i18n="gameTitle">Seu mundo Valheim</h2>
+            <p class="lead" data-i18n="gameIntro">SteamCMD baixará o servidor oficial. O mundo será salvo em /srv/valheim/saves, separado dos arquivos do jogo.</p>
+            <div class="grid"><div class="field"><label for="server_name" data-i18n="serverName">Nome do servidor</label><input id="server_name" name="server_name" value="Valheim Server" required maxlength="40"></div><div class="field"><label for="world" data-i18n="world">Nome do mundo</label><input id="world" name="world" value="Valheim" required maxlength="40"></div></div>
+            <div class="grid"><div class="field"><label for="port" data-i18n="gamePort">Porta UDP</label><input id="port" name="port" type="number" value="2456" min="1024" max="65534" required><small data-i18n="portHint">Valheim usa esta porta e a seguinte.</small></div><div class="field"><label for="game_password" data-i18n="gamePassword">Senha do jogo</label><input id="game_password" name="game_password" type="password" minlength="5" autocomplete="new-password" placeholder="Opcional"><small data-i18n="passwordHint">Deixe vazia para um servidor sem senha.</small></div></div>
+            <div class="checks"><label class="check"><input id="public" name="public" type="checkbox" checked><span><b data-i18n="public">Aparecer na lista de servidores</b><small data-i18n="publicHint">Jogadores também podem entrar pelo endereço direto.</small></span></label><label class="check"><input id="crossplay" name="crossplay" type="checkbox"><span><b data-i18n="crossplay">Ativar crossplay</b><small data-i18n="crossplayHint">Permite jogadores de outras plataformas; utiliza o backend PlayFab.</small></span></label></div>
+            <div class="note"><b data-i18n="portsTitle">Rede</b><p data-i18n="portsNote">Com o backend Steam, encaminhe as portas UDP escolhida e seguinte no firewall e roteador. Com crossplay, o Valheim usa um relay.</p></div>
+          </section>
+
+          <section class="page" data-step="2" hidden>
+            <span class="number">03 / 05</span><h2 data-i18n="optionsTitle">Escolha os recursos</h2>
+            <p class="lead" data-i18n="optionsIntro">Instale somente o que faz sentido para o seu servidor. As páginas e layouts serão editados depois no painel.</p>
+            <label class="choice"><input id="bepinex" name="bepinex" type="checkbox"><span class="choice-icon">◆</span><span><b>BepInEx</b><small data-i18n="bepinexHint">Instala o pacote Valheim para usar mods no servidor. Desmarcado = servidor vanilla.</small></span></label>
+            <div class="field" id="modpack-field" hidden><label for="modpack" data-i18n="modpack">Modpack</label><input id="modpack" name="modpack" type="text" placeholder="Autor/NomeDoModpack ou /root/meu-modpack.zip" spellcheck="false"><small data-i18n="modpackHint">Opcional. Nome de um pacote do Hexium/Thunderstore, ou o caminho completo de um .zip enviado à VPS (mods privados inclusos). Um pacote publicado também preenche a lista de mods do site.</small><label class="check prominent"><input id="install_modpack" name="install_modpack" type="checkbox" checked><span><b data-i18n="installModpack">Instalar o modpack no servidor</b><small data-i18n="installModpackHint">Baixa as dependências em lote. Se versões requeridas entrarem em conflito, usa a mais alta. Pacotes marcados apenas para cliente são pulados.</small></span></label></div>
+            <h3 data-i18n="liveTitle">Dados ao vivo no editor</h3><p class="micro" data-i18n="liveHint">Estes grupos aparecem como peças arrastáveis. Recursos que dependem de mods exigem a configuração correspondente.</p>
+            <div class="feature-grid">
+              <label><input type="checkbox" name="features" value="servidor" checked><span data-i18n="featureServer">Estado do servidor</span></label>
+              <label><input type="checkbox" name="features" value="jogadores" checked><span data-i18n="featurePlayers">Jogadores online</span></label>
+              <label><input type="checkbox" name="features" value="mundo" checked><span data-i18n="featureWorld">Mundo e dia</span></label>
+              <label><input type="checkbox" name="features" value="estacoes"><span data-i18n="featureSeasons">Estações (mod)</span></label>
+              <label><input type="checkbox" name="features" value="recursos"><span data-i18n="featureResources">Taxa de recursos</span></label>
+              <label><input type="checkbox" name="features" value="saga"><span data-i18n="featureSaga">Saga de personagens (mod)</span></label>
+            </div>
+          </section>
+
+          <section class="page" data-step="3" hidden>
+            <span class="number">04 / 05</span><h2 data-i18n="adminTitle">Proteja o painel</h2>
+            <p class="lead" data-i18n="adminIntro">Escolha uma conta Linux para o serviço do painel e um login separado para o site. A senha do painel será guardada como hash.</p>
+            <div class="field"><label for="system_user" data-i18n="systemUser">Conta Linux do serviço</label><input id="system_user" name="system_user" value="heimdall" required minlength="3" maxlength="31" pattern="[a-z_][a-z0-9_-]{2,30}" spellcheck="false" autocomplete="off"><small data-i18n="systemUserHint">Conta criada na VM para executar o painel; diferente do login abaixo. O jogo usa outra conta separada.</small></div>
+            <div class="field"><label for="panel_user" data-i18n="adminUser">Usuário administrador</label><input id="panel_user" name="panel_user" value="jarl" required minlength="3" maxlength="30" autocomplete="username"></div>
+            <div class="grid"><div class="field"><label for="panel_password" data-i18n="adminPassword">Senha do painel</label><input id="panel_password" name="panel_password" type="password" required minlength="10" autocomplete="new-password"></div><div class="field"><label for="panel_password_confirm" data-i18n="adminPasswordAgain">Repita a senha</label><input id="panel_password_confirm" type="password" required minlength="10" autocomplete="new-password"></div></div>
+            <div class="note"><b data-i18n="adminNoteTitle">Acesso</b><p data-i18n="adminNote">Depois da instalação, acesse /jarl/entrar. O editor visual da página fica disponível após o login.</p></div>
+          </section>
+
+          <section class="page" data-step="4" hidden>
+            <span class="number">05 / 05</span><h2 data-i18n="reviewTitle">Tudo pronto para instalar</h2>
+            <p class="lead" data-i18n="reviewIntro">Revise o resumo. O download do Valheim pode levar alguns minutos; acompanhe cada etapa nesta tela.</p>
+            <dl class="summary" id="summary"></dl>
+            <label class="check prominent"><input id="start_game" name="start_game" type="checkbox"><span><b data-i18n="startGame">Iniciar Valheim ao terminar e em cada boot</b><small data-i18n="startGameHint">Deixe desmarcado para iniciar manualmente pelo painel quando quiser.</small></span></label>
+            <div class="note"><b data-i18n="reviewNoteTitle">O que será instalado</b><p data-i18n="reviewNote">SteamCMD, Valheim Dedicated Server, serviço systemd, Nginx, site e painel. BepInEx será incluído se você o selecionou.</p></div>
+          </section>
+
+          <p id="form-error" class="error" role="alert" hidden></p>
+          <div class="form-actions"><button type="button" id="back" class="button secondary" data-i18n="back" hidden>Voltar</button><button type="button" id="next" class="button primary" data-i18n="next">Continuar</button><button type="button" id="install" class="button primary" data-i18n="install" hidden>Instalar tudo</button></div>
+        </form>
+
+        <section id="progress" hidden>
+          <span class="number" data-i18n="progressNumber">INSTALAÇÃO</span><h2 id="progress-title" data-i18n="progressTitle">Preparando seu servidor…</h2>
+          <p class="lead" data-i18n="progressHint">Mantenha o terminal e esta página abertos. Você pode acompanhar as etapas abaixo.</p>
+          <div class="activity"><div class="spinner" id="spinner"></div><div><b id="phase">SteamCMD / Valheim / painel</b><small id="phase-detail"></small></div></div>
+          <div class="log" id="log" role="log" aria-live="polite"></div>
+          <p id="progress-error" class="error" hidden></p>
+          <div id="success" class="success" hidden><h3 data-i18n="successTitle">Heimdall Nexus está pronto</h3><p data-i18n="successHint">Use o painel para editar o site e controlar o servidor.</p><div id="success-links"></div></div>
+        </section>
+      </div>
+      <footer><span data-i18n="footer">Heimdall Nexus · criado por BRKiHeL</span><a href="https://valheim.com/support/a-guide-to-dedicated-servers/" target="_blank" rel="noopener noreferrer" data-i18n="officialGuide">Guia oficial do Valheim ↗</a></footer>
+    </main>
+  </div>
+</body>
+</html>

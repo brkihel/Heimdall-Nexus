@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+{% block titulo %}Arquivos{% endblock %}
+{% block corpo %}
+<div class="topo">
+  <h1>Arquivos</h1>
+  <div class="acoes">
+    <button class="btn bom" id="btn-colar" hidden>Colar aqui</button>
+    <button class="btn" id="btn-enviar">Enviar arquivo</button>
+    <button class="btn" id="btn-pasta">Nova pasta</button>
+    <button class="btn" id="btn-novo">Novo arquivo</button>
+    <input type="file" id="enviar-arquivo" multiple hidden>
+  </div>
+</div>
+
+<div class="aviso-caixa">
+  Daqui se apaga o mundo. Toda gravação e toda remoção guardam cópia antes, em
+  <code>/var/backups/heimdall-panel</code> — mas cópia é consolo, não desfazer.
+</div>
+
+{% if erro %}<div class="erro-caixa">{{ erro }}</div>{% endif %}
+
+<div class="progresso" id="progresso" hidden><div></div><span></span></div>
+
+<div class="cartao" id="lista-arquivos">
+  <p class="dica" style="margin:0 0 .6rem">Botão direito num item para baixar, copiar, recortar,
+    colar ou descompactar. Arraste arquivos do seu computador para cá para enviar.</p>
+  <div class="caminho" id="caminho">
+    {% set partes = listagem.caminho.strip('/').split('/') %}
+    <a href="{{ raiz }}/arquivos?caminho={{ valheim_dir|urlencode }}">{{ valheim_dir }}</a>
+    {% set acumulado = [] %}
+    {% for parte in partes %}{% if loop.index > 2 %}
+      {% set _ = acumulado.append(parte) %}
+      <span>/</span><a href="{{ raiz }}/arquivos?caminho={{ valheim_dir|urlencode }}/{{ acumulado|join('/')|urlencode }}">{{ parte }}</a>
+    {% endif %}{% endfor %}
+  </div>
+
+  <table>
+    <thead><tr><th>Nome</th><th style="width:110px">Tamanho</th>
+      <th style="width:170px">Modificado</th><th style="width:150px"></th></tr></thead>
+    <tbody>
+      {% if listagem.acima %}
+      <tr><td class="linha-arq" colspan="4">
+        <a href="{{ raiz }}/arquivos?caminho={{ listagem.acima }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 19V5M5 12l7-7 7 7"/></svg>
+          subir um nível</a></td></tr>
+      {% endif %}
+      {% for item in listagem.itens %}
+      <tr data-caminho="{{ item.caminho }}" data-pasta="{{ 1 if item.pasta else 0 }}">
+        <td class="linha-arq">
+          {% if item.pasta %}
+            <a href="{{ raiz }}/arquivos?caminho={{ item.caminho }}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
+              {{ item.nome }}{% if item.link %} <small style="color:var(--fraco)">→ link</small>{% endif %}</a>
+          {% else %}
+            <a href="#" data-abrir="{{ item.caminho }}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Zm0 0v5h5"/></svg>
+              {{ item.nome }}</a>
+          {% endif %}
+        </td>
+        <td class="num">{{ '' if item.pasta else item.tamanho|tamanho }}</td>
+        <td class="num" data-quando="{{ item.modificado }}"></td>
+        <td style="text-align:right">
+          <div style="display:inline-flex;gap:.4rem;flex-wrap:nowrap">
+            <button class="btn" data-renomear="{{ item.caminho }}" style="padding:.3rem .6rem">Renomear</button>
+            <button class="btn ruim" data-apagar="{{ item.caminho }}" style="padding:.3rem .6rem">Apagar</button>
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" style="color:var(--fraco)">pasta vazia</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="menu-ctx" id="menu-ctx" hidden></div>
+<div class="recados" id="recados"></div>
+
+<div class="cartao" id="editor" hidden>
+  <h2 id="editor-nome">arquivo</h2>
+  <textarea id="editor-texto" spellcheck="false"></textarea>
+  <div class="acoes" style="margin-top:.9rem">
+    <button class="btn bom" id="btn-gravar">Gravar</button>
+    <button class="btn" id="btn-fechar">Fechar</button>
+    <span id="editor-aviso" style="color:var(--fraco); font-size:.85rem; align-self:center"></span>
+  </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+const RAIZ = {{ raiz|tojson }};
+const AQUI = {{ listagem.caminho|tojson }};
+let abertoAgora = null;
+
+document.querySelectorAll('[data-quando]').forEach(td => {
+  const t = Number(td.dataset.quando) * 1000;
+  td.textContent = t ? new Date(t).toLocaleString('pt-BR') : '';
+});
+
+async function peca(verbo, dados){
+  const r = await fetch(`${RAIZ}/api/arquivo`, {
+    method:'POST', credentials:'same-origin',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({verbo, dados})});
+  if (r.status === 401) { location.href = `${RAIZ}/entrar`; return null; }
+  const d = await r.json();
+  if (!d.ok) { alert(d.erro); return null; }
+  return d;
+}
+
+document.querySelectorAll('[data-abrir]').forEach(link => {
+  link.addEventListener('click', async evento => {
+    evento.preventDefault();
+    const caminho = link.dataset.abrir;
+    const d = await peca('arquivo.ler', {caminho});
+    if (!d) return;
+    if (d.binario) { alert('Esse arquivo não é texto — o painel não abre binário.'); return; }
+    abertoAgora = caminho;
+    document.getElementById('editor-nome').textContent = caminho;
+    document.getElementById('editor-texto').value = d.texto;
+    document.getElementById('editor-aviso').textContent = '';
+    document.getElementById('editor').hidden = false;
+    document.getElementById('editor').scrollIntoView({behavior:'smooth'});
+  });
+});
+
+document.getElementById('btn-gravar').addEventListener('click', async () => {
+  if (!abertoAgora) return;
+  const ehConfig = /\.cfg$|\.yml$|\.yaml$|\.json$/.test(abertoAgora);
+  let aviso = `Gravar ${abertoAgora}?`;
+  if (ehConfig) aviso += '\n\nSe o servidor estiver de pé, ele pode gravar a memória por cima e desfazer isto.';
+  if (!confirm(aviso)) return;
+  const d = await peca('arquivo.gravar',
+    {caminho: abertoAgora, texto: document.getElementById('editor-texto').value});
+  if (d) document.getElementById('editor-aviso').textContent =
+    'gravado · cópia em ' + (d.copia || '—');
+});
+
+document.getElementById('btn-fechar').addEventListener('click', () => {
+  document.getElementById('editor').hidden = true; abertoAgora = null;
+});
+
+document.querySelectorAll('[data-apagar]').forEach(botao => {
+  botao.addEventListener('click', async () => {
+    const caminho = botao.dataset.apagar;
+    if (!confirm(`Apagar ${caminho}?`)) return;
+    if (/\/saves\/|\/backups\//.test(caminho) &&
+        !confirm('ISSO É MUNDO OU BACKUP.\n\nEscreveu certo? Confirma de novo.')) return;
+    if (await peca('arquivo.apagar', {caminho})) location.reload();
+  });
+});
+
+document.querySelectorAll('[data-renomear]').forEach(botao => {
+  botao.addEventListener('click', async () => {
+    const de = botao.dataset.renomear;
+    const nome = prompt('Novo nome:', de.split('/').pop());
+    if (!nome) return;
+    const para = de.slice(0, de.lastIndexOf('/') + 1) + nome;
+    if (await peca('arquivo.renomear', {de, para})) location.reload();
+  });
+});
+
+document.getElementById('btn-pasta').addEventListener('click', async () => {
+  const nome = prompt('Nome da pasta:');
+  if (!nome) return;
+  if (await peca('arquivo.pasta', {caminho: `${AQUI}/${nome}`})) location.reload();
+});
+
+document.getElementById('btn-novo').addEventListener('click', async () => {
+  const nome = prompt('Nome do arquivo:');
+  if (!nome) return;
+  if (await peca('arquivo.gravar', {caminho: `${AQUI}/${nome}`, texto: ''})) location.reload();
+});
+// ---------------------------------------------------------------- recados
+function recado(texto, tipo='bom'){
+  const caixa = document.createElement('div');
+  caixa.className = 'recado ' + tipo;
+  caixa.textContent = texto;
+  document.getElementById('recados').append(caixa);
+  setTimeout(() => caixa.remove(), 7000);
+}
+
+// ---------------------------------------------------------------- área de transferência
+// Guardada na sessão do navegador: copiar numa pasta e colar em outra sobrevive à
+// troca de página.
+const CHAVE = 'painel-transferencia';
+const transferencia = () => { try { return JSON.parse(sessionStorage.getItem(CHAVE)); } catch { return null; } };
+function guarda(op, caminho){
+  sessionStorage.setItem(CHAVE, JSON.stringify({op, caminho}));
+  mostraColar();
+  recado(`${op === 'mover' ? 'Recortado' : 'Copiado'}: ${caminho.split('/').pop()} — vá até a pasta e cole.`);
+}
+function mostraColar(){
+  const t = transferencia(), b = document.getElementById('btn-colar');
+  b.hidden = !t;
+  if (t) b.textContent = `Colar ${t.caminho.split('/').pop()} aqui`;
+}
+async function cola(pasta){
+  const t = transferencia();
+  if (!t) return;
+  const d = await peca(t.op === 'mover' ? 'arquivo.mover' : 'arquivo.copiar', {de: t.caminho, para: pasta});
+  if (!d) return;
+  if (t.op === 'mover') sessionStorage.removeItem(CHAVE);
+  location.reload();
+}
+document.getElementById('btn-colar').onclick = () => cola(AQUI);
+mostraColar();
+
+// ---------------------------------------------------------------- download
+function baixa(caminho){
+  // O navegador baixa direto; se o executor recusar, a resposta é um JSON de erro.
+  const a = document.createElement('a');
+  a.href = `${RAIZ}/api/baixar?caminho=${encodeURIComponent(caminho)}`;
+  a.download = '';
+  document.body.append(a); a.click(); a.remove();
+  recado('Preparando o download… pastas viram .zip e podem demorar.');
+}
+
+// ---------------------------------------------------------------- envio
+function envia(arquivos, i=0){
+  if (i >= arquivos.length) { location.reload(); return; }
+  const arquivo = arquivos[i];
+  const barra = document.getElementById('progresso');
+  const manda = substituir => {
+    const corpo = new FormData();
+    corpo.append('destino', AQUI);
+    corpo.append('substituir', substituir ? '1' : '0');
+    corpo.append('arquivo', arquivo);
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${RAIZ}/api/enviar`);
+    barra.hidden = false;
+    xhr.upload.onprogress = e => {
+      if (!e.lengthComputable) return;
+      const p = Math.round(e.loaded / e.total * 100);
+      barra.querySelector('div').style.width = p + '%';
+      barra.querySelector('span').textContent = `${arquivo.name} — ${p}%`;
+    };
+    xhr.onload = () => {
+      barra.hidden = true;
+      if (xhr.status === 401) { location.href = `${RAIZ}/entrar`; return; }
+      let d; try { d = JSON.parse(xhr.responseText); } catch { d = {ok:false, erro:'resposta estranha'}; }
+      if (!d.ok && /já existe/.test(d.erro || '') && !substituir &&
+          confirm(`${arquivo.name} já existe aqui. Substituir? (o atual vai para o porão de cópias)`)) {
+        manda(true); return;
+      }
+      if (!d.ok) recado(`${arquivo.name}: ${d.erro}`, 'ruim');
+      envia(arquivos, i + 1);
+    };
+    xhr.onerror = () => { barra.hidden = true; recado(`${arquivo.name}: o envio caiu`, 'ruim'); };
+    xhr.send(corpo);
+  };
+  manda(false);
+}
+document.getElementById('btn-enviar').onclick = () => document.getElementById('enviar-arquivo').click();
+document.getElementById('enviar-arquivo').onchange = e => envia([...e.target.files]);
+const lista = document.getElementById('lista-arquivos');
+lista.addEventListener('dragover', e => { e.preventDefault(); lista.classList.add('soltando'); });
+lista.addEventListener('dragleave', () => lista.classList.remove('soltando'));
+lista.addEventListener('drop', e => {
+  e.preventDefault(); lista.classList.remove('soltando');
+  if (e.dataTransfer.files.length) envia([...e.dataTransfer.files]);
+});
+
+// ---------------------------------------------------------------- menu do botão direito
+const menu = document.getElementById('menu-ctx');
+function fechaMenu(){ menu.hidden = true; }
+function abreMenu(x, y, itens){
+  menu.innerHTML = '';
+  for (const item of itens){
+    if (item === '-') { menu.append(Object.assign(document.createElement('hr'))); continue; }
+    const b = document.createElement('button');
+    b.textContent = item.rotulo;
+    if (item.perigo) b.className = 'perigo';
+    b.onclick = () => { fechaMenu(); item.faz(); };
+    menu.append(b);
+  }
+  menu.hidden = false;
+  const r = menu.getBoundingClientRect();
+  menu.style.left = Math.min(x, innerWidth - r.width - 8) + 'px';
+  menu.style.top = Math.min(y, innerHeight - r.height - 8) + 'px';
+}
+document.addEventListener('click', fechaMenu);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') fechaMenu(); });
+addEventListener('scroll', fechaMenu, true);
+
+document.querySelectorAll('tr[data-caminho]').forEach(linha => {
+  linha.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    const caminho = linha.dataset.caminho, pasta = linha.dataset.pasta === '1';
+    const t = transferencia();
+    const itens = [];
+    if (pasta) itens.push({rotulo:'Abrir', faz: () => location.href = `${RAIZ}/arquivos?caminho=${encodeURIComponent(caminho)}`});
+    else itens.push({rotulo:'Abrir no editor', faz: () => linha.querySelector('[data-abrir]').click()});
+    itens.push({rotulo: pasta ? 'Baixar como .zip' : 'Baixar', faz: () => baixa(caminho)});
+    itens.push('-');
+    itens.push({rotulo:'Copiar', faz: () => guarda('copiar', caminho)});
+    itens.push({rotulo:'Recortar', faz: () => guarda('mover', caminho)});
+    if (pasta && t) itens.push({rotulo:`Colar ${t.caminho.split('/').pop()} dentro`, faz: () => cola(caminho)});
+    if (!pasta && /\.zip$/i.test(caminho)) {
+      itens.push('-');
+      itens.push({rotulo:'Descompactar aqui', faz: async () => {
+        const d = await peca('arquivo.extrair', {caminho});
+        if (d) { recado(`${d.itens} arquivo(s) em ${d.pasta.split('/').pop()}`); setTimeout(() => location.reload(), 900); }
+      }});
+    }
+    itens.push('-');
+    itens.push({rotulo:'Renomear', faz: () => linha.querySelector('[data-renomear]').click()});
+    itens.push({rotulo:'Apagar', perigo:true, faz: () => linha.querySelector('[data-apagar]').click()});
+    abreMenu(e.clientX, e.clientY, itens);
+  });
+});
+lista.addEventListener('contextmenu', e => {
+  if (e.target.closest('tr[data-caminho]')) return;
+  e.preventDefault();
+  const t = transferencia();
+  const itens = [];
+  if (t) itens.push({rotulo:`Colar ${t.caminho.split('/').pop()} aqui`, faz: () => cola(AQUI)});
+  itens.push({rotulo:'Enviar arquivo…', faz: () => document.getElementById('enviar-arquivo').click()});
+  itens.push({rotulo:'Nova pasta', faz: () => document.getElementById('btn-pasta').click()});
+  itens.push({rotulo:'Baixar esta pasta como .zip', faz: () => baixa(AQUI)});
+  abreMenu(e.clientX, e.clientY, itens);
+});
+</script>
+{% endblock %}

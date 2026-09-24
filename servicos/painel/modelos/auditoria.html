@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block titulo %}Auditoria{% endblock %}
+{% block corpo %}
+<div class="topo"><h1>Auditoria</h1></div>
+<div class="cartao">
+  <h2>Tudo que o painel fez, e o que ele recusou</h2>
+  <table>
+    <thead><tr><th>Quando</th><th>Quem</th><th>Verbo</th><th>Resultado</th><th>Detalhe</th></tr></thead>
+    <tbody>
+    {% for linha in linhas %}
+      <tr>
+        <td class="num">{{ linha.quando.replace('T',' ').replace('+00:00','') }}</td>
+        <td>{{ linha.quem }}</td>
+        <td><code>{{ linha.verbo }}</code></td>
+        <td><span class="pastilha {{ 'viva' if linha.resultado == 'feito' else 'morta' }}">{{ linha.resultado }}</span></td>
+        <td style="color:var(--fraco)">{{ linha.detalhe or (linha.dados.caminho if linha.dados else '') or (linha.dados.acao if linha.dados else '') or '' }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" style="color:var(--fraco)">Nada registrado ainda.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
