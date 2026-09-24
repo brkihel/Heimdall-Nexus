@@ -6,6 +6,7 @@ import tarfile
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
 import urllib.error
 import urllib.request
 import zipfile
@@ -150,3 +151,31 @@ class VisualInstallerTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class SteamCmdRetryTests(unittest.TestCase):
+    def test_game_download_retries_missing_configuration(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state = root / 'attempts'
+            steamcmd = root / 'steamcmd' / 'steamcmd.sh'
+            steamcmd.parent.mkdir()
+            # Fails twice like a freshly bootstrapped SteamCMD, then installs the game.
+            steamcmd.write_text(f'''#!/bin/sh
+case "$*" in *app_update*) ;; *) exit 0 ;; esac
+n=$(cat "{state}" 2>/dev/null || echo 0); n=$((n+1)); echo $n > "{state}"
+if [ $n -lt 3 ]; then printf "\\033[0mERROR! Failed to install app '896660' (Missing configuration)\\n\\033[0m\\n"; exit 8; fi
+mkdir -p "{root}/current" && touch "{root}/current/valheim_server.x86_64"
+''')
+            steamcmd.chmod(0o755)
+            lines = []
+            engine = installer.Installer(choices(), lambda step, line: lines.append(line), game_root=root)
+            with patch.object(installer.time, 'sleep'), \
+                 patch.object(engine, 'command', wraps=lambda step, argv, timeout=0:
+                              installer.Installer.command(engine, step, argv[4:], timeout)):
+                engine.game()
+            self.assertEqual(state.read_text().strip(), '3')
+            retries = [l for l in lines if 'Retrying' in l]
+            self.assertEqual(len(retries), 2)
+            self.assertIn("ERROR! Failed to install app '896660' (Missing configuration)", retries[0])
+            self.assertFalse(any('\x1b' in l for l in lines))

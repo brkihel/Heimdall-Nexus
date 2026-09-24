@@ -34,6 +34,7 @@ import modpack as server_modpack
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_ROOT = Path('/opt/heimdall-nexus')
+ANSI = re.compile(r'\x1b\[[0-9;?]*[A-Za-z]')
 GAME_ROOT = Path('/srv/valheim')
 GAME_FILES = GAME_ROOT / 'current'
 STEAMCMD_DIR = GAME_ROOT / 'steamcmd'
@@ -261,12 +262,12 @@ class Installer:
         def reader():
             assert process.stdout is not None
             for line in process.stdout:
-                stream.put(line.rstrip()[:400])
+                stream.put(ANSI.sub('', line).rstrip()[:400])
             stream.put(None)
 
         threading.Thread(target=reader, daemon=True).start()
         deadline = time.monotonic() + timeout
-        last = ''
+        last = error = ''
         while True:
             try:
                 item = stream.get(timeout=0.5)
@@ -276,13 +277,15 @@ class Installer:
                 break
             if item:
                 last = item
+                if 'ERROR' in item or 'FAILED' in item.upper():
+                    error = item
                 self.report(step, item)
             if time.monotonic() > deadline:
                 process.kill()
                 process.wait()
                 raise InstallError(f'{step} timed out.')
         if process.wait() != 0:
-            raise InstallError(f'{step} failed: {last or "see system logs"}')
+            raise InstallError(f'{step} failed: {error or last or "see system logs"}')
 
     def _chown_tree(self, path: Path) -> None:
         user = pwd.getpwnam('valheim')
@@ -380,12 +383,23 @@ class Installer:
             raise InstallError('SteamCMD archive did not contain steamcmd.sh.')
 
     def game(self) -> None:
+        steamcmd = ['runuser', '-u', 'valheim', '--', str(self.steamcmd_dir / 'steamcmd.sh')]
+        # A fresh SteamCMD updates and restarts itself on first run; downloading an
+        # app in that same session often fails with "Missing configuration".
+        self.report('valheim', 'Updating SteamCMD…')
+        self.command('valheim', [*steamcmd, '+quit'], timeout=900)
         self.report('valheim', 'Downloading Valheim Dedicated Server (Steam App 896660)…')
-        self.command('valheim', ['runuser', '-u', 'valheim', '--',
-                                 str(self.steamcmd_dir / 'steamcmd.sh'),
-                                 '+force_install_dir', str(self.game_files),
-                                 '+login', 'anonymous', '+app_update', '896660',
-                                 'validate', '+quit'], timeout=3600)
+        for attempt in range(1, 4):
+            try:
+                self.command('valheim', [*steamcmd, '+force_install_dir', str(self.game_files),
+                                         '+login', 'anonymous', '+app_update', '896660',
+                                         'validate', '+quit'], timeout=3600)
+                break
+            except InstallError as exc:
+                if attempt == 3:
+                    raise
+                self.report('valheim', f'SteamCMD did not finish ({exc}). Retrying ({attempt + 1}/3)…')
+                time.sleep(10)
         if not (self.game_files / 'valheim_server.x86_64').is_file():
             raise InstallError('SteamCMD finished but the Valheim server binary is missing.')
 
