@@ -47,6 +47,8 @@ def public_html(source: str, path: str) -> str:
             '/assets/boss-fights.js' not in source:
         source = source.replace('</head>', f'<link rel="stylesheet" href="{asset("boss-fights.css")}">\n'
                                 f'<script src="{asset("boss-fights.js")}"></script>\n</head>', 1)
+    if path == 'historias/index.html' and '/assets/historias-layout.css' not in source:
+        source = source.replace('</head>', f'<link rel="stylesheet" href="{asset("historias-layout.css")}">\n</head>', 1)
     if '/assets/navegacao.js' not in source:
         source = source.replace('</head>', f'<link rel="stylesheet" href="{asset("navegacao.css")}">\n'
                                 f'<script src="{asset("navegacao.js")}" defer></script>\n</head>', 1)

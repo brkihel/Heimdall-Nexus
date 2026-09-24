@@ -5,6 +5,7 @@
 .chapter.boss-fight .boss-art{position:absolute;inset:0 0 auto;height:370px;z-index:0;pointer-events:none;background-image:var(--boss-tint),linear-gradient(0deg,var(--carvao,#0d151d),transparent 48%),var(--boss-image);background-size:cover;background-position:center,center,var(--boss-position,center)}
 .chapter.boss-fight summary,.chapter.boss-fight .chapter-body{position:relative;z-index:1}
 .chapter.boss-fight summary{min-height:205px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end}
+.chapter.boss-fight:not([open]) summary{background-image:var(--boss-tint),linear-gradient(0deg,var(--carvao,#0d151d),transparent 70%),var(--boss-image);background-size:cover;background-position:center,center,var(--boss-position,center)}
 .chapter.boss-fight[data-text-side="right"] summary{align-items:flex-end;text-align:right}
 .chapter.boss-fight[data-text-side="right"] summary h2{margin-left:2rem;margin-right:0}
 .chapter.boss-fight[data-text-side="right"] summary::after{right:auto;left:1.5rem}

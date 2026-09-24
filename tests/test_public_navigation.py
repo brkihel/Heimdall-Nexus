@@ -80,6 +80,14 @@ class NavigationTests(unittest.TestCase):
             self.assertIn('/assets/boss-fights.css?v=', publicar.public_html(source, path))
         self.assertNotIn('/assets/boss-fights.js', publicar.public_html(source, 'wiki/index.html'))
 
+    def test_fixed_story_layout_loads_only_on_story_page(self):
+        source = '<html><head></head><body></body></html>'
+        published = publicar.public_html(source, 'historias/index.html')
+        self.assertIn('/assets/historias-layout.css?v=', published)
+        self.assertEqual(publicar.public_html(published, 'historias/index.html'), published)
+        self.assertNotIn('/assets/historias-layout.css',
+                         publicar.public_html(source, 'mapa/index.html'))
+
     def test_new_page_identity_is_resolved_when_published(self):
         import identidade
         source = (SITE / 'historias.html').read_text(encoding='utf-8')
