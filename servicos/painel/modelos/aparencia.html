@@ -55,7 +55,7 @@
 </section>
 
 <div class="salvar-barra">
-  <button class="btn bom" id="salvar" type="button">Salvar e publicar</button>
+  <button class="btn principal" id="salvar" type="button">Salvar e publicar</button>
   <span id="salvar-msg" role="status"></span>
 </div>
 
@@ -70,7 +70,7 @@
     <label>Endereço<span class="endereco-campo"><span>/</span><input id="nova-endereco" type="text" maxlength="40" placeholder="regras"><span>/</span></span></label>
   </div>
   <label>Descrição curta<input id="nova-descricao" type="text" maxlength="200" placeholder="Aparece no topo da página e nos resultados de busca"></label>
-  <div class="acoes esquerda"><button class="btn bom" id="criar" type="button">Criar página</button><span id="criar-msg" role="status"></span></div>
+  <div class="acoes esquerda"><button class="btn principal" id="criar" type="button">Criar página</button><span id="criar-msg" role="status"></span></div>
 </section>
 </div>
 
@@ -79,14 +79,14 @@
 .aparencia h3{font-size:.8rem; letter-spacing:.1em; text-transform:uppercase; color:var(--fraco); margin:1.6rem 0 .7rem}
 .aparencia .dica{color:var(--fraco); font-size:.85rem; margin:-.3rem 0 1rem}
 .aparencia label:not(.btn):not(.alavanca):not(.cor){display:grid; gap:.3rem; margin-bottom:.9rem; font-size:.85rem}
-.aparencia input[type=text],.aparencia textarea{min-height:0; font-family:inherit; font-size:.9rem; padding:.55rem .7rem; border-radius:6px}
+.aparencia input[type=text],.aparencia textarea{min-height:0; font-family:inherit; font-size:.9rem; padding:.55rem .7rem; border-radius:3px}
 .aparencia textarea{resize:vertical; height:4rem}
 .grade-ap{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:0 1rem}
 .imagens{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1rem; margin-top:.4rem}
-.imagem{border:1px solid var(--borda); border-radius:10px; padding:.8rem; display:grid; gap:.25rem; align-content:start}
+.imagem{border:1px solid var(--borda); border-radius:3px; padding:.8rem; display:grid; gap:.25rem; align-content:start}
 .imagem small{color:var(--fraco); font-size:.72rem}
 .imagem .acoes{margin:.4rem 0 0; justify-content:flex-start}
-.imagem-previa{height:90px; border-radius:6px; display:grid; place-items:center; overflow:hidden;
+.imagem-previa{height:90px; border-radius:3px; display:grid; place-items:center; overflow:hidden;
   background:repeating-conic-gradient(#0b1219 0 25%,#101a23 0 50%) 0 0/16px 16px; margin-bottom:.4rem}
 .imagem-previa img{max-width:100%; max-height:100%; object-fit:contain}
 .imagem-previa img:not([src]),.imagem-previa img[src=""]{display:none}
@@ -96,31 +96,31 @@
 .imagem-previa.larga img{width:100%; height:100%; object-fit:cover}
 .imagem.pendente{border-color:var(--ouro)}
 .paletas{display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1rem}
-.paleta{display:flex; align-items:center; gap:.5rem; padding:.4rem .7rem; border:1px solid var(--borda); border-radius:8px;
+.paleta{display:flex; align-items:center; gap:.5rem; padding:.4rem .7rem; border:1px solid var(--borda); border-radius:3px;
   background:none; color:var(--texto); cursor:pointer; font:inherit; font-size:.8rem}
 .paleta:hover{border-color:var(--ouro)}
 .paleta i{display:inline-flex}.paleta i span{width:12px; height:18px}
 .paleta i span:first-child{border-radius:3px 0 0 3px}.paleta i span:last-child{border-radius:0 3px 3px 0}
 .tabela-cores{display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:.4rem .8rem}
-.cor{display:flex; align-items:center; gap:.6rem; padding:.35rem .4rem; border-radius:6px}
+.cor{display:flex; align-items:center; gap:.6rem; padding:.35rem .4rem; border-radius:3px}
 .cor:hover{background:rgba(255,255,255,.03)}
-.cor input[type=color]{width:34px; height:28px; padding:0; border:1px solid var(--borda); border-radius:6px; background:none; cursor:pointer; flex:none}
+.cor input[type=color]{width:34px; height:28px; padding:0; border:1px solid var(--borda); border-radius:3px; background:none; cursor:pointer; flex:none}
 .cor span{font-size:.82rem; flex:1}
 .cor code{font-size:.72rem; color:var(--fraco)}
-.amostra{margin-top:1rem; padding:1.2rem; border-radius:10px; border:1px solid var(--borda)}
-.amostra-cartao{padding:1rem 1.2rem; border-radius:8px}
+.amostra{margin-top:1rem; padding:1.2rem; border-radius:3px; border:1px solid var(--borda)}
+.amostra-cartao{padding:1rem 1.2rem; border-radius:3px}
 .amostra-cartao b{font-family:'Cinzel',serif; display:block; margin-bottom:.3rem}
 .amostra-cartao p{margin:.2rem 0 .8rem; font-size:.9rem}
-.amostra-botao{display:inline-block; padding:.45rem 1rem; border-radius:4px; font-family:'Cinzel',serif; font-size:.7rem; letter-spacing:.14em; text-transform:uppercase}
+.amostra-botao{display:inline-block; padding:.45rem 1rem; border-radius:3px; font-family:'Cinzel',serif; font-size:.7rem; letter-spacing:.14em; text-transform:uppercase}
 .salvar-barra{position:sticky; bottom:0; z-index:5; display:flex; align-items:center; gap:1rem; padding:.9rem 0 1.2rem;
   background:linear-gradient(180deg,transparent,var(--breu) 35%); margin-bottom:1.2rem}
 #salvar-msg,#criar-msg{font-size:.85rem; color:var(--fraco)}
 .lista-pag{display:grid; gap:.4rem}
-.pag{display:flex; align-items:center; gap:.8rem; padding:.6rem .8rem; border:1px solid var(--borda); border-radius:8px}
+.pag{display:flex; align-items:center; gap:.8rem; padding:.6rem .8rem; border:1px solid var(--borda); border-radius:3px}
 .pag b{flex:0 0 auto}.pag code{color:var(--fraco); font-size:.8rem; flex:1}
 .pag .etiqueta{font-size:.68rem; color:var(--fraco); border:1px solid var(--borda); border-radius:999px; padding:.1rem .5rem}
 .tipos{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:.7rem; margin-bottom:1rem}
-.tipo{text-align:left; border:1px solid var(--borda); border-radius:10px; padding:.8rem 1rem; background:none; color:var(--texto); cursor:pointer; font:inherit}
+.tipo{text-align:left; border:1px solid var(--borda); border-radius:3px; padding:.8rem 1rem; background:none; color:var(--texto); cursor:pointer; font:inherit}
 .tipo b{display:block; color:var(--osso); margin-bottom:.2rem}.tipo small{color:var(--fraco); font-size:.78rem}
 .tipo[aria-pressed=true]{border-color:var(--ouro); background:rgba(200,164,92,.08)}
 .endereco-campo{display:flex; align-items:center; gap:.3rem; color:var(--fraco)}

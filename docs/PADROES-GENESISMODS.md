@@ -1,7 +1,7 @@
 # Padrões GenesisMods
 
 Vale para tudo o que a GenesisMods produz: Heimdall Nexus (site, Jarl,
-instalador, extensões), site GenesisHeim e mods da linha Genesis. Quando um
+instalador, extensões), o servidor principal da GenesisMods e os mods da linha Genesis. Quando um
 padrão daqui conflitar com o código existente, o padrão vence e o código entra
 na fila de ajuste.
 
@@ -25,6 +25,10 @@ na fila de ajuste.
   dos logs. A auditoria registra "chave definida", nunca o valor.
 - **Nenhuma porta nova.** O jogo não abre servidor web. Tudo público passa
   pelo Nginx e pelo painel já existentes, com rotas exatas.
+- **Nada de terceiros no navegador do visitante.** Fontes, scripts e imagens
+  são servidos pelo próprio Nexus (Cinzel e Spectral ficam em
+  `assets/fontes/`, licença OFL). Nenhuma página pede recursos ao Google ou a
+  CDNs, e o instalador mantém CSP `'self'`.
 - **Menor privilégio.** Cada serviço roda com o usuário e as pastas mínimas
   (systemd com `ProtectSystem`, `NoNewPrivileges`). Arquivos do servidor do
   jogo pertencem ao usuário `valheim`.
@@ -60,7 +64,7 @@ na fila de ajuste.
 
 ## 4. Identidade visual
 
-A identidade nasce do GenesisHeim: não é copiar o site, é usar a mesma
+A identidade nasce do servidor principal da GenesisMods: não é copiar o site, é usar a mesma
 linguagem. A referência de experiência é o ValheimSagas (seção 5), traduzido
 para esta linguagem. Nenhum código, ilustração ou captura de terceiros é
 copiado; artes são originais.

@@ -470,7 +470,10 @@ def admin_status(state: Path = STATE, game: Path | None = None) -> dict:
     database = state / 'sagas.sqlite3'
     result = {'installed': database.is_file(), 'queued': 0, 'rejected': 0,
               'worlds': 0, 'players': 0, 'events': 0, 'bridge': False,
-              'storage_error': False, 'settings': load_settings(state)}
+              'storage_error': False, 'settings': load_settings(state),
+              'profiles': 0, 'map_players': 0, 'last_data_at': None,
+              'atlas': sum(1 for _ in (state / 'atlas').glob('*.biomes'))
+              if (state / 'atlas').is_dir() else 0}
     for key, folder in (('queued', 'inbox'), ('rejected', 'rejected')):
         path = state / folder
         if path.is_dir():
@@ -482,6 +485,13 @@ def admin_status(state: Path = STATE, game: Path | None = None) -> dict:
             with sqlite3.connect(f'file:{database}?mode=ro', uri=True, timeout=3) as db:
                 for name in ('worlds', 'players', 'events'):
                     result[name] = db.execute(f'SELECT count(*) FROM {name}').fetchone()[0]
+                result['profiles'] = db.execute(
+                    'SELECT count(*) FROM players WHERE share_profile=1').fetchone()[0]
+                result['map_players'] = db.execute(
+                    'SELECT count(*) FROM players WHERE share_profile=1 AND share_map=1').fetchone()[0]
+                result['last_data_at'] = db.execute(
+                    '''SELECT max(t) FROM (SELECT max(seen_at) AS t FROM players
+                       UNION ALL SELECT max(clock_at) FROM worlds)''').fetchone()[0]
         except sqlite3.Error:
             result.update(storage_error=True, worlds=0, players=0, events=0)
     return result

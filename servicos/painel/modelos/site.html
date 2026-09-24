@@ -3,7 +3,7 @@
 {% block cabeca %}
 <style>
   .site-quadro{position:relative; height:calc(100vh - 250px); min-height:520px; border:1px solid var(--borda);
-    border-radius:10px; overflow:hidden; background:#05090d}
+    border-radius:3px; overflow:hidden; background:#05090d}
   .site-quadro iframe{width:100%; height:100%; border:0; display:block}
   .site-sec{display:flex !important; justify-content:space-between; gap:.6rem}
   .site-sec small{color:var(--fraco); flex:none}
@@ -13,14 +13,14 @@
   .site-cabeca{display:grid; gap:1rem; max-width:760px}
   .site-cabeca label{display:block; font-family:'Cinzel',serif; font-size:.62rem; letter-spacing:.14em;
     text-transform:uppercase; color:var(--fraco); margin-bottom:.35rem}
-  .site-cabeca .campo{border:1px solid var(--borda); border-radius:8px; padding:.6rem .8rem;
+  .site-cabeca .campo{border:1px solid var(--borda); border-radius:3px; padding:.6rem .8rem;
     background:var(--noite); color:var(--osso); line-height:1.5; min-height:2.6rem}
   .site-cabeca .campo:focus{outline:none; border-color:var(--ouro)}
   .site-cabeca .campo.mudou{border-color:var(--atencao)}
   .site-cabeca .jarl-chip{display:inline-block; padding:0 .45em; border-radius:999px;
     background:rgba(147,160,171,.2); font-size:.85em}
   .site-legenda{display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin:0 0 .8rem;
-    padding:.6rem .8rem; border:1px dashed var(--borda-viva); border-radius:10px}
+    padding:.6rem .8rem; border:1px dashed var(--borda-viva); border-radius:3px}
   .site-legenda[hidden]{display:none}
   .site-legenda .rotulo-legenda{font-family:'Cinzel',serif; font-size:.6rem; letter-spacing:.14em;
     text-transform:uppercase; color:var(--fraco); margin-right:.3rem}
@@ -31,7 +31,7 @@
   .site-legenda button:disabled{opacity:.5; cursor:help}
   .site-legenda button small{color:var(--fraco); margin-left:.35rem}
   .site-legenda .dica{color:var(--fraco); font-size:.78rem; flex-basis:100%}
-  .site-aviso-leitura{border:1px solid var(--borda-viva); border-radius:10px; padding:.8rem 1rem;
+  .site-aviso-leitura{border:1px solid var(--borda-viva); border-radius:3px; padding:.8rem 1rem;
     margin-bottom:.8rem; color:var(--texto); font-size:.9rem}
 </style>
 {% endblock %}
@@ -213,7 +213,7 @@ function desenhaCabeca(secao){
   cabeca.innerHTML = secao.campos.map(c => `
     <div><label>${esc(c.rotulo)}</label>
       <div class="campo" data-id="${esc(c.id)}" ${leitura ? '' : 'contenteditable="true"'}>${c.html}</div></div>`).join('') +
-    (leitura ? '' : `<div><button class="btn bom" id="btn-cabeca" disabled>Salvar e publicar</button></div>`);
+    (leitura ? '' : `<div><button class="btn principal" id="btn-cabeca" disabled>Salvar e publicar</button></div>`);
   campoCabeca = null;
   cabeca.querySelectorAll('[data-marker]').forEach(ch => {
     const v = valores.find(x => x.chave === ch.dataset.marker);

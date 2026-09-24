@@ -1,7 +1,8 @@
 :root{
   --breu:#05090d; --noite:#080e14; --carvao:#0d151d; --ardosia:#152029;
   --borda:#22313d; --borda-viva:#33475a;
-  --ouro:#c8a45c; --ouro-claro:#eeddb0; --osso:#e6e0d2;
+  --ouro:#c8a45c; --ouro-claro:#eeddb0; --ouro-fundo:#7d6331; --osso:#e6e0d2;
+  --brasa:#ff8b3d; --brasa-clara:#ffc477;
   --texto:#b4bec7; --fraco:#78848f;
   --bom:#7fd9a2; --ruim:#ef8e7c; --atencao:#d8b13f;
   color-scheme:dark;
@@ -36,12 +37,12 @@ h1,h2,h3{font-family:'Cinzel',serif; color:var(--osso); letter-spacing:.04em; ma
 .corpo{padding:1.6rem 2rem 4rem; max-width:1500px}
 @media (max-width:860px){ .corpo{padding:1.2rem} }
 .topo{display:flex; align-items:center; gap:1rem; flex-wrap:wrap;
-  background:var(--carvao); border:1px solid var(--borda); border-radius:10px;
+  background:var(--carvao); border:1px solid var(--borda); border-radius:3px;
   padding:1rem 1.3rem; margin-bottom:1rem}
 .topo h1{font-size:1.5rem}
 .acoes{margin-left:auto; display:flex; gap:.5rem; flex-wrap:wrap}
 .btn{font-family:'Cinzel',serif; font-size:.68rem; letter-spacing:.14em;
-  text-transform:uppercase; padding:.6rem 1.1rem; border-radius:5px; cursor:pointer;
+  text-transform:uppercase; padding:.6rem 1.1rem; border-radius:3px; cursor:pointer;
   border:1px solid var(--borda-viva); background:var(--ardosia); color:var(--osso);
   transition:border-color .15s, background .15s}
 .btn:hover{border-color:var(--ouro); background:rgba(200,164,92,.1)}
@@ -50,12 +51,12 @@ h1,h2,h3{font-family:'Cinzel',serif; color:var(--osso); letter-spacing:.04em; ma
 .btn:disabled{opacity:.45; cursor:not-allowed}
 
 .medidores{display:flex; gap:.6rem; flex-wrap:wrap; margin-bottom:1rem}
-.medidor{background:var(--carvao); border:1px solid var(--borda); border-radius:8px;
+.medidor{background:var(--carvao); border:1px solid var(--borda); border-radius:3px;
   padding:.55rem 1rem; display:flex; align-items:center; gap:.6rem; font-size:.88rem}
 .medidor b{font-family:'Cinzel',serif; color:var(--ouro-claro); font-variant-numeric:tabular-nums}
 .medidor small{color:var(--fraco)}
 
-.cartao{background:var(--carvao); border:1px solid var(--borda); border-radius:10px;
+.cartao{background:var(--carvao); border:1px solid var(--borda); border-radius:3px;
   padding:1.1rem 1.3rem; margin-bottom:1rem}
 .cartao h2{font-size:.95rem; margin-bottom:.8rem; letter-spacing:.1em; text-transform:uppercase;
   color:var(--fraco); font-size:.65rem}
@@ -67,7 +68,7 @@ h1,h2,h3{font-family:'Cinzel',serif; color:var(--osso); letter-spacing:.04em; ma
 .pastilha.meio{color:var(--atencao)}
 
 /* ---- console ---- */
-.console{background:#03070a; border:1px solid var(--borda); border-radius:8px;
+.console{background:#03070a; border:1px solid var(--borda); border-radius:3px;
   padding:.9rem 1rem; height:min(58vh,560px); overflow:auto;
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.79rem;
   line-height:1.55; white-space:pre-wrap; word-break:break-word}
@@ -93,30 +94,30 @@ td.num{font-variant-numeric:tabular-nums; color:var(--fraco); white-space:nowrap
 
 /* ---- entrar ---- */
 .porta{min-height:100vh; display:grid; place-items:center; padding:1.5rem}
-.porta form{background:var(--carvao); border:1px solid var(--borda); border-radius:12px;
+.porta form{background:var(--carvao); border:1px solid var(--borda); border-radius:3px;
   padding:2.2rem 2rem; width:min(400px,100%)}
 .porta h1{font-size:1.3rem; margin-bottom:.3rem}
 .porta p{color:var(--fraco); font-size:.88rem; margin:.2rem 0 1.4rem}
 input[type=password],input[type=text],textarea{width:100%; background:#04080c;
-  border:1px solid var(--borda); border-radius:6px; padding:.7rem .9rem; color:var(--osso);
+  border:1px solid var(--borda); border-radius:3px; padding:.7rem .9rem; color:var(--osso);
   font-family:inherit; font-size:.95rem}
 input:focus,textarea:focus{outline:none; border-color:var(--ouro-fundo,#7d6331)}
 textarea{font-family:ui-monospace,monospace; font-size:.82rem; line-height:1.5; min-height:60vh}
 .erro-caixa{border:1px solid rgba(239,142,124,.45); background:rgba(239,142,124,.08);
-  color:var(--ruim); border-radius:6px; padding:.6rem .8rem; font-size:.86rem; margin-bottom:1rem}
+  color:var(--ruim); border-radius:3px; padding:.6rem .8rem; font-size:.86rem; margin-bottom:1rem}
 .aviso-caixa{border:1px solid rgba(216,177,63,.4); background:rgba(216,177,63,.07);
-  color:var(--atencao); border-radius:6px; padding:.6rem .8rem; font-size:.86rem; margin-bottom:1rem}
+  color:var(--atencao); border-radius:3px; padding:.6rem .8rem; font-size:.86rem; margin-bottom:1rem}
 
 /* ================= refino: mais ar, menos aresta ================= */
 body{font-size:15.5px}
 .corpo{padding:2rem 2.2rem 5rem}
-.topo{border-radius:14px; padding:1.15rem 1.4rem; margin-bottom:1.2rem;
+.topo{border-radius:3px; padding:1.15rem 1.4rem; margin-bottom:1.2rem;
   background:linear-gradient(170deg,rgba(21,32,41,.9),rgba(13,21,29,.95))}
-.cartao{border-radius:14px; padding:1.3rem 1.4rem; margin-bottom:1.2rem}
+.cartao{border-radius:3px; padding:1.3rem 1.4rem; margin-bottom:1.2rem}
 .cartao h2{margin-bottom:1rem}
-.btn{border-radius:8px; padding:.62rem 1.15rem; letter-spacing:.1em; font-size:.66rem}
+.btn{border-radius:3px; padding:.62rem 1.15rem; letter-spacing:.1em; font-size:.66rem}
 .btn:active{transform:translateY(1px)}
-.medidor{border-radius:10px; padding:.6rem 1.05rem}
+.medidor{border-radius:3px; padding:.6rem 1.05rem}
 
 /* dica embaixo do título de cada página */
 .dica{color:var(--fraco); font-size:.9rem; margin:.15rem 0 1.2rem; max-width:72ch}
@@ -138,15 +139,15 @@ body{font-size:15.5px}
 
 /* ---- busca ---- */
 .busca{display:flex; gap:.6rem; align-items:center; margin-bottom:1.1rem; flex-wrap:wrap}
-.busca input{flex:1 1 280px; padding:.75rem 1rem; border-radius:10px}
+.busca input{flex:1 1 280px; padding:.75rem 1rem; border-radius:3px}
 
 /* ---- grade de mods ---- */
 .grade{display:grid; gap:.8rem; grid-template-columns:repeat(auto-fill,minmax(330px,1fr))}
 .mod{display:flex; gap:.9rem; align-items:flex-start; background:var(--carvao);
-  border:1px solid var(--borda); border-radius:12px; padding:.9rem 1rem;
+  border:1px solid var(--borda); border-radius:3px; padding:.9rem 1rem;
   transition:border-color .15s, transform .15s}
 .mod:hover{border-color:var(--borda-viva); transform:translateY(-1px)}
-.mod img,.mod .semcapa{width:48px; height:48px; border-radius:9px; flex:none;
+.mod img,.mod .semcapa{width:48px; height:48px; border-radius:3px; flex:none;
   background:var(--ardosia); border:1px solid var(--borda); object-fit:cover}
 .mod-txt{min-width:0; flex:1}
 .mod-nome{display:block; font-family:'Cinzel',serif; color:var(--osso); font-size:.95rem;
@@ -162,7 +163,7 @@ body{font-size:15.5px}
 
 /* ---- tarefa ---- */
 .tarefa{position:fixed; right:1.2rem; bottom:1.2rem; width:min(520px,calc(100vw - 2.4rem));
-  background:var(--noite); border:1px solid var(--borda-viva); border-radius:14px;
+  background:var(--noite); border:1px solid var(--borda-viva); border-radius:3px;
   box-shadow:0 18px 50px rgba(0,0,0,.6); overflow:hidden; z-index:50}
 .tarefa-topo{display:flex; align-items:center; gap:.6rem; padding:.8rem 1rem;
   border-bottom:1px solid var(--borda); font-family:'Cinzel',serif; font-size:.78rem;
@@ -181,7 +182,7 @@ body{font-size:15.5px}
 .recados{position:fixed; top:1rem; right:1rem; display:flex; flex-direction:column;
   gap:.5rem; z-index:60}
 .recado{background:var(--carvao); border:1px solid var(--borda-viva); border-left-width:3px;
-  border-radius:9px; padding:.7rem 1rem; font-size:.87rem; max-width:360px;
+  border-radius:3px; padding:.7rem 1rem; font-size:.87rem; max-width:360px;
   animation:entra .2s ease-out}
 .recado.bom{border-left-color:var(--bom)} .recado.ruim{border-left-color:var(--ruim)}
 @keyframes entra{from{opacity:0; transform:translateX(12px)}}
@@ -196,7 +197,7 @@ body{font-size:15.5px}
   place-items:center; font-family:'Cinzel',serif; font-size:.68rem; color:var(--ouro)}
 .botao-lado{display:flex; align-items:center; justify-content:center; gap:.45rem;
   font-family:'Cinzel',serif; font-size:.62rem; letter-spacing:.12em; text-transform:uppercase;
-  padding:.55rem .7rem; border:1px solid var(--borda); border-radius:8px;
+  padding:.55rem .7rem; border:1px solid var(--borda); border-radius:3px;
   background:var(--ardosia); color:var(--texto) !important; transition:all .15s}
 .botao-lado:hover{border-color:var(--ouro); color:var(--ouro-claro) !important;
   background:rgba(200,164,92,.08)}
@@ -206,7 +207,7 @@ body{font-size:15.5px}
 
 /* ---- controles da lista ---- */
 .controles{display:flex; gap:.5rem; align-items:center; flex-wrap:wrap}
-select{background:#04080c; border:1px solid var(--borda); border-radius:8px;
+select{background:#04080c; border:1px solid var(--borda); border-radius:3px;
   color:var(--osso); font-family:inherit; font-size:.86rem; padding:.62rem .8rem}
 select:focus{outline:none; border-color:var(--borda-viva)}
 .interruptor{display:inline-flex; align-items:center; gap:.5rem; font-size:.86rem;
@@ -219,7 +220,7 @@ select:focus{outline:none; border-color:var(--borda-viva)}
 .interruptor input:checked{background:rgba(200,164,92,.22); border-color:var(--ouro)}
 .interruptor input:checked::after{transform:translateX(16px); background:var(--ouro)}
 
-.jeito{display:inline-flex; border:1px solid var(--borda); border-radius:8px; overflow:hidden}
+.jeito{display:inline-flex; border:1px solid var(--borda); border-radius:3px; overflow:hidden}
 .jeito button{background:var(--ardosia); border:none; padding:.55rem .7rem; cursor:pointer;
   color:var(--fraco); display:grid; place-items:center}
 .jeito button+button{border-left:1px solid var(--borda)}
@@ -229,7 +230,7 @@ select:focus{outline:none; border-color:var(--borda-viva)}
 /* ---- modo lista ---- */
 .grade.lista{grid-template-columns:1fr; gap:.45rem}
 .lista .mod{align-items:center; padding:.6rem .9rem; gap:.75rem}
-.lista .mod img,.lista .mod .semcapa{width:34px; height:34px; border-radius:7px}
+.lista .mod img,.lista .mod .semcapa{width:34px; height:34px; border-radius:3px}
 .lista .mod-txt{display:flex; align-items:center; gap:.7rem; flex-wrap:wrap}
 .lista .mod-nome{display:inline; font-size:.9rem}
 .lista .mod-desc{display:none}
@@ -245,12 +246,12 @@ select:focus{outline:none; border-color:var(--borda-viva)}
 .linha-campos label{display:flex; flex-direction:column; gap:.35rem; flex:1 1 320px;
   font-size:.86rem; color:var(--texto)}
 .linha-campos label small{color:var(--fraco)}
-.linha-campos input[type=text]{padding:.65rem .9rem; border-radius:8px}
+.linha-campos input[type=text]{padding:.65rem .9rem; border-radius:3px}
 input[type=file]{color:var(--texto); font-family:inherit; font-size:.86rem}
 input[type=file]::file-selector-button{font-family:'Cinzel',serif; font-size:.66rem; letter-spacing:.1em;
   text-transform:uppercase; background:var(--ardosia); color:var(--osso); border:1px solid var(--borda);
-  border-radius:8px; padding:.55rem .9rem; margin-right:.8rem; cursor:pointer}
-.progresso{position:relative; height:26px; border:1px solid var(--borda); border-radius:8px;
+  border-radius:3px; padding:.55rem .9rem; margin-right:.8rem; cursor:pointer}
+.progresso{position:relative; height:26px; border:1px solid var(--borda); border-radius:3px;
   background:#04080c; overflow:hidden; margin:.2rem 0 1rem}
 .progresso div{height:100%; width:0; background:rgba(200,164,92,.28); transition:width .2s}
 .progresso span{position:absolute; inset:0; display:grid; place-items:center; font-size:.8rem;
@@ -258,11 +259,11 @@ input[type=file]::file-selector-button{font-family:'Cinzel',serif; font-size:.66
 
 /* ---- arquivos: menu do botão direito ---- */
 .menu-ctx{position:fixed; z-index:50; min-width:210px; background:var(--carvao);
-  border:1px solid var(--borda-viva); border-radius:10px; padding:.35rem;
+  border:1px solid var(--borda-viva); border-radius:3px; padding:.35rem;
   box-shadow:0 12px 32px rgba(0,0,0,.55)}
 .menu-ctx button{display:block; width:100%; text-align:left; background:none; border:none;
   color:var(--texto); font-family:inherit; font-size:.9rem; padding:.45rem .75rem;
-  border-radius:6px; cursor:pointer}
+  border-radius:3px; cursor:pointer}
 .menu-ctx button:hover{background:rgba(200,164,92,.1); color:var(--ouro-claro)}
 .menu-ctx button.perigo{color:var(--ruim)}
 .menu-ctx button.perigo:hover{background:rgba(239,142,124,.1)}
@@ -274,11 +275,11 @@ tr[data-caminho]{cursor:context-menu}
 .config-layout{display:grid; grid-template-columns:300px 1fr; gap:1.2rem; align-items:start}
 @media (max-width:1100px){ .config-layout{grid-template-columns:1fr} }
 .config-lista{position:sticky; top:1rem; max-height:calc(100vh - 2rem); overflow:auto; padding:1rem}
-.config-lista input[type=text]{padding:.6rem .8rem; border-radius:8px}
+.config-lista input[type=text]{padding:.6rem .8rem; border-radius:3px}
 .config-lista .grupo-cfg{font-family:'Cinzel',serif; font-size:.62rem; letter-spacing:.16em;
   text-transform:uppercase; color:var(--fraco); margin:1rem 0 .3rem}
 .config-lista .grupo-cfg small{font-family:'Spectral',serif; letter-spacing:0; opacity:.7}
-.config-lista a{display:block; padding:.28rem .55rem; border-radius:6px; font-size:.84rem;
+.config-lista a{display:block; padding:.28rem .55rem; border-radius:3px; font-size:.84rem;
   color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .config-lista a:hover{background:rgba(200,164,92,.07); color:var(--ouro-claro)}
 .config-lista a.ativo{background:rgba(200,164,92,.13); color:var(--ouro-claro)}
@@ -294,9 +295,9 @@ tr[data-caminho]{cursor:context-menu}
 .editor-rodape{display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap;
   color:var(--fraco); font-size:.76rem; margin-top:.5rem}
 kbd{font-family:ui-monospace,monospace; font-size:.72rem; border:1px solid var(--borda);
-  border-bottom-width:2px; border-radius:4px; padding:0 .3rem; color:var(--texto)}
+  border-bottom-width:2px; border-radius:3px; padding:0 .3rem; color:var(--texto)}
 #editor .CodeMirror{height:calc(100vh - 330px); min-height:420px; border:1px solid var(--borda);
-  border-radius:10px; font-family:ui-monospace,'Cascadia Code','Fira Code',monospace;
+  border-radius:3px; font-family:ui-monospace,'Cascadia Code','Fira Code',monospace;
   font-size:.82rem; line-height:1.55}
 
 /* tema do editor, nas cores do painel */
@@ -325,7 +326,7 @@ kbd{font-family:ui-monospace,monospace; font-size:.72rem; border:1px solid var(-
 .cm-s-heimdall .cm-searching{background:rgba(216,177,63,.3)}
 .CodeMirror-dialog{background:var(--carvao); color:var(--texto); border-bottom:1px solid var(--borda)}
 .CodeMirror-dialog input{background:#04080c; color:var(--osso); border:1px solid var(--borda) !important;
-  border-radius:6px; padding:.2rem .4rem; width:18em}
+  border-radius:3px; padding:.2rem .4rem; width:18em}
 
 /* Toggle switch: a checkbox styled as a sliding switch. */
 .alavanca{display:inline-flex; align-items:center; gap:.65rem; cursor:pointer; user-select:none}
@@ -337,3 +338,37 @@ kbd{font-family:ui-monospace,monospace; font-size:.72rem; border:1px solid var(-
 .alavanca input:checked{background:rgba(127,217,162,.18); border-color:rgba(127,217,162,.6)}
 .alavanca input:checked::after{transform:translateX(1.15rem); background:var(--bom)}
 .alavanca input:focus-visible{outline:2px solid var(--ouro); outline-offset:2px}
+
+/* ================= GenesisMods standard components (docs/PADROES-GENESISMODS.md) ================= */
+.btn{background:transparent; border-color:rgba(200,164,92,.45); color:var(--ouro-claro)}
+.btn:hover{border-color:var(--ouro); background:rgba(200,164,92,.1)}
+.btn.principal{color:#1c1407; font-weight:700; border:none;
+  background:linear-gradient(180deg,var(--ouro-claro),var(--ouro) 58%,#9a7a3c);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 6px 18px rgba(0,0,0,.35)}
+.btn.principal:hover{filter:brightness(1.07); background:linear-gradient(180deg,var(--ouro-claro),var(--ouro) 58%,#9a7a3c)}
+.btn:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+  outline:2px solid var(--ouro-claro); outline-offset:2px}
+.divisor{display:flex; align-items:center; gap:14px; max-width:360px; margin:1.2rem auto}
+.divisor i{flex:1; height:1px; background:linear-gradient(90deg,transparent,var(--ouro-fundo,#7d6331))}
+.divisor i:last-child{background:linear-gradient(270deg,transparent,var(--ouro-fundo,#7d6331))}
+.divisor b{width:7px; height:7px; transform:rotate(45deg); border:1px solid var(--ouro)}
+.cartao.ornado{position:relative}
+.cartao.ornado::before,.cartao.ornado::after{content:""; position:absolute; width:16px; height:16px;
+  border-color:var(--ouro); pointer-events:none; opacity:.8}
+.cartao.ornado::before{left:6px; top:6px; border-left:1px solid; border-top:1px solid}
+.cartao.ornado::after{right:6px; bottom:6px; border-right:1px solid; border-bottom:1px solid}
+/* "Para funcionar": what an optional feature needs, each item checked by the system */
+.requisitos{list-style:none; margin:.4rem 0 1rem; padding:0; display:grid; gap:.45rem}
+.requisitos li{display:grid; grid-template-columns:1.6rem 1fr; gap:.2rem .6rem; align-items:start;
+  padding:.65rem .8rem; border:1px solid var(--borda); border-radius:3px; background:rgba(5,9,13,.35)}
+.requisitos li::before{content:"◌"; grid-row:span 2; font-size:1.05rem; line-height:1.3; color:var(--atencao); text-align:center}
+.requisitos li.ok::before{content:"✓"; color:var(--bom)}
+.requisitos li.opcional::before{content:"·"; color:var(--fraco)}
+.requisitos strong{color:var(--osso); font-weight:600}
+.requisitos span{color:var(--fraco); font-size:.86rem; line-height:1.45}
+.requisitos li:not(.ok):not(.opcional){border-color:rgba(216,177,63,.35)}
+.requisitos code{font-size:.82rem; color:var(--ouro-claro); overflow-wrap:anywhere}
+.resumo-pronto{font-family:'Cinzel',serif; font-size:.64rem; letter-spacing:.2em; text-transform:uppercase; color:var(--fraco)}
+.resumo-pronto.ok{color:var(--bom)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;
+  animation-iteration-count:1!important; transition-duration:.01ms!important; scroll-behavior:auto!important}}

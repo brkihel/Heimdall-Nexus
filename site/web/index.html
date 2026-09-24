@@ -19,9 +19,7 @@
 <link rel="preload" as="image" href="/assets/heroi-1600.webp"
       imagesrcset="/assets/heroi-1024.webp 1024w, /assets/heroi-1600.webp 1600w, /assets/heroi-2560.webp 2560w"
       imagesizes="100vw">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Spectral:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/fontes/fontes.css">
 <style>
 :root{
   --breu:#05090d; --noite:#080e14; --carvao:#0d151d; --ardosia:#152029;
@@ -139,7 +137,7 @@ h2,h3{font-family:'Cinzel',Georgia,serif; color:var(--osso); line-height:1.25; m
   margin:2.2rem auto 0; width:min(100%, 650px);
   display:flex; align-items:stretch; flex-wrap:nowrap;
   background:linear-gradient(168deg, rgba(14,23,31,.82), color-mix(in srgb,var(--breu) 90%,transparent));
-  border:1px solid color-mix(in srgb,var(--ouro) 28%,transparent); border-radius:4px;
+  border:1px solid color-mix(in srgb,var(--ouro) 28%,transparent); border-radius:3px;
   box-shadow:0 26px 70px rgba(0,0,0,.72), 0 4px 18px rgba(0,0,0,.5),
              inset 0 1px 0 rgba(255,238,200,.08);
   backdrop-filter:blur(10px) saturate(.9); -webkit-backdrop-filter:blur(10px) saturate(.9);
@@ -370,7 +368,7 @@ body.tochas-acesas .tochas{opacity:1; transform:none}
 /* ---- os mods ---- */
 /* Aviso do Gale: e o caminho recomendado, entao pesa mais que a lista. */
 .gale{display:flex; align-items:center; gap:1.1rem; flex-wrap:wrap;
-  border:1px solid color-mix(in srgb,var(--ouro) 35%,transparent); border-radius:10px; padding:1.05rem 1.3rem;
+  border:1px solid color-mix(in srgb,var(--ouro) 35%,transparent); border-radius:3px; padding:1.05rem 1.3rem;
   background:linear-gradient(120deg, color-mix(in srgb,var(--ouro) 10%,transparent), rgba(12,20,27,.7) 55%);
   margin-bottom:1.1rem}
 .gale-icone{width:38px; height:38px; flex:none; color:var(--ouro);
@@ -390,7 +388,7 @@ body.tochas-acesas .tochas{opacity:1; transform:none}
   background:color-mix(in srgb,var(--ouro) 10%,transparent)}
 .botao-fantasma:active{box-shadow:none}
 
-.modcaixa{position:relative; border:1px solid var(--borda); border-radius:10px;
+.modcaixa{position:relative; border:1px solid var(--borda); border-radius:3px;
   overflow:hidden; background:linear-gradient(168deg,rgba(15,24,32,.9),color-mix(in srgb,var(--breu) 95%,transparent))}
 /* a sombra na base avisa que a lista continua abaixo */
 .modcaixa::after{content:""; position:absolute; left:0; right:0; bottom:0; height:38px;
@@ -400,14 +398,14 @@ body.tochas-acesas .tochas{opacity:1; transform:none}
 .modlista::-webkit-scrollbar{width:9px}
 .modlista::-webkit-scrollbar-track{background:color-mix(in srgb,var(--breu) 60%,transparent)}
 .modlista::-webkit-scrollbar-thumb{background:linear-gradient(180deg,var(--ouro),#7d6331);
-  border-radius:6px; border:2px solid color-mix(in srgb,var(--breu) 60%,transparent)}
+  border-radius:3px; border:2px solid color-mix(in srgb,var(--breu) 60%,transparent)}
 .modlinha{display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:.95rem;
   height:var(--alt); padding:0 1.05rem; text-decoration:none; color:inherit;
   border-bottom:1px solid color-mix(in srgb,var(--borda) 55%,transparent); transition:background .16s}
 .modlinha:last-child{border-bottom:none}
 .modlinha:hover{background:color-mix(in srgb,var(--ouro) 7%,transparent)}
 .modlinha:focus-visible{outline:2px solid var(--ouro-claro); outline-offset:-3px}
-.modcapa{width:48px; height:48px; border-radius:5px; flex:none; object-fit:cover;
+.modcapa{width:48px; height:48px; border-radius:3px; flex:none; object-fit:cover;
   border:1px solid var(--borda); background:#04080c}
 .modtxt{min-width:0}
 .modnome{display:block; font-family:'Cinzel',serif; font-size:.9rem; color:var(--osso);
@@ -460,7 +458,7 @@ body.tochas-acesas .tochas{opacity:1; transform:none}
 
 /* ---- guia de como entrar ---- */
 .porque{border-left:2px solid var(--ouro-fundo); background:color-mix(in srgb,var(--ouro) 6%,transparent);
-  padding:.9rem 1.1rem; border-radius:0 4px 4px 0; margin:0 0 1.6rem; font-size:.89rem}
+  padding:.9rem 1.1rem; border-radius:0 3px 3px 0; margin:0 0 1.6rem; font-size:.89rem}
 .porque strong{color:var(--ouro-claro); font-family:'Cinzel',serif; letter-spacing:.05em}
 .passos{list-style:none; counter-reset:passo; margin:0; padding:0}
 .passos li{counter-increment:passo; position:relative; padding:0 0 1.3rem 3.1rem; font-size:.91rem}
@@ -487,7 +485,7 @@ body.tochas-acesas .tochas{opacity:1; transform:none}
   padding:1.25rem; background:rgba(3,6,9,.86); backdrop-filter:blur(6px)}
 .ficha[open]{display:flex}
 .ficha-caixa{background:linear-gradient(168deg,rgba(20,31,41,.98),color-mix(in srgb,var(--breu) 99%,transparent));
-  border:1px solid color-mix(in srgb,var(--ouro) 30%,transparent); border-radius:4px; width:min(100%,720px);
+  border:1px solid color-mix(in srgb,var(--ouro) 30%,transparent); border-radius:3px; width:min(100%,720px);
   max-height:88svh; overflow:auto; box-shadow:0 30px 90px rgba(0,0,0,.8); position:relative}
 .ficha-topo{position:sticky; top:0; z-index:2; padding:1.5rem 1.6rem 1.1rem;
   background:linear-gradient(180deg,rgba(20,31,41,.99),rgba(16,25,34,.97));

@@ -8,11 +8,9 @@
 <meta property="og:site_name" data-identidade="nome" content="Seu Servidor">
 <link rel="icon" data-identidade="favicon" href="/marca/favicon.svg" type="image/svg+xml">
 <link rel="canonical" data-identidade="url" data-caminho="/cronicas/" href="/cronicas/">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Spectral:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/fontes/fontes.css">
 <style>
-:root{--breu:#05090d;--noite:#080e14;--carvao:#0d151d;--ardosia:#152029;--borda:#22313d;--borda-viva:#33475a;--osso:#e6e0d2;--texto:#b4bec7;--fraco:#78848f;--ouro:#c8a45c;--ouro-claro:#eeddb0;--brasa:#ff8b3d;--verde:#90c8a2;color-scheme:dark}
+:root{--breu:#05090d;--noite:#080e14;--carvao:#0d151d;--ardosia:#152029;--borda:#22313d;--borda-viva:#33475a;--osso:#e6e0d2;--texto:#b4bec7;--fraco:#78848f;--ouro:#c8a45c;--ouro-fundo:#7d6331;--ouro-claro:#eeddb0;--brasa:#ff8b3d;--verde:#90c8a2;color-scheme:dark}
 *{box-sizing:border-box}
 body{margin:0;background:var(--breu);color:var(--texto);font:16px/1.55 Spectral,Georgia,serif}
 a{color:var(--ouro-claro)}
@@ -34,21 +32,66 @@ h1{font-size:clamp(2.15rem,5vw,4.2rem);margin:.4rem 0 .65rem}
 .hero-numbers{display:flex;gap:1.5rem;flex-wrap:wrap;margin-top:1.45rem}
 .hero-numbers span{display:flex;align-items:baseline;gap:.4rem;color:var(--fraco);font-size:.83rem}
 .hero-numbers strong{color:var(--ouro-claro);font:600 1.35rem Cinzel,Georgia,serif}
-.clock-card{display:flex;align-items:center;gap:1rem;background:rgba(8,14,20,.8);border:1px solid rgba(200,164,92,.25);border-radius:16px;padding:1rem 1.2rem;min-width:270px}
-.clock-ring{width:80px;height:80px;flex:none;display:grid;place-items:center;border-radius:50%;background:conic-gradient(var(--ouro) calc(var(--cycle,0)*1%),var(--borda) 0);padding:5px}
-.clock-ring-inner{width:100%;height:100%;border-radius:50%;display:grid;place-items:center;background:var(--noite);font:600 .65rem Cinzel,Georgia,serif;color:var(--ouro-claro);text-align:center}
-.clock-card strong{display:block;color:var(--osso);font:600 1rem Cinzel,Georgia,serif}
-.clock-card small{display:block;color:var(--fraco);font-size:.78rem;margin-top:.2rem}
 .toolbar{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding:1.1rem 0}
 .toolbar label{display:flex;align-items:center;gap:.6rem;color:var(--fraco);font-size:.85rem}
-select{background:var(--carvao);color:var(--osso);border:1px solid var(--borda-viva);border-radius:8px;padding:.52rem .8rem;min-width:190px}
+select{background:var(--carvao);color:var(--osso);border:1px solid var(--borda-viva);border-radius:3px;padding:.52rem .8rem;min-width:190px}
 .toolbar-note{color:var(--fraco);font-size:.79rem}
 main{padding-bottom:5rem}
 .dashboard{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(300px,1fr);gap:1rem}
-.panel{position:relative;min-width:0;background:linear-gradient(155deg,rgba(21,32,41,.65),rgba(13,21,29,.98) 42%);border:1px solid var(--borda);border-radius:14px;padding:1.35rem}
-.panel::before,.panel::after{content:"";position:absolute;width:14px;height:14px;border-color:var(--ouro);pointer-events:none}
-.panel::before{left:5px;top:5px;border-left:1px solid;border-top:1px solid}
-.panel::after{right:5px;bottom:5px;border-right:1px solid;border-bottom:1px solid}
+.panel{position:relative;min-width:0;background:linear-gradient(168deg,rgba(21,32,41,.94),rgba(8,14,20,.97));border:1px solid var(--borda);border-radius:3px;padding:1.35rem;box-shadow:0 22px 60px rgba(0,0,0,.45)}
+/* Gold corner ornaments only on highlight panels (docs/PADROES-GENESISMODS.md) */
+.panel.ornado::before,.panel.ornado::after{content:"";position:absolute;width:16px;height:16px;border-color:var(--ouro);pointer-events:none}
+.panel.ornado::before{left:6px;top:6px;border-left:1px solid;border-top:1px solid}
+.panel.ornado::after{right:6px;bottom:6px;border-right:1px solid;border-bottom:1px solid}
+.divisor{display:flex;align-items:center;gap:14px;max-width:320px;margin:1.3rem 0 0}
+.divisor i{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--ouro-fundo))}
+.divisor i:last-child{background:linear-gradient(270deg,transparent,var(--ouro-fundo))}
+.divisor b{width:7px;height:7px;transform:rotate(45deg);border:1px solid var(--ouro)}
+/* ---- World atlas: the map is the protagonist ---- */
+.map-panel{grid-column:1/-1;padding:1.1rem}
+.map-head{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin:0 .25rem .9rem}
+.map-head h2{font-size:clamp(1.3rem,2.4vw,1.8rem);margin:.25rem 0 0}
+.map-mode{border:1px solid rgba(200,164,92,.45);color:var(--ouro-claro);font:600 .62rem Cinzel,Georgia,serif;letter-spacing:.16em;text-transform:uppercase;padding:.4rem .7rem;border-radius:3px}
+.atlas{position:relative;height:clamp(360px,62vh,720px);border:1px solid var(--borda-viva);border-radius:3px;overflow:hidden;background:#070d12;touch-action:none;user-select:none}
+.atlas svg{display:block;width:100%;height:100%;cursor:grab}
+.atlas svg.arrastando{cursor:grabbing}
+.atlas-image{image-rendering:auto}
+.world-disc{fill:#0b1117;stroke:var(--borda-viva);stroke-width:.6}
+.world-ring{fill:none;stroke:rgba(200,164,92,.12);stroke-width:.4;stroke-dasharray:2 3}
+.world-label{fill:var(--fraco);font:600 7px Cinzel,Georgia,serif;letter-spacing:.2em;text-anchor:middle}
+.atlas-float{position:absolute;background:rgba(8,14,20,.86);border:1px solid var(--borda-viva);border-radius:3px;backdrop-filter:blur(6px);box-shadow:0 10px 30px rgba(0,0,0,.45)}
+.atlas-bar{left:12px;top:12px;display:flex;flex-wrap:wrap;gap:.1rem;padding:.25rem;max-width:calc(100% - 150px)}
+.atlas-bar button,.atlas-zoom button{display:inline-flex;align-items:center;gap:.45rem;border:1px solid transparent;border-radius:3px;background:transparent;color:var(--fraco);padding:.45rem .65rem;cursor:pointer;font-size:.82rem}
+.atlas-bar button[aria-pressed=true]{color:var(--osso)}
+.atlas-bar button[aria-pressed=true] svg{color:var(--ouro)}
+.atlas-bar button:hover,.atlas-zoom button:hover{border-color:var(--borda-viva);color:var(--osso)}
+.atlas-bar svg{width:17px;height:17px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.atlas-clock{right:12px;top:12px;display:grid;justify-items:center;gap:.3rem;padding:.7rem .8rem .6rem;min-width:118px;text-align:center}
+.clock-ring{--cycle:0;width:70px;height:70px;display:grid;place-items:center;border-radius:50%;background:conic-gradient(var(--ouro) calc(var(--cycle)*1%),#3a4f63 0);padding:4px}
+.clock-ring-inner{width:100%;height:100%;border-radius:50%;display:grid;place-items:center;align-content:center;background:var(--noite);font:600 .6rem Cinzel,Georgia,serif;color:var(--ouro-claro);letter-spacing:.08em}
+.clock-ring-inner svg{width:18px;height:18px;fill:none;stroke:var(--ouro-claro);stroke-width:1.6;stroke-linecap:round}
+.atlas-clock strong{color:var(--osso);font-size:.82rem;font-weight:600}
+.atlas-clock small{color:var(--fraco);font-size:.7rem;line-height:1.3;max-width:120px}
+.atlas-zoom{right:12px;bottom:12px;display:flex;gap:.2rem;padding:.25rem}
+.atlas-zoom button{min-width:40px;min-height:40px;justify-content:center;color:var(--osso);font:600 .95rem Spectral,Georgia,serif}
+.atlas-scale{position:absolute;left:14px;bottom:14px;color:var(--osso);font-size:.72rem;text-shadow:0 1px 3px #000}
+.atlas-scale i{display:block;height:2px;background:var(--osso);box-shadow:0 1px 3px #000;margin-top:3px}
+.atlas-info{left:12px;bottom:46px;max-width:min(360px,calc(100% - 24px));padding:.75rem .9rem}
+.atlas-info .eyebrow{margin-bottom:.2rem}
+.atlas-info strong{display:block;color:var(--osso);font:600 .95rem Cinzel,Georgia,serif}
+.atlas-info small{display:block;color:var(--fraco);font-size:.76rem;margin-top:.2rem}
+.atlas-info button{position:absolute;right:.35rem;top:.3rem;border:0;background:none;color:var(--fraco);font-size:1.1rem;cursor:pointer;min-width:32px;min-height:32px}
+.map-note{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;color:var(--fraco);font-size:.78rem;margin:.6rem .25rem 0}
+.marker{cursor:pointer}
+.marker .base{fill:#0d151d;stroke-width:2}
+.marker use{color:var(--osso)}
+.marker.kill .base{stroke:var(--verde)}.marker.death .base{stroke:var(--brasa)}
+.marker.discover .base{stroke:#7fb6e0}.marker.other .base{stroke:var(--ouro)}
+.marker.boss .base{stroke:var(--ouro);stroke-width:2.4}.marker.boss use{color:var(--ouro-claro)}
+.marker.player .base{fill:var(--ouro-claro);stroke:var(--ouro)}.marker.player use{color:#1c1407}
+.marker:hover .base,.marker:focus .base,.marker.escolhido .base{stroke:var(--ouro-claro);stroke-width:3}
+.marker:focus{outline:none}
+.marker text{fill:var(--osso);font:600 9px Spectral,Georgia,serif;text-anchor:middle;paint-order:stroke;stroke:#05090d;stroke-width:3px}
 .section-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem}
 .section-head h2{font-size:1rem;margin:0}
 .section-head small{color:var(--fraco);font-size:.75rem}
@@ -78,13 +121,13 @@ main{padding-bottom:5rem}
 .badge.stars{border-color:var(--verde);color:var(--verde);background:rgba(144,200,162,.09)}
 .feats-panel{grid-column:1/-1}
 .feats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.7rem}
-.feat{display:block;text-align:left;border:1px solid rgba(200,164,92,.25);border-radius:10px;background:radial-gradient(circle at 95% 0,rgba(200,164,92,.12),transparent 55%),rgba(5,9,13,.5);color:var(--texto);padding:1rem;cursor:pointer}
+.feat{display:block;text-align:left;border:1px solid rgba(200,164,92,.25);border-radius:3px;background:radial-gradient(circle at 95% 0,rgba(200,164,92,.12),transparent 55%),rgba(5,9,13,.5);color:var(--texto);padding:1rem;cursor:pointer}
 .feat:hover{border-color:var(--ouro)}
 .feat strong{display:block;margin:.5rem 0 .2rem;color:var(--osso);font:600 .98rem Cinzel,Georgia,serif;overflow-wrap:anywhere}
 .feat small{display:block;color:var(--fraco);font-size:.76rem;line-height:1.35}
 .stories-panel{grid-column:1/-1}
 .story-list{display:grid;gap:.8rem}
-.story-card{border:1px solid rgba(200,164,92,.3);border-radius:12px;background:linear-gradient(135deg,rgba(200,164,92,.07),rgba(5,9,13,.4));padding:1rem 1.15rem}
+.story-card{border:1px solid rgba(200,164,92,.3);border-radius:3px;background:linear-gradient(135deg,rgba(200,164,92,.07),rgba(5,9,13,.4));padding:1rem 1.15rem}
 .story-card summary{cursor:pointer;list-style:none}
 .story-card summary::-webkit-details-marker{display:none}
 .story-card summary:focus-visible{outline:2px solid var(--ouro-claro);outline-offset:4px}
@@ -95,7 +138,7 @@ main{padding-bottom:5rem}
 .story-evidence strong{color:var(--ouro-claro);font:600 .71rem Cinzel,Georgia,serif}
 .story-evidence ul{margin:.5rem 0 0;padding-left:1.25rem;color:var(--fraco);font-size:.82rem}
 .viking-list{display:grid;gap:.55rem}
-.viking{display:flex;align-items:center;gap:.75rem;width:100%;text-align:left;border:1px solid var(--borda);border-radius:10px;background:rgba(5,9,13,.45);padding:.65rem .75rem;color:var(--texto);cursor:pointer}
+.viking{display:flex;align-items:center;gap:.75rem;width:100%;text-align:left;border:1px solid var(--borda);border-radius:3px;background:rgba(5,9,13,.45);padding:.65rem .75rem;color:var(--texto);cursor:pointer}
 .viking:hover,.viking[aria-pressed=true]{border-color:var(--ouro);background:rgba(200,164,92,.07)}
 .portrait{display:grid;place-items:center;flex:none;width:44px;height:44px;border:1px solid var(--ouro);border-radius:50%;font:600 1.05rem Cinzel,Georgia,serif;color:var(--ouro-claro);background:rgba(200,164,92,.08)}
 .viking strong{display:block;color:var(--osso)}
@@ -105,56 +148,63 @@ main{padding-bottom:5rem}
 .profile h3{font-size:.93rem;margin:0 0 .45rem}
 .profile p{color:var(--fraco);font-size:.84rem;margin:.3rem 0}
 .profile-stats{display:flex;gap:.5rem;flex-wrap:wrap;margin:.8rem 0}
-.profile-stats span{border:1px solid var(--borda);border-radius:8px;padding:.35rem .6rem;color:var(--fraco);font-size:.74rem}
+.profile-stats span{border:1px solid var(--borda);border-radius:3px;padding:.35rem .6rem;color:var(--fraco);font-size:.74rem}
 .profile-stats b{color:var(--osso)}
 .gear-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.45rem;margin-top:.7rem}
-.gear-list li{border:1px solid var(--borda);border-radius:8px;background:rgba(5,9,13,.35);padding:.55rem .65rem;min-width:0}
+.gear-list li{border:1px solid var(--borda);border-radius:3px;background:rgba(5,9,13,.35);padding:.55rem .65rem;min-width:0}
 .gear-list strong{display:block;color:var(--osso);font-size:.8rem;overflow-wrap:anywhere}
 .gear-list small{color:var(--fraco);font-size:.72rem}
-.map-panel{grid-column:1/-1}
-.map-tools{display:flex;gap:.35rem}
-.map-wrap.atlas svg{max-height:720px;aspect-ratio:1/1;margin:auto;min-height:0}
-.map-wrap.atlas{background:#05090d}
-.map-pin.discover circle{fill:#7fb6e0}
-.map-pin text{fill:var(--osso);font:600 11px Cinzel,Georgia,serif;paint-order:stroke;stroke:#05090d;stroke-width:3px}
 .timeline li.discover::before{background:#7fb6e0;box-shadow:0 0 0 4px rgba(127,182,224,.12)}
 .timeline .discover .event-type{color:#7fb6e0}
 .badge.discover{border-color:#7fb6e0;color:#bfe0f7;background:rgba(127,182,224,.1)}
 .badge.auto{border-color:var(--borda-viva);color:var(--fraco)}
-.map-intro{color:var(--fraco);font-size:.83rem;margin:-.3rem 0 1rem;max-width:75ch}
-.map-wrap{position:relative;border:1px solid var(--borda-viva);border-radius:10px;overflow:hidden;background:radial-gradient(circle at 50% 50%,rgba(200,164,92,.07),transparent 65%),#070f14}
-.map-wrap svg{display:block;width:100%;height:auto;min-height:230px}
-.map-grid line{stroke:var(--borda);stroke-width:1}
-.map-axis{fill:var(--fraco);font:12px Cinzel,Georgia,serif;letter-spacing:.12em}
-.map-pin circle{stroke:#061015;stroke-width:3}
-.map-pin.kill circle{fill:var(--verde)}
-.map-pin.boss circle{fill:var(--ouro-claro)}
-.map-pin.death circle{fill:var(--brasa)}
-.map-pin.other circle{fill:var(--ouro)}
-.map-pin.player circle{fill:var(--ouro-claro);stroke:var(--ouro);stroke-width:7}
-.map-legend{display:flex;gap:1rem;flex-wrap:wrap;color:var(--fraco);font-size:.76rem;margin:.75rem 0}
-.map-legend b{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:.35rem;background:var(--ouro-claro)}
-.map-legend .discover b{background:#7fb6e0}.map-legend .kill b{background:var(--verde)}.map-legend .death b{background:var(--brasa)}.map-legend .boss b{background:var(--ouro-claro)}
-.map-list{display:flex;gap:.5rem;flex-wrap:wrap}
-.map-list li{border:1px solid var(--borda);border-radius:7px;padding:.35rem .55rem;color:var(--texto);font-size:.73rem}
+.intro-texto{color:var(--fraco);font-size:.83rem;margin:-.3rem 0 1rem;max-width:75ch}
 .empty{color:var(--fraco);font-size:.84rem;padding:.6rem 0}
 #status{color:var(--fraco);font-size:.9rem}
 footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-size:.82rem}
-@media(max-width:820px){.dashboard{grid-template-columns:1fr}.hero .shell{grid-template-columns:1fr}.clock-card{width:max-content;max-width:100%}.feats{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:540px){header .shell{padding:1rem 0;align-items:flex-start;flex-direction:column}.hero-numbers{gap:.8rem 1rem}.panel{padding:1rem}.clock-card{min-width:0}.map-wrap svg{min-height:180px}.feats{grid-template-columns:1fr}}
+@media(max-width:820px){.dashboard{grid-template-columns:1fr}.hero .shell{grid-template-columns:1fr}.feats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:540px){header .shell{padding:1rem 0;align-items:flex-start;flex-direction:column}.hero-numbers{gap:.8rem 1rem}.panel{padding:1rem}.feats{grid-template-columns:1fr}.atlas{height:72vh}.atlas-bar{max-width:calc(100% - 24px)}.atlas-bar span{display:none}.atlas-clock{top:auto;bottom:62px;min-width:0;padding:.5rem}.atlas-clock small{display:none}.clock-ring{width:52px;height:52px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 </style>
 <link rel="stylesheet" href="/assets/tema.css">
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-kill" viewBox="0 0 24 24"><path d="M5 5l12 12M19 5L7 17M4 16l4 4M20 16l-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="i-death" viewBox="0 0 24 24"><path d="M12 4a7 7 0 0 0-7 7c0 2.4 1 3.7 2.5 4.6V19h9v-3.4C18 14.7 19 13.4 19 11a7 7 0 0 0-7-7zM10 19v-2M14 19v-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="9.3" cy="11.5" r="1.4" fill="currentColor"/><circle cx="14.7" cy="11.5" r="1.4" fill="currentColor"/></symbol>
+<symbol id="i-boss" viewBox="0 0 24 24"><path d="M12 21v-9M12 12L6 6M12 12l6-6M6 6V3M6 6H3M18 6V3M18 6h3M9 15l-4-2M15 15l4-2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+<symbol id="i-discover" viewBox="0 0 24 24"><path d="M12 3l2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></symbol>
+<symbol id="i-player" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6" fill="currentColor"/><path d="M5 20c.8-4 3.4-6 7-6s6.2 2 7 6" fill="currentColor"/></symbol>
+<symbol id="i-other" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="currentColor"/></symbol>
+</defs></svg>
 <header><div class="shell"><a href="/"><strong data-identidade="nome">Seu Servidor</strong></a><nav aria-label="Navegação"><a href="/">Início</a><a href="/wiki/">Wiki</a><a href="/cronicas/" aria-current="page">Crônicas</a></nav></div></header>
-<section class="hero"><div class="shell"><div><div class="eyebrow">Heimdall Nexus · Aventuras registradas</div><h1>Crônicas dos Vikings</h1><p>Momentos que os jogadores escolheram compartilhar. Os registros começam quando a extensão é ativada.</p><div class="hero-numbers"><span><strong id="count-vikings">—</strong> Vikings</span><span><strong id="count-online">—</strong> online</span><span><strong id="count-events">—</strong> momentos recentes</span></div></div><div class="clock-card"><div class="clock-ring" id="clock-ring" role="progressbar" aria-label="Progresso do ciclo do dia" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="clock-ring-inner" id="clock-percent">—</div></div><div><strong id="clock-day">Dia —</strong><small id="clock-note">Aguardando relógio</small></div></div></div></section>
+<section class="hero"><div class="shell"><div><div class="eyebrow">Heimdall Nexus · Aventuras registradas</div><h1>Crônicas dos Vikings</h1><p>Momentos que os jogadores escolheram compartilhar. Os registros começam quando a extensão é ativada.</p><div class="hero-numbers"><span><strong id="count-vikings">—</strong> Vikings</span><span><strong id="count-online">—</strong> online</span><span><strong id="count-events">—</strong> momentos recentes</span></div><div class="divisor" aria-hidden="true"><i></i><b></b><i></i></div></div></div></section>
 <div class="shell toolbar"><label for="world">Mundo <select id="world"></select></label><span class="toolbar-note">Atualização automática a cada 30 segundos</span></div>
 <main class="shell"><p id="status" role="status">Carregando as Crônicas…</p><div id="dashboard" class="dashboard" hidden>
+  <section class="panel map-panel" id="map-panel"><div class="map-head"><div><div class="eyebrow">Além da fogueira</div><h2>O mundo conhecido</h2></div><span class="map-mode" id="map-mode">Pontos registrados</span></div>
+  <div class="atlas" id="atlas">
+    <svg id="map" role="img" aria-labelledby="map-title"><title id="map-title">Mapa do mundo com locais compartilhados</title>
+      <g id="map-base"><circle class="world-disc" cx="256" cy="256" r="256"/><circle class="world-ring" cx="256" cy="256" r="48.8"/><circle class="world-ring" cx="256" cy="256" r="122"/><circle class="world-ring" cx="256" cy="256" r="195"/><text class="world-label" x="256" y="14">NORTE</text></g>
+      <image id="map-image" class="atlas-image" x="0" y="0" width="512" height="512" preserveAspectRatio="none" style="display:none"/>
+      <g id="map-pins"></g>
+    </svg>
+    <div class="atlas-float atlas-bar" role="toolbar" aria-label="Camadas do mapa">
+      <button type="button" data-layer="terrain" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14"/></svg><span>Terreno</span></button>
+      <button type="button" data-layer="vikings" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-4 3.4-6 7-6s6.2 2 7 6"/></svg><span>Vikings</span></button>
+      <button type="button" data-layer="moments" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21c-4 0-6-2.7-6-5.8 0-3.6 3-5.4 3.6-9.2 2.3 1.5 3.4 3.4 3.4 5.3 1-.7 1.7-1.8 1.9-3.2C17 10 18 12.4 18 15.2 18 18.3 16 21 12 21z"/></svg><span>Momentos</span></button>
+      <button type="button" data-layer="discoveries" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg><span>Descobertas</span></button>
+    </div>
+    <div class="atlas-float atlas-clock" id="clock"><div class="clock-ring" id="clock-ring" role="progressbar" aria-label="Progresso do ciclo do dia" aria-valuemin="0" aria-valuemax="100"><div class="clock-ring-inner"><svg viewBox="0 0 24 24" aria-hidden="true" id="clock-icon"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></svg><span id="clock-day">DIA —</span></div></div><strong id="clock-phase">Aguardando</strong><small id="clock-note">Relógio do mundo</small></div>
+    <div class="atlas-float atlas-info" id="atlas-info" role="status" hidden><button type="button" id="atlas-info-close" aria-label="Fechar detalhes">×</button><div class="eyebrow" id="atlas-info-kind"></div><strong id="atlas-info-title"></strong><small id="atlas-info-meta"></small></div>
+    <div class="atlas-float atlas-zoom"><button type="button" id="zoom-in" aria-label="Aproximar">+</button><button type="button" id="zoom-out" aria-label="Afastar">−</button><button type="button" id="zoom-fit">Ajustar</button></div>
+    <div class="atlas-scale" id="atlas-scale" aria-hidden="true"><span id="atlas-scale-label">1 km</span><i id="atlas-scale-bar"></i></div>
+  </div>
+  <div class="map-note"><span>Arraste para mover · role ou use + e − para aproximar · toque num marcador para ver o momento.</span><span id="map-intro">Pontos autorizados pelos jogadores.</span></div>
+  </section>
   <section class="panel"><div class="section-head"><h2>Momentos recentes</h2><div class="filters" aria-label="Filtrar momentos"><button class="filter" type="button" data-kind="all" aria-pressed="true">Todos</button><button class="filter" type="button" data-kind="kill" aria-pressed="false">Abates</button><button class="filter" type="button" data-kind="boss" aria-pressed="false">Chefes</button><button class="filter" type="button" data-kind="notable" aria-pressed="false">Marcantes</button><button class="filter" type="button" data-kind="discover" aria-pressed="false">Descobertas</button><button class="filter" type="button" data-kind="death" aria-pressed="false">Mortes</button><button class="filter" type="button" data-kind="other" aria-pressed="false">Outros</button></div></div><ol id="timeline" class="timeline"></ol></section>
   <aside class="panel"><div class="section-head"><h2>Vikings</h2><small>Escolha um perfil</small></div><div id="viking-empty" class="empty" hidden>Nenhum perfil compartilhado neste mundo.</div><ul id="vikings" class="viking-list"></ul><div id="profile" class="profile" hidden></div></aside>
-  <section class="panel feats-panel"><div class="section-head"><h2>Feitos recentes</h2><small>Entre os momentos mais recentes deste mundo</small></div><div id="feats-empty" class="empty" hidden>Chefes, elites e criaturas de 3 estrelas ou mais aparecerão aqui após um abate compartilhado.</div><div id="feats" class="feats"></div></section>
-  <section class="panel stories-panel" id="stories-panel" hidden><div class="section-head"><h2>Histórias ao redor da fogueira</h2><small>Ficção criada por IA a partir de momentos registrados</small></div><p class="map-intro">Cada capítulo é uma interpretação literária. Os registros citados abaixo mostram os fatos compartilhados que o inspiraram.</p><div id="stories-empty" class="empty" hidden>Nenhuma história escrita neste mundo ainda.</div><div id="stories" class="story-list"></div></section>
-  <section class="panel map-panel"><div class="section-head"><h2>Mapa do mundo</h2><div class="map-tools" id="map-tools" hidden><button class="filter" type="button" data-zoom="world" aria-pressed="true">Mundo</button><button class="filter" type="button" data-zoom="near" aria-pressed="false">Aproximar</button></div></div><p class="map-intro" id="map-intro">Pontos autorizados pelos jogadores.</p><div id="map-empty" class="empty" hidden>Nenhum local compartilhado para mostrar.</div><div id="map-content" hidden><div class="map-wrap" id="map-wrap"><svg id="map" viewBox="0 0 800 360" role="img" aria-labelledby="map-title"><title id="map-title">Mapa do mundo com locais compartilhados</title><image id="map-image" x="0" y="0" width="512" height="512" preserveAspectRatio="none" hidden/><g class="map-grid" id="map-grid"><line x1="200" y1="0" x2="200" y2="360"/><line x1="400" y1="0" x2="400" y2="360"/><line x1="600" y1="0" x2="600" y2="360"/><line x1="0" y1="90" x2="800" y2="90"/><line x1="0" y1="180" x2="800" y2="180"/><line x1="0" y1="270" x2="800" y2="270"/><text x="400" y="26" text-anchor="middle" class="map-axis">NORTE</text><text x="400" y="347" text-anchor="middle" class="map-axis">SUL</text></g><g id="map-pins"></g></svg></div><div class="map-legend"><span><b></b>Viking online</span><span class="boss"><b></b>Chefe</span><span class="discover"><b></b>Descoberta</span><span class="kill"><b></b>Abate</span><span class="death"><b></b>Morte</span></div><ul id="map-list" class="map-list"></ul></div></section>
+  <section class="panel feats-panel ornado"><div class="section-head"><h2>Feitos recentes</h2><small>Entre os momentos mais recentes deste mundo</small></div><div id="feats-empty" class="empty" hidden>Chefes, elites e criaturas de 3 estrelas ou mais aparecerão aqui após um abate compartilhado.</div><div id="feats" class="feats"></div></section>
+  <section class="panel stories-panel ornado" id="stories-panel" hidden><div class="section-head"><h2>Histórias ao redor da fogueira</h2><small>Ficção criada por IA a partir de momentos registrados</small></div><p class="intro-texto">Cada capítulo é uma interpretação literária. Os registros citados abaixo mostram os fatos compartilhados que o inspiraram.</p><div id="stories-empty" class="empty" hidden>Nenhuma história escrita neste mundo ainda.</div><div id="stories" class="story-list"></div></section>
 </div></main>
 <footer><div class="shell"><span data-identidade="rodape">Servidor comunitário de Valheim. Não somos afiliados à Iron Gate AB nem à Coffee Stain.</span></div></footer>
 <script>
@@ -181,7 +231,7 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
     }
     return event;
   }
-  let atlasKey = '', atlasImage = '', zoom = 'world';
+  let atlasKey = '', atlasImage = '';
   const biomes = {Meadows:'Pradarias',BlackForest:'Floresta Negra',Swamp:'Pântano',
     Mountain:'Montanhas',Plains:'Planícies',Mistlands:'Terras Nebulosas',
     AshLands:'Terras das Cinzas',DeepNorth:'Norte Profundo',Ocean:'Oceano'};
@@ -226,16 +276,18 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
     const known = current && current.day != null && current.fraction != null &&
       Number.isFinite(fraction);
     const percent = known ? Math.max(0, Math.min(100, Math.round(fraction * 100))) : 0;
+    $('clock').hidden = !known;
+    if (!known) return;
     $('clock-ring').style.setProperty('--cycle', percent);
-    if (known) $('clock-ring').setAttribute('aria-valuenow', String(percent));
-    else $('clock-ring').removeAttribute('aria-valuenow');
-    $('clock-ring').setAttribute('aria-valuetext', known ? percent + '% do ciclo' :
-      'Relógio não compartilhado');
-    $('clock-percent').textContent = known ? percent + '%' : '—';
-    $('clock-day').textContent = known ? 'Dia ' + current.day : 'Dia —';
-    const stale = known && current.clock_at && Date.now() / 1000 - current.clock_at > 120;
-    $('clock-note').textContent = !known ? 'Relógio não compartilhado' : stale ?
-      'Última leitura: ' + when(current.clock_at) : 'Ciclo do dia · ' + percent + '%';
+    $('clock-ring').setAttribute('aria-valuenow', String(percent));
+    // Valheim daylight runs from about a quarter to three quarters of the cycle.
+    const daylight = fraction >= 0.25 && fraction < 0.75;
+    $('clock-ring').setAttribute('aria-valuetext', percent + '% do ciclo, ' + (daylight ? 'de dia' : 'à noite'));
+    $('clock-day').textContent = 'DIA ' + current.day;
+    $('clock-phase').textContent = daylight ? 'Sol sobre Midgard' : 'Noite em Midgard';
+    const stale = current.clock_at && Date.now() / 1000 - current.clock_at > 120;
+    $('clock-note').textContent = stale ? 'Última leitura: ' + when(current.clock_at) :
+      daylight ? 'Anoitece aos 75% do ciclo' : 'Amanhece aos 25% do ciclo';
   }
   function renderWorlds(data) {
     const select = $('world');
@@ -394,81 +446,183 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
       proof.append(list);card.append(proof);box.append(card);
     }
   }
+  const WORLD = 512, METERS = 21000;
+  const layers = {terrain:true, vikings:true, moments:true, discoveries:true};
+  let view = null, fitted = false, selected = '';
+  function toMap(point) {
+    return [(point.x + METERS / 2) / METERS * WORLD, (METERS / 2 - point.z) / METERS * WORLD];
+  }
   function mapPoints() {
     const points = [];
     for (const event of payload.events) if (hasLocation(event)) {
-      points.push({x:event.x,z:event.z,kind:event.kind === 'discover' ? 'discover' :
-        event.boss ? 'boss' : event.kind,
-        label:(event.name || 'Viking') + ' ' + (labels[event.kind] || 'registrou') +
-          (event.target ? ' ' + event.target : '') +
-          (biomeName(event) ? ' · ' + biomeName(event) : '')});
+      const kind = event.kind === 'discover' ? 'discover' : event.boss ? 'boss' :
+        event.kind === 'kill' || event.kind === 'death' ? event.kind : 'other';
+      if (kind === 'discover' ? !layers.discoveries : !layers.moments) continue;
+      points.push({x:event.x, z:event.z, kind, id:'e' + event.id,
+        type:{discover:'Descoberta', boss:'Chefe derrotado', kill:'Abate', death:'Morte', other:'Momento'}[kind],
+        title:(event.name || 'Viking') + ' ' + (labels[event.kind] || 'registrou') +
+          (event.target ? ' ' + event.target : ''),
+        meta:when(event.occurred_at) + (biomeName(event) ? ' · ' + biomeName(event) : '')});
     }
-    for (const player of payload.players) if (player.online && hasLocation(player)) {
-      points.push({x:player.x,z:player.z,kind:'player',label:player.name + ' · online'});
+    if (layers.vikings) for (const player of payload.players) if (player.online && hasLocation(player)) {
+      points.push({x:player.x, z:player.z, kind:'player', id:'p' + player.id, type:'Viking online',
+        title:player.name || 'Viking', meta:'Posição compartilhada agora', label:player.name});
     }
     return points;
   }
+  function currentAtlas() {
+    return payload.atlas && atlasImage && atlasKey === payload.atlas.key ? payload.atlas : null;
+  }
+  function fitView(points) {
+    if (!points.length) return {cx:WORLD / 2, cy:WORLD / 2, size:WORLD};
+    const xy = points.map(toMap), xs = xy.map(p => p[0]), ys = xy.map(p => p[1]);
+    return {cx:(Math.min(...xs) + Math.max(...xs)) / 2, cy:(Math.min(...ys) + Math.max(...ys)) / 2,
+      size:Math.max(24, Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) * 1.6};
+  }
+  function applyView() {
+    const svg = $('map'), box = svg.getBoundingClientRect();
+    const aspect = box.width && box.height ? box.width / box.height : 1.6;
+    view.size = Math.max(6, Math.min(WORLD * 1.4, view.size));
+    const height = aspect >= 1 ? view.size : view.size / aspect;
+    const width = height * aspect;
+    svg.setAttribute('viewBox', [view.cx - width / 2, view.cy - height / 2, width, height].join(' '));
+    // Markers keep a constant on-screen size; 1 screen px = unit world units.
+    const unit = box.width ? width / box.width : width / 800;
+    for (const marker of $('map-pins').children)
+      marker.setAttribute('transform', 'translate(' + marker.dataset.x + ' ' + marker.dataset.y + ') scale(' + unit + ')');
+    const metersPerPixel = unit * METERS / WORLD;
+    const nice = [50, 100, 200, 500, 1000, 2000, 5000].find(m => m / metersPerPixel >= 70) || 5000;
+    $('atlas-scale-bar').style.width = Math.round(nice / metersPerPixel) + 'px';
+    $('atlas-scale-label').textContent = nice >= 1000 ? nice / 1000 + ' km' : nice + ' m';
+  }
+  function showInfo(point) {
+    selected = point ? point.id : '';
+    $('atlas-info').hidden = !point;
+    for (const marker of $('map-pins').children)
+      marker.classList.toggle('escolhido', marker.dataset.id === selected);
+    if (!point) return;
+    $('atlas-info-kind').textContent = point.type;
+    $('atlas-info-title').textContent = point.title;
+    $('atlas-info-meta').textContent = point.meta + ' · ' + coords(point);
+  }
   function renderMap() {
     const pins = $('map-pins');
-    const list = $('map-list');
     pins.replaceChildren();
-    list.replaceChildren();
     const points = mapPoints();
-    const atlas = payload.atlas && atlasImage && atlasKey === payload.atlas.key ? payload.atlas : null;
-    $('map-empty').hidden = points.length > 0 || !!atlas;
-    $('map-content').hidden = points.length === 0 && !atlas;
-    $('map-tools').hidden = !atlas || !points.length;
-    $('map-wrap').classList.toggle('atlas', !!atlas);
-    $('map-grid').style.display = atlas ? 'none' : '';
+    const atlas = currentAtlas();
     const image = $('map-image');
-    image.hidden = !atlas;
-    $('map-intro').textContent = !atlas ? 'Pontos autorizados pelos jogadores. O mapa de biomas aparece depois que a ponte o gerar ou quando o admin ativá-lo.' :
-      atlas.mode === 'full' ? 'Biomas do mundo inteiro, calculados a partir da semente do servidor.' :
-      'Terras conhecidas: o terreno aparece em volta dos locais que os Vikings compartilharam. O resto segue sob névoa.';
-    let project, radius, view;
-    if (atlas) {
-      if (image.getAttribute('href') !== atlasImage) image.setAttribute('href', atlasImage);
-      const scale = atlas.size / (atlas.edge * 2);
-      project = point => [(point.x + atlas.edge) * scale, (atlas.edge - point.z) * scale];
-      view = [0, 0, atlas.size];
-      if (zoom === 'near' && points.length) {
-        const xy = points.map(project);
-        const xs = xy.map(p => p[0]), ys = xy.map(p => p[1]);
-        const size = Math.max(48, Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) * 1.4;
-        view = [(Math.min(...xs) + Math.max(...xs) - size) / 2, (Math.min(...ys) + Math.max(...ys) - size) / 2, size];
-      }
-      $('map').setAttribute('viewBox', view.join(' ') + ' ' + view[2]);
-      radius = view[2] / 90;
-    } else {
-      $('map').setAttribute('viewBox', '0 0 800 360');
-      if (!points.length) return;
-      const xs = points.map(point => point.x);
-      const zs = points.map(point => point.z);
-      const centerX = (Math.min(...xs) + Math.max(...xs)) / 2;
-      const centerZ = (Math.min(...zs) + Math.max(...zs)) / 2;
-      const span = Math.max(300, Math.max(...xs) - Math.min(...xs),
-        Math.max(...zs) - Math.min(...zs)) * 1.25;
-      project = point => [400 + (point.x - centerX) / span * 650, 180 - (point.z - centerZ) / span * 270];
-      radius = 6;
-    }
+    // SVG elements ignore the HTML hidden property; toggle display instead.
+    image.style.display = atlas && layers.terrain ? '' : 'none';
+    if (atlas && image.getAttribute('href') !== atlasImage) image.setAttribute('href', atlasImage);
+    $('map-mode').textContent = !atlas ? 'Pontos registrados' :
+      atlas.mode === 'full' ? 'Mundo inteiro' : 'Terras conhecidas';
+    $('map-intro').textContent = !atlas ?
+      'O terreno aparece quando a ponte gerar o mapa e o admin escolher um modo no Jarl.' :
+      atlas.mode === 'full' ? 'Biomas calculados a partir da semente do mundo.' :
+      'O terreno aparece em volta dos locais compartilhados; o resto segue sob névoa.';
     for (const point of points) {
-      const [x, y] = project(point);
-      const group = document.createElementNS(svgNS, 'g');
-      group.setAttribute('class', 'map-pin ' + (['boss', 'kill', 'death', 'discover', 'player']
-        .includes(point.kind) ? point.kind : 'other'));
-      const circle = document.createElementNS(svgNS, 'circle');
-      circle.setAttribute('cx', String(x));
-      circle.setAttribute('cy', String(y));
-      circle.setAttribute('r', String(point.kind === 'player' ? radius * 1.35 : radius));
-      if (atlas) circle.setAttribute('stroke-width', String(radius / 3));
+      const [x, y] = toMap(point);
+      const marker = document.createElementNS(svgNS, 'g');
+      marker.setAttribute('class', 'marker ' + point.kind);
+      marker.setAttribute('tabindex', '0');
+      marker.setAttribute('role', 'button');
+      marker.setAttribute('aria-label', point.type + ': ' + point.title);
+      marker.dataset.x = x; marker.dataset.y = y; marker.dataset.id = point.id;
+      const base = document.createElementNS(svgNS, point.kind === 'boss' ? 'rect' : 'circle');
+      base.setAttribute('class', 'base');
+      if (point.kind === 'boss') {
+        for (const [k, v] of [['x', -13], ['y', -13], ['width', 26], ['height', 26], ['rx', 3]]) base.setAttribute(k, v);
+      } else base.setAttribute('r', point.kind === 'player' ? 12 : 11);
+      const icon = document.createElementNS(svgNS, 'use');
+      icon.setAttribute('href', '#i-' + point.kind);
+      for (const [k, v] of [['x', -7], ['y', -7], ['width', 14], ['height', 14]]) icon.setAttribute(k, v);
       const title = document.createElementNS(svgNS, 'title');
-      title.textContent = point.label + ' · ' + coords(point);
-      group.append(circle, title);
-      pins.append(group);
+      title.textContent = point.title;
+      marker.append(base, icon, title);
+      if (point.label) {
+        const text = document.createElementNS(svgNS, 'text');
+        text.setAttribute('y', 24); text.textContent = point.label;
+        marker.append(text);
+      }
+      const open = () => showInfo(point);
+      marker.addEventListener('click', event => { event.stopPropagation(); open(); });
+      marker.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); }
+      });
+      pins.append(marker);
     }
-    for (const point of points.slice(0, 8))
-      list.append(element('li', point.label + ' · ' + coords(point)));
+    if (!view || !fitted) {
+      view = fitView(points);
+      fitted = points.length > 0 || !!atlas;
+    }
+    applyView();
+    const still = points.find(point => point.id === selected);
+    showInfo(still || null);
   }
+  function zoomAt(factor, cx, cy) {
+    if (!view) return;
+    if (cx != null) {
+      view.cx = cx + (view.cx - cx) * factor;
+      view.cy = cy + (view.cy - cy) * factor;
+    }
+    view.size *= factor;
+    applyView();
+  }
+  function svgPoint(event) {
+    const svg = $('map'), box = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+    return [vb.x + (event.clientX - box.left) / box.width * vb.width,
+      vb.y + (event.clientY - box.top) / box.height * vb.height];
+  }
+  (() => {
+    const svg = $('map');
+    let drag = null;
+    svg.addEventListener('pointerdown', event => {
+      if (!view || event.target.closest('.marker')) return;
+      drag = {x:event.clientX, y:event.clientY, cx:view.cx, cy:view.cy, moved:false};
+      svg.setPointerCapture(event.pointerId);
+      svg.classList.add('arrastando');
+    });
+    svg.addEventListener('pointermove', event => {
+      if (!drag) return;
+      const vb = svg.viewBox.baseVal, box = svg.getBoundingClientRect();
+      const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
+      if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
+      view.cx = drag.cx - dx * vb.width / box.width;
+      view.cy = drag.cy - dy * vb.height / box.height;
+      applyView();
+    });
+    const end = () => {
+      if (drag && !drag.moved) showInfo(null);
+      drag = null; svg.classList.remove('arrastando');
+    };
+    svg.addEventListener('pointerup', end);
+    svg.addEventListener('pointercancel', end);
+    svg.addEventListener('wheel', event => {
+      if (!view) return;
+      event.preventDefault();
+      const [x, y] = svgPoint(event);
+      zoomAt(event.deltaY > 0 ? 1.25 : 0.8, x, y);
+    }, {passive:false});
+    $('zoom-in').addEventListener('click', () => zoomAt(0.7));
+    $('zoom-out').addEventListener('click', () => zoomAt(1.4));
+    $('zoom-fit').addEventListener('click', () => {
+      if (!payload) return;
+      const points = mapPoints();
+      view = points.length ? fitView(points) : {cx:WORLD / 2, cy:WORLD / 2, size:WORLD};
+      applyView();
+    });
+    $('atlas-info-close').addEventListener('click', () => showInfo(null));
+    // Re-measure when the map first becomes visible or changes size.
+    if (window.ResizeObserver) new ResizeObserver(() => { if (view) applyView(); }).observe($('atlas'));
+    else window.addEventListener('resize', () => { if (view) applyView(); });
+    for (const button of document.querySelectorAll('[data-layer]')) {
+      button.addEventListener('click', () => {
+        layers[button.dataset.layer] = !layers[button.dataset.layer];
+        button.setAttribute('aria-pressed', String(layers[button.dataset.layer]));
+        if (payload) renderMap();
+      });
+    }
+  })();
   function render(data) {
     data.events.forEach(friendly);
     payload = data;
@@ -482,6 +636,7 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
     renderVikings();
     renderFeats();
     renderStories();
+    $('dashboard').hidden = false;
     renderMap();
     $('dashboard').hidden = false;
     $('status').hidden = true;
@@ -527,14 +682,6 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
     chosen = '';
     load();
   });
-  for (const button of document.querySelectorAll('[data-zoom]')) {
-    button.addEventListener('click', () => {
-      zoom = button.dataset.zoom;
-      for (const other of document.querySelectorAll('[data-zoom]'))
-        other.setAttribute('aria-pressed', String(other === button));
-      if (payload) renderMap();
-    });
-  }
   for (const button of document.querySelectorAll('.filter[data-kind]')) {
     button.addEventListener('click', () => {
       filter = button.dataset.kind;

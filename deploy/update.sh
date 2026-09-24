@@ -65,6 +65,9 @@ done
 for asset in vivo.js modpack.js mod-placeholder.svg; do
   install -D -m 0640 -o root -g "$PANEL_OS_USER" "$RUNTIME/site/web/assets/$asset" "$SITE_DIR/assets/$asset"
 done
+for font in "$RUNTIME"/site/web/assets/fontes/*; do
+  install -D -m 0640 -o root -g "$PANEL_OS_USER" "$font" "$SITE_DIR/assets/fontes/$(basename "$font")"
+done
 for template in "$RUNTIME"/site/web/modelos-pagina/*.html; do
   target="$SITE_DIR/modelos-pagina/$(basename "$template")"
   [[ -e "$target" ]] || install -D -m 0640 -o root -g "$PANEL_OS_USER" "$template" "$target"
@@ -77,7 +80,7 @@ install -D -m 0640 -o root -g "$PANEL_OS_USER" "$RUNTIME/site/web/cronicas.html"
 
 echo "Publishing the site…"
 HEIMDALL_WEB_DIR="$WEB_ROOT" HEIMDALL_WEB_USER=www-data HEIMDALL_WEB_BACKUP_DIR=/var/backups/heimdall-web \
-  HEIMDALL_SITE_DIR="$SITE_DIR" python3 "$SITE_DIR/publicar.py" vivo modpack-ui cronicas tema marca sitemap robots
+  HEIMDALL_SITE_DIR="$SITE_DIR" python3 "$SITE_DIR/publicar.py" vivo modpack-ui fontes cronicas tema marca sitemap robots
 
 echo "Restarting the panel…"
 systemctl restart heimdall-executor.service heimdall-panel.service

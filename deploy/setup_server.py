@@ -25,7 +25,10 @@ import quick_tunnel
 ASSETS = Path(__file__).with_name('setup')
 CONTENT = {'/': ('index.html', 'text/html; charset=utf-8'),
            '/style.css': ('style.css', 'text/css; charset=utf-8'),
-           '/app.js': ('app.js', 'application/javascript; charset=utf-8')}
+           '/app.js': ('app.js', 'application/javascript; charset=utf-8'),
+           '/fontes/fontes.css': ('fontes/fontes.css', 'text/css; charset=utf-8'),
+           **{f'/fontes/{font.name}': (f'fontes/{font.name}', 'font/woff2')
+              for font in (Path(__file__).with_name('setup') / 'fontes').glob('*.woff2')}}
 
 
 class InstallState:

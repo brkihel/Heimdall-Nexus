@@ -136,7 +136,7 @@ def main(argv: list[str]) -> int:
         pub.retirar(argv[1])
         return 0
     lista = paginas()
-    conhecidos = [*lista, *FIXOS, 'tema', 'marca', 'assets', 'sitemap', 'robots']
+    conhecidos = [*lista, *FIXOS, 'tema', 'marca', 'fontes', 'assets', 'sitemap', 'robots']
     alvos = argv or conhecidos
     desconhecidos = [a for a in alvos if a not in conhecidos]
     if desconhecidos:
@@ -161,6 +161,8 @@ def main(argv: list[str]) -> int:
             pub.escrever('assets/tema.css', identidade.tema_css(ident).encode(), alvo)
         elif alvo == 'marca':
             pub.copiar_pasta(BASE / identidade.MARCA_DIR, 'marca', alvo)
+        elif alvo == 'fontes':
+            pub.copiar_pasta(BASE / 'assets/fontes', 'assets/fontes', alvo)
         elif alvo == 'assets':
             pub.copiar_pasta(BASE / 'assets', 'assets', alvo)
         elif alvo == 'sitemap':

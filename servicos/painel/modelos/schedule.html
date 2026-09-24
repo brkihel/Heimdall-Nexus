@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block titulo %}Tarefas{% endblock %}
 {% block corpo %}
-<div class="topo"><h1>Tarefas</h1><div class="acoes"><button class="btn bom" id="novo">Criar rotina</button></div></div>
+<div class="topo"><h1>Tarefas</h1><div class="acoes"><button class="btn principal" id="novo">Criar rotina</button></div></div>
 <p class="dica-rotinas">Uma rotina roda no horário escolhido e executa suas tarefas na ordem. Os horários seguem o fuso da máquina.</p>
 <div id="lista" class="cartao">Carregando…</div>
 <div id="formulario" class="cartao" hidden>
@@ -24,7 +24,7 @@
   <div id="tarefas"></div>
   <p id="sem-tarefas" class="dica-rotinas">Nenhuma tarefa ainda. Use “Adicionar tarefa” para escolher o que esta rotina faz.</p>
   <button class="btn" id="adicionar">+ Adicionar tarefa</button>
-  <div class="acoes rodape-form"><button class="btn bom" id="salvar">Salvar rotina</button><button class="btn" id="cancelar">Cancelar</button></div>
+  <div class="acoes rodape-form"><button class="btn principal" id="salvar">Salvar rotina</button><button class="btn" id="cancelar">Cancelar</button></div>
 </div>
 <p id="mensagem" role="status"></p>
 <style>
@@ -34,10 +34,10 @@
 .campos-cron{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.5rem;max-width:520px}
 .campos-cron label{display:grid;gap:.25rem;font-size:.72rem;color:var(--fraco);min-width:0}
 .campos-cron input{min-width:0;text-align:center;font-family:ui-monospace,monospace}
-#formulario input[type=text],#formulario input[type=number],#formulario select{width:100%;box-sizing:border-box;background:#04080c;color:var(--texto);border:1px solid var(--borda);border-radius:6px;padding:.45rem .55rem;font-size:.85rem}
+#formulario input[type=text],#formulario input[type=number],#formulario select{width:100%;box-sizing:border-box;background:#04080c;color:var(--texto);border:1px solid var(--borda);border-radius:3px;padding:.45rem .55rem;font-size:.85rem}
 .dica-rotinas{color:var(--fraco);font-size:.8rem;margin:.5rem 0}
 .alavancas{display:flex;flex-wrap:wrap;gap:.8rem 1.6rem;margin-top:1rem}
-.passo-rotina{display:grid;grid-template-columns:1.6rem minmax(0,1fr) auto auto;gap:.6rem;align-items:center;padding:.6rem .7rem;margin:.4rem 0;border:1px solid var(--borda);border-radius:8px;background:rgba(4,8,12,.5)}
+.passo-rotina{display:grid;grid-template-columns:1.6rem minmax(0,1fr) auto auto;gap:.6rem;align-items:center;padding:.6rem .7rem;margin:.4rem 0;border:1px solid var(--borda);border-radius:3px;background:rgba(4,8,12,.5)}
 .passo-rotina .ordem{color:var(--fraco);font-variant-numeric:tabular-nums}
 .passo-rotina .atraso{display:flex;align-items:center;gap:.4rem;font-size:.75rem;color:var(--fraco);white-space:nowrap}
 .passo-rotina .atraso input{width:4.6rem}

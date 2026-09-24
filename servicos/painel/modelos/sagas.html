@@ -4,7 +4,7 @@
 <style>
 .sagas-opcoes{display:grid;gap:.65rem;margin:1rem 0 1.25rem}
 .sagas-opcao{display:flex;align-items:center;justify-content:space-between;gap:1.2rem;
-  padding:.9rem 1rem;border:1px solid var(--borda);border-radius:10px;
+  padding:.9rem 1rem;border:1px solid var(--borda);border-radius:3px;
   background:rgba(5,9,13,.38);cursor:pointer}
 .sagas-opcao:hover{border-color:var(--borda-viva)}
 .sagas-opcao.principal{border-color:rgba(200,164,92,.35);background:rgba(200,164,92,.05)}
@@ -19,13 +19,13 @@
 .sagas-opcao input:checked+.sagas-trilho::after{transform:translateX(20px);background:var(--ouro-claro)}
 .sagas-opcao input:focus-visible+.sagas-trilho{outline:2px solid var(--ouro-claro);outline-offset:3px}
 .sagas-opcao input:disabled+.sagas-trilho{opacity:.5}
-.sagas-filtro{margin:-.35rem 0 .15rem;padding:.9rem 1rem 1rem;border:1px solid var(--borda);border-radius:10px;background:rgba(5,9,13,.22)}
+.sagas-filtro{margin:-.35rem 0 .15rem;padding:.9rem 1rem 1rem;border:1px solid var(--borda);border-radius:3px;background:rgba(5,9,13,.22)}
 .sagas-filtro legend{padding:0 .35rem;color:var(--osso);font-family:'Cinzel',serif;font-size:.78rem}
 .sagas-filtro p{margin:.25rem 0 .8rem;color:var(--fraco);font-size:.84rem}
 .sagas-modos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.55rem}
 .sagas-modo{display:block;cursor:pointer}
 .sagas-modo input{position:absolute;opacity:0;width:1px;height:1px}
-.sagas-modo span{display:block;height:100%;padding:.7rem .8rem;border:1px solid var(--borda);border-radius:8px;background:rgba(5,9,13,.38)}
+.sagas-modo span{display:block;height:100%;padding:.7rem .8rem;border:1px solid var(--borda);border-radius:3px;background:rgba(5,9,13,.38)}
 .sagas-modo strong{display:block;color:var(--osso);font-size:.84rem}
 .sagas-modo small{display:block;margin-top:.25rem;color:var(--fraco);font-size:.79rem;line-height:1.35}
 .sagas-modo input:checked+span{border-color:var(--ouro);background:rgba(200,164,92,.12)}
@@ -36,7 +36,7 @@
 #feedback{margin-left:.7rem;font-size:.86rem}
 .story-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.85rem;margin:1rem 0}
 .story-field{display:grid;gap:.3rem;color:var(--osso);font-size:.84rem}
-.story-field input,.story-field select{width:100%;min-width:0;padding:.65rem .75rem;border:1px solid var(--borda-viva);border-radius:8px;background:rgba(5,9,13,.55);color:var(--osso)}
+.story-field input,.story-field select{width:100%;min-width:0;padding:.65rem .75rem;border:1px solid var(--borda-viva);border-radius:3px;background:rgba(5,9,13,.55);color:var(--osso)}
 .story-actions{display:flex;gap:.55rem;align-items:center;flex-wrap:wrap;margin:.75rem 0}
 .story-note{color:var(--fraco);font-size:.84rem;line-height:1.5}
 .story-check{display:flex;align-items:center;gap:.55rem;color:var(--texto);font-size:.85rem}
@@ -56,10 +56,10 @@
   <div class="medidor"><b id="events-count">—</b><small>eventos</small></div>
   <div class="medidor"><b id="queued">—</b><small>aguardando importação</small></div>
 </div>
-<div class="cartao"><h2>Componentes</h2>
-  <p class="sagas-estado" id="bridge">Ponte: verificando…</p>
-  <p class="sagas-estado" id="ingest">Importação: verificando…</p>
-  <p>O jogador precisa do Heimdall Sagas Client no modpack e deve ativar o compartilhamento no BepInEx. Cliente e ponte devem usar a mesma versão do protocolo.</p>
+<div class="cartao"><h2>Para funcionar: Crônicas</h2>
+  <p class="resumo-pronto" id="req-cronicas-resumo">Verificando…</p>
+  <ul class="requisitos" id="req-cronicas" aria-live="polite"></ul>
+  <p class="sagas-estado" id="bridge" hidden></p><p class="sagas-estado" id="ingest"></p>
 </div>
 <div class="cartao"><h2>Módulos</h2>
   <p>Desativar um módulo interrompe novos registros e oculta os dados já guardados até ele ser reativado. A ponte lê mudanças em até 30 segundos.</p>
@@ -75,7 +75,15 @@
         <label class="sagas-modo"><input type="radio" name="kill_mode" value="bosses"><span><strong>Só chefes</strong><small>Mostra apenas abates de chefes.</small></span></label>
       </div>
     </fieldset>
-    <fieldset class="sagas-filtro" id="map-filter"><legend>Mapa do mundo nas Crônicas</legend>
+    <label class="sagas-opcao"><span><strong>Dia do mundo</strong><small>Mostra o dia e o horário do mundo informado pela ponte.</small></span><input type="checkbox" id="clock"><span class="sagas-trilho" aria-hidden="true"></span></label>
+  </div>
+  <button class="btn principal" id="save" type="button" disabled>Salvar opções</button>
+  <span id="feedback" role="status"></span>
+</div>
+<div class="cartao"><h2>Mapa do mundo</h2>
+  <p class="resumo-pronto" id="req-mapa-resumo">Verificando…</p>
+  <ul class="requisitos" id="req-mapa" aria-live="polite"></ul>
+  <fieldset class="sagas-filtro" id="map-filter"><legend>O que mostrar nas Crônicas</legend>
       <p>O mapa de biomas é calculado pela ponte a partir da semente do mundo, uma vez por reinício do servidor.</p>
       <div class="sagas-modos">
         <label class="sagas-modo"><input type="radio" name="map_mode" value="off"><span><strong>Sem mapa</strong><small>Mostra só os pontos registrados, sem terreno.</small></span></label>
@@ -83,12 +91,11 @@
         <label class="sagas-modo"><input type="radio" name="map_mode" value="full"><span><strong>Mundo inteiro</strong><small>Revela todos os biomas. Pode estragar a exploração dos jogadores.</small></span></label>
       </div>
     </fieldset>
-    <label class="sagas-opcao"><span><strong>Dia do mundo</strong><small>Mostra o dia e o horário do mundo informado pela ponte.</small></span><input type="checkbox" id="clock"><span class="sagas-trilho" aria-hidden="true"></span></label>
-  </div>
-  <button class="btn" id="save" type="button" disabled>Salvar opções</button>
-  <span id="feedback" role="status"></span>
+  <div class="story-actions"><button class="btn principal" id="map-save" type="button">Salvar mapa</button><span id="map-feedback" role="status"></span></div>
 </div>
-<div class="cartao"><h2>Histórias dos Vikings</h2>
+<div class="cartao ornado"><h2>Histórias dos Vikings</h2>
+  <p class="resumo-pronto" id="req-historias-resumo">Verificando…</p>
+  <ul class="requisitos" id="req-historias" aria-live="polite"></ul>
   <p class="story-note">O Nexus escreve capítulos a partir de eventos dos jogadores que ativaram ShareStories no BepInEx. Nome e descrição dos eventos vão ao provedor escolhido; coordenadas, IDs internos e equipamentos não vão.</p>
   <div class="sagas-opcoes">
     <label class="sagas-opcao principal"><span><strong>Histórias ativas</strong><small>Mostra os capítulos nas Crônicas e permite gerar novos.</small></span><input type="checkbox" id="story-enabled"><span class="sagas-trilho" aria-hidden="true"></span></label>
@@ -105,7 +112,7 @@
     <label class="story-field">Capítulos por dia (UTC)<input id="story-limit" type="number" min="1" max="20" value="3"></label>
   </div>
   <p class="story-note" id="story-provider-note"></p>
-  <div class="story-actions"><button class="btn" id="story-save" type="button">Salvar histórias</button><span id="story-config-feedback" role="status"></span></div>
+  <div class="story-actions"><button class="btn principal" id="story-save" type="button">Salvar histórias</button><span id="story-config-feedback" role="status"></span></div>
   <div class="story-grid">
     <label class="story-field"><span id="story-key-label">Chave da API</span><input id="story-key" type="password" maxlength="256" autocomplete="new-password"></label>
     <label class="story-field">Gerar capítulo agora para<select id="story-target"><option value="">Carregando mundos…</option></select></label>
@@ -136,13 +143,55 @@ function sagasShow(d){
     !d.importer_timer_active?'Importação parada':d.storage_error?'Banco indisponível':
     d.installed?'Extensão ativa':'Aguardando dados';
   state.className='pastilha '+(d.settings.enabled&&d.bridge&&d.importer_timer_active&&!d.storage_error?'viva':'meio');
-  document.getElementById('bridge').textContent='Ponte: '+(d.bridge?'arquivo instalado no servidor':'arquivo não encontrado no servidor');
-  const ingest=document.getElementById('ingest');
-  ingest.textContent='Importação: '+(d.importer_timer_active?'timer ativo':'timer parado')+
-    (d.storage_error?' · banco de dados indisponível':d.installed?' · banco disponível':' · aguardando primeiro ciclo')+
-    ' · '+d.queued+' pendente(s), '+d.rejected+' rejeitado(s).';
-  ingest.classList.toggle('erro',d.storage_error||!d.importer_timer_active);
+  sagasStatus=d;
+  const recent=d.last_data_at&&Date.now()/1000-d.last_data_at<300;
+  const ago=d.last_data_at?Math.max(0,Math.round((Date.now()/1000-d.last_data_at)/60)):null;
+  requirements('req-cronicas',[
+    [d.bridge,'Ponte instalada no servidor do jogo',d.bridge?'':'Na máquina do Nexus, dentro da pasta do Heimdall, rode:',
+      'sudo ./deploy/install-sagas-extension.sh "$PWD/dist/sagas/HeimdallSagas.Bridge.dll" && sudo systemctl restart heimdall-valheim'],
+    [d.importer_timer_active&&!d.storage_error,'Importação ativa',d.importer_timer_active&&!d.storage_error?d.queued+' registro(s) aguardando, '+d.rejected+' rejeitado(s).':d.storage_error?'O banco das Crônicas não abriu. Rode sudo ./deploy/update.sh e recarregue esta página.':
+      'O serviço que lê a fila da ponte está parado. Rode o mesmo instalador da ponte (linha acima) para reativá-lo.'],
+    [d.settings.enabled,'Extensão ligada aqui no Jarl',d.settings.enabled?'':'Ligue “Extensão ativa” em Módulos e clique em Salvar opções.'],
+    [recent,'Ponte enviando dados',recent?'Último dado há '+ago+' min.':(d.last_data_at?'Último dado há '+ago+' min. ':'Nenhum dado recebido ainda. ')+
+      'Confira se o servidor Valheim está ligado. No log do servidor deve aparecer “Heimdall Sagas”: sudo journalctl -u heimdall-valheim | grep "Heimdall Sagas"'],
+    [d.profiles>0,'Pelo menos um jogador compartilhando',d.profiles>0?d.profiles+' Viking(s) compartilham o perfil.':
+      'Cada jogador instala o Heimdall Sagas Client (arquivo dist/sagas/HeimdallSagas.Client-0.1.4.zip do Nexus, arrastado no Gale/r2modman), abre o jogo uma vez e, em BepInEx/config/gg.heimdall.sagas.client.cfg, muda ShareProfile para true.'],
+  ]);
+  requirements('req-mapa',[
+    [d.settings.enabled,'Extensão ligada',d.settings.enabled?'':'Ligue “Extensão ativa” em Módulos.'],
+    [d.atlas>0,'Mapa de biomas gerado pela ponte',d.atlas>0?'Pronto para '+d.atlas+' mundo(s).':
+      'A ponte gera o mapa uma vez, logo depois que o Valheim inicia com a extensão ligada. Reinicie o servidor e aguarde cerca de 1 minuto.'],
+    [(d.settings.map_mode||'explored')!=='off','Modo do mapa escolhido',(d.settings.map_mode||'explored')!=='off'?'':'Escolha “Terras conhecidas” ou “Mundo inteiro” abaixo e salve.'],
+    [(d.settings.map_mode==='full')||d.map_players>0,'Jogadores compartilhando locais',
+      d.settings.map_mode==='full'?'Não é necessário no modo Mundo inteiro.':d.map_players>0?d.map_players+' Viking(s) compartilham o mapa.':
+      'No modo Terras conhecidas, o terreno só aparece em volta de locais compartilhados. O jogador liga ShareMap em BepInEx/config/gg.heimdall.sagas.client.cfg.'],
+  ]);
+  if(storyData)storyRequirements();
   document.getElementById('save').disabled=false;
+}
+let sagasStatus=null,storyData=null;
+function requirements(id,items){
+  const list=document.getElementById(id);list.replaceChildren();
+  for(const [ok,title,help,command] of items){
+    const li=document.createElement('li');if(ok)li.className='ok';
+    const strong=document.createElement('strong');strong.textContent=title;
+    const span=document.createElement('span');
+    span.textContent=help||(ok?'Pronto.':'');
+    if(!ok){if(command){const code=document.createElement('code');code.textContent=command;span.append(document.createElement('br'),code);}}
+    li.append(strong,span);list.append(li);
+  }
+  const missing=items.filter(item=>!item[0]).length;
+  const summary=document.getElementById(id+'-resumo');
+  summary.textContent=missing?'Falta '+missing+' de '+items.length+' passo(s)':
+    (list.dataset.aberto?'Tudo pronto · ocultar detalhes':'Tudo pronto · ver detalhes');
+  summary.classList.toggle('ok',!missing);
+  // Progressive disclosure: a finished checklist collapses to one line.
+  list.hidden=!missing&&!list.dataset.aberto;
+  summary.style.cursor=missing?'':'pointer';
+  summary.onclick=missing?null:()=>{
+    if(list.dataset.aberto)delete list.dataset.aberto;else list.dataset.aberto='1';
+    requirements(id,items);
+  };
 }
 function sagasSyncFilter(){
   const disabled=!document.getElementById('events').checked;
@@ -165,12 +214,12 @@ async function sagasLoad(){
   }
 }
 sagasLoad();
-document.getElementById('save').addEventListener('click',async()=>{
+async function sagasSave(feedbackId,buttonId){
   const data={};for(const k of sagasKeys)data[k]=document.getElementById(k).checked;
   data.kill_mode=document.querySelector('input[name="kill_mode"]:checked')?.value||'all';
   data.map_mode=document.querySelector('input[name="map_mode"]:checked')?.value||'explored';
-  const feedback=document.getElementById('feedback');feedback.textContent='Salvando…';
-  const button=document.getElementById('save');button.disabled=true;
+  const feedback=document.getElementById(feedbackId);feedback.textContent='Salvando…';
+  const button=document.getElementById(buttonId);button.disabled=true;
   try{
     const response=await fetch(sagasPost,{method:'POST',headers:{'Content-Type':'application/json'},
       credentials:'same-origin',body:JSON.stringify(data)});
@@ -182,7 +231,9 @@ document.getElementById('save').addEventListener('click',async()=>{
     feedback.textContent=await sagasLoad()?'Opções salvas.':'Opções salvas; não foi possível atualizar o estado.';
   }catch(error){feedback.textContent=error.message||'Falha ao salvar';}
   finally{button.disabled=false;}
-});
+}
+document.getElementById('save').addEventListener('click',()=>sagasSave('feedback','save'));
+document.getElementById('map-save').addEventListener('click',()=>sagasSave('map-feedback','map-save'));
 async function storyPost(action,data){
   const response=await fetch(storyApi,{method:'POST',headers:{'Content-Type':'application/json'},
     credentials:'same-origin',body:JSON.stringify({action,...data})});
@@ -201,6 +252,21 @@ const storyProviders={
     note:'A assinatura do Claude (Pro/Max) não inclui a API. Crie a chave e adicione créditos em console.anthropic.com.'}
 };
 let storyKeys={};
+function storyRequirements(){
+  const data=storyData,provider=storyProviders[data.config.provider];
+  const sharers=data.worlds.reduce((total,world)=>total+world.players.length,0);
+  requirements('req-historias',[
+    [data.config.enabled,'Histórias ligadas',data.config.enabled?'':'Ligue “Histórias ativas” abaixo e clique em Salvar histórias.'],
+    [!!(sagasStatus&&sagasStatus.settings.enabled&&sagasStatus.settings.events),'Crônicas e “Abates e mortes” ligados',
+      sagasStatus&&sagasStatus.settings.enabled&&sagasStatus.settings.events?'':'As histórias nascem dos momentos registrados. Ligue “Extensão ativa” e “Abates e mortes” em Módulos.'],
+    [!!storyKeys[provider.key],'Chave de API do provedor escolhido',storyKeys[provider.key]?'Guardada no servidor; o valor nunca aparece aqui.':
+      provider.note+' Cole a chave no campo abaixo e clique em Guardar chave.'],
+    [!!data.worker_timer_active,'Gerador de histórias ativo',data.worker_timer_active?'':'O serviço que escreve as histórias está parado. Rode o instalador da ponte de novo para reativá-lo.',
+      'sudo ./deploy/install-sagas-extension.sh "$PWD/dist/sagas/HeimdallSagas.Bridge.dll"'],
+    [sharers>0,'Vikings que autorizaram histórias',sharers>0?sharers+' Viking(s) autorizaram.':
+      'Cada jogador liga ShareProfile e ShareStories em BepInEx/config/gg.heimdall.sagas.client.cfg. Sem isso, nenhum nome ou feito dele vai para a IA.'],
+  ]);
+}
 function storyProviderView(changed){
   const provider=storyProviders[document.getElementById('story-provider').value];
   document.getElementById('story-provider-note').textContent=provider.note;
@@ -225,6 +291,7 @@ async function storyLoad(initial=false){
       document.getElementById('story-limit').value=data.config.daily_limit;
     }
     storyProviderView(false);
+    storyData=data;storyRequirements();
     const select=document.getElementById('story-target'), previous=select.value;
     select.replaceChildren();
     for(const world of data.worlds){

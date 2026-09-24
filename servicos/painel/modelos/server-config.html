@@ -30,14 +30,14 @@
   <p>Esta ação verifica novamente os arquivos oficiais pelo SteamCMD. Se estiver ligado, o servidor é desligado primeiro e continuará desligado até você ligá-lo manualmente.</p>
   <button id="reinstalar" class="btn ruim">Reinstalar servidor</button>
 </div>
-<dialog id="confirmar-reinstalacao" style="background:#111c24;color:#f0e5cf;border:1px solid #9b5944;border-radius:9px;max-width:480px">
+<dialog id="confirmar-reinstalacao" style="background:#111c24;color:#f0e5cf;border:1px solid #9b5944;border-radius:3px;max-width:480px">
   <h2>Confirme a reinstalação</h2><p>Digite a senha do administrador do painel. A senha do jogo é diferente.</p>
   <input id="senha-admin" type="password" autocomplete="current-password" style="padding:.6rem;width:100%;box-sizing:border-box">
   <div class="acoes" style="margin-top:1rem"><button id="confirmar-acao" class="btn ruim">Confirmar</button><button id="cancelar-acao" class="btn">Cancelar</button></div>
 </dialog>
 <style>
 .grade-cfg{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin:1rem 0}
-.grade-cfg label:not(.alavanca),.cartao>label{display:grid;gap:.3rem} .grade-cfg .alavanca{align-self:center} .grade-cfg input:not([type=checkbox]),.cartao textarea{width:100%;box-sizing:border-box;background:#101b23;color:#f0e5cf;border:1px solid #755c39;border-radius:5px;padding:.6rem;font:inherit}
+.grade-cfg label:not(.alavanca),.cartao>label{display:grid;gap:.3rem} .grade-cfg .alavanca{align-self:center} .grade-cfg input:not([type=checkbox]),.cartao textarea{width:100%;box-sizing:border-box;background:#101b23;color:#f0e5cf;border:1px solid #755c39;border-radius:3px;padding:.6rem;font:inherit}
 </style>
 {% endblock %}
 {% block script %}

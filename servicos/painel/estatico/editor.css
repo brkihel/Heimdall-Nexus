@@ -23,7 +23,7 @@ body.jarl-shell {
 .lat-topo { display: flex; align-items: center; gap: 10px; padding: 12px 14px 8px; }
 .lat-topo select {
   flex: 1; min-width: 0; font: inherit; color: var(--jarl-text); background: var(--jarl-bg-2);
-  border: 1px solid var(--jarl-line); border-radius: 6px; padding: 6px 8px;
+  border: 1px solid var(--jarl-line); border-radius: 3px; padding: 6px 8px;
 }
 /* Two rows: history and draft tools on top, Salvar on its own, full width, so
    nothing spills out of the 340px sidebar. */
@@ -55,7 +55,7 @@ body.jarl-shell {
 .telas { display: flex; gap: 2px; margin-right: auto; }
 .telas button {
   width: 32px; height: 30px; color: var(--jarl-muted); background: var(--jarl-bg-2);
-  border: 1px solid var(--jarl-line); border-radius: 5px; cursor: pointer; font-size: 15px;
+  border: 1px solid var(--jarl-line); border-radius: 3px; cursor: pointer; font-size: 15px;
 }
 .telas button.on { color: var(--jarl-gold); border-color: var(--jarl-gold); }
 
@@ -86,7 +86,7 @@ body.jarl-shell {
 .item-lista {
   display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; font: inherit;
   color: var(--jarl-text); background: var(--jarl-bg-2); border: 1px solid var(--jarl-line);
-  border-radius: 6px; padding: 8px 10px; cursor: pointer;
+  border-radius: 3px; padding: 8px 10px; cursor: pointer;
 }
 .item-lista:hover { border-color: var(--jarl-gold); color: var(--jarl-gold-soft); }
 .item-lista .num { font: 600 11px 'Cinzel', serif; color: var(--jarl-muted); min-width: 1.2em; }
@@ -96,14 +96,14 @@ body.jarl-shell {
 .elemento {
   display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 6px 10px;
   font: inherit; font-size: 13.5px; color: var(--jarl-text); background: var(--jarl-bg-2);
-  border: 1px solid var(--jarl-line); border-radius: 8px; cursor: grab; text-align: center;
+  border: 1px solid var(--jarl-line); border-radius: 3px; cursor: grab; text-align: center;
 }
 .elemento:hover { border-color: var(--jarl-gold); color: var(--jarl-gold-soft); }
 .elemento .ico { font-size: 22px; color: var(--jarl-gold); line-height: 1; }
 .dado {
   display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; width: 100%; margin-bottom: 6px;
   text-align: left; font: inherit; color: var(--jarl-text); background: var(--jarl-bg-2);
-  border: 1px solid var(--jarl-line); border-radius: 7px; padding: 8px 10px; cursor: grab;
+  border: 1px solid var(--jarl-line); border-radius: 3px; padding: 8px 10px; cursor: grab;
 }
 .dado:hover { border-color: var(--jarl-gold); }
 .dado .nome { font-weight: 600; }
@@ -115,7 +115,7 @@ body.jarl-shell {
   color: var(--jarl-muted); margin: 12px 0 5px;
 }
 .campo-cab {
-  border: 1px solid var(--jarl-line); border-radius: 7px; padding: 8px 10px; background: var(--jarl-bg-2);
+  border: 1px solid var(--jarl-line); border-radius: 3px; padding: 8px 10px; background: var(--jarl-bg-2);
   line-height: 1.45; min-height: 2.4em;
 }
 .campo-cab:focus { outline: none; border-color: var(--jarl-gold); }
@@ -125,7 +125,7 @@ body.jarl-shell {
 /* ---------------------------------------------------------------- stage */
 .palco { min-width: 0; height: 100vh; overflow: hidden; display: flex; justify-content: center; background: #0a0f14; }
 .moldura { width: 100%; height: 100%; transition: max-width .25s ease; }
-.moldura.aparelho { margin: 14px 0; height: calc(100% - 28px); border: 1px solid var(--jarl-line); border-radius: 14px; overflow: hidden; }
+.moldura.aparelho { margin: 14px 0; height: calc(100% - 28px); border: 1px solid var(--jarl-line); border-radius: 3px; overflow: hidden; }
 .moldura iframe { width: 100%; height: 100%; border: 0; display: block; background: #05090d; }
 body.arrastando .moldura { outline: 2px dashed rgba(200, 164, 92, .5); outline-offset: -6px; }
 
@@ -138,7 +138,7 @@ body.arrastando .moldura { outline: 2px dashed rgba(200, 164, 92, .5); outline-o
 }
 
 /* ---------------------------------------------------------------- versions */
-.versao { border: 1px solid var(--jarl-line); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; background: var(--jarl-bg-2); }
+.versao { border: 1px solid var(--jarl-line); border-radius: 3px; padding: 10px 12px; margin-bottom: 8px; background: var(--jarl-bg-2); }
 .versao.atual { border-color: var(--jarl-gold); }
 .versao-topo { display: flex; align-items: baseline; gap: 8px; }
 .versao-topo span { color: var(--jarl-muted); font-size: 13px; }
@@ -146,3 +146,5 @@ body.arrastando .moldura { outline: 2px dashed rgba(200, 164, 92, .5); outline-o
 .versao ul { margin: 6px 0 8px; padding-left: 18px; font-size: 13.5px; color: var(--jarl-text); }
 .versao li { margin: 2px 0; }
 .versao-acoes { display: flex; gap: 6px; }
+
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
