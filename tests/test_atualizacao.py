@@ -63,6 +63,14 @@ class UpdateTests(unittest.TestCase):
             atualizacao.check(self.state, self.runtime, 'http://example.com/x.git')
         self.assertIn('error', atualizacao.status(self.state, self.runtime)['check'])
 
+    def test_first_channel_is_the_installed_branch(self):
+        (self.runtime / '.heimdall-version.json').write_text(json.dumps(
+            {'commit': self.first, 'short': self.first[:7], 'branch': 'dev/sagas'}))
+        self.assertEqual(atualizacao.status(self.state, self.runtime)['channel'], 'dev/sagas')
+        self.assertEqual(self.check()['channel'], 'dev/sagas')
+        atualizacao.set_channel('main', self.state)
+        self.assertEqual(atualizacao.channel(self.state, self.runtime), 'main')
+
     def test_channel_names_are_restricted(self):
         for bad in ('Feature_Evil', '../main', 'main; rm', 'dev/', 3):
             with self.subTest(bad=bad), self.assertRaises(atualizacao.UpdateError):

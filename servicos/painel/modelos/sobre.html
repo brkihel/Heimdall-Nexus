@@ -106,7 +106,7 @@ function mostra(d){
   $('v-ponte').textContent='A última atualização trocou a ponte Sagas. Reinicie o servidor Valheim (aba Console) quando for conveniente para carregá-la.';
   $('repo').textContent=d.repository;
   const sel=$('canal'),atual=d.channel,ramos=(d.check&&d.check.branches)||[];
-  const opcoes=[...new Set(['main',...ramos,atual])];
+  const opcoes=[...new Set(['main',...ramos,v.branch,atual].filter(r=>r&&/^(main|dev\/[a-z0-9._-]{1,40})$/.test(r)))];
   if(sel.options.length!==opcoes.length||sel.value!==atual){
     sel.replaceChildren();
     for(const r of opcoes){const o=document.createElement('option');o.value=r;o.textContent=r==='main'?'Estável (main): recomendado':'Desenvolvimento ('+r+')';sel.append(o);}

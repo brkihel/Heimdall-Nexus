@@ -65,11 +65,12 @@ def installed(runtime: Path = RUNTIME) -> dict:
         return {}
 
 
-def channel(state: Path = STATE) -> str:
+def channel(state: Path = STATE, runtime: Path = RUNTIME) -> str:
+    """The saved channel; before any choice, the branch the install came from."""
     try:
         value = _paths(state)['channel'].read_text(encoding='ascii').strip()
     except (OSError, UnicodeError):
-        return 'main'
+        value = str(installed(runtime).get('branch') or '')
     return value if CHANNEL.fullmatch(value) else 'main'
 
 
@@ -108,7 +109,7 @@ def status(state: Path = STATE, runtime: Path = RUNTIME) -> dict:
         check = json.loads(paths['check'].read_text(encoding='utf-8'))
     except (OSError, ValueError):
         check = None
-    return {'installed': installed(runtime), 'channel': channel(state),
+    return {'installed': installed(runtime), 'channel': channel(state, runtime),
             'repository': REPOSITORY, 'running': running(), 'check': check,
             'log': _log_tail(paths['log']), 'git': _has_git()}
 
@@ -138,7 +139,7 @@ def check(state: Path = STATE, runtime: Path = RUNTIME, repository: str = REPOSI
     try:
         return _check(state, runtime, repository, allow_file)
     except UpdateError as error:
-        _save_check(state, {'checked_at': int(time.time()), 'channel': channel(state),
+        _save_check(state, {'checked_at': int(time.time()), 'channel': channel(state, runtime),
                             'error': str(error)})
         raise
 
@@ -157,7 +158,7 @@ def _check(state: Path, runtime: Path, repository: str, allow_file: bool) -> dic
                       _git(source, 'for-each-ref', '--format=%(refname:short)',
                            'refs/remotes/origin').split()
                       if CHANNEL.fullmatch(name.removeprefix('origin/')))
-    wanted = channel(state)
+    wanted = channel(state, runtime)
     if wanted not in branches:
         raise UpdateError(f'o canal {wanted} não existe no repositório')
     target = _git(source, 'rev-parse', f'origin/{wanted}^{{commit}}').strip()
@@ -183,7 +184,8 @@ def _check(state: Path, runtime: Path, repository: str, allow_file: bool) -> dic
     return result
 
 
-def start(commit: object, state: Path = STATE, runner=subprocess.run) -> dict:
+def start(commit: object, state: Path = STATE, runner=subprocess.run,
+          runtime: Path = RUNTIME) -> dict:
     paths = _paths(state)
     if not isinstance(commit, str) or not COMMIT.fullmatch(commit):
         raise UpdateError('versão inválida')
@@ -195,7 +197,7 @@ def start(commit: object, state: Path = STATE, runner=subprocess.run) -> dict:
         raise UpdateError('procure atualizações antes de atualizar') from error
     source = paths['source']
     remote = _git(source, 'rev-parse', f'origin/{last["channel"]}^{{commit}}').strip()
-    if last.get('error') or last.get('target') != commit or remote != commit or last['channel'] != channel(state):
+    if last.get('error') or last.get('target') != commit or remote != commit or last['channel'] != channel(state, runtime):
         raise UpdateError('a lista de mudanças ficou desatualizada; procure de novo')
     _git(source, 'checkout', '--quiet', '--force', '--detach', commit)
     _git(source, 'clean', '--quiet', '-fdx')
