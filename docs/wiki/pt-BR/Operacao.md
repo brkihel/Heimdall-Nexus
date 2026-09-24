@@ -29,7 +29,7 @@ sudo ./deploy/reset-vm.sh --purge
 sudo ./deploy/install.sh
 ```
 
-O script só aceita `--purge` se encontrar o marcador da instalação visual em `/var/lib/heimdall-nexus/installed.json` e pede a frase `RESET HEIMDALL VM`. Ele remove a conta Linux exclusiva do painel para permitir escolher o mesmo nome novamente; mantém a conta `valheim`.
+O reset funciona numa instalação completa ou numa que parou no meio, e pede a frase `RESET HEIMDALL VM`. Ele remove a conta Linux exclusiva do painel para permitir escolher o mesmo nome novamente; mantém a conta `valheim`.
 
 ## Modpack próprio (.zip)
 

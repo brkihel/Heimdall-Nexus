@@ -29,7 +29,7 @@ sudo ./deploy/reset-vm.sh --purge
 sudo ./deploy/install.sh
 ```
 
-The reset requires the visual install marker at `/var/lib/heimdall-nexus/installed.json` and asks you to type `RESET HEIMDALL VM`. It removes the dedicated panel Linux account so you can choose the same name again, while keeping the `valheim` account.
+The reset works on a complete installation or on one that stopped midway, and asks you to type `RESET HEIMDALL VM`. It removes the dedicated panel Linux account so you can choose the same name again, while keeping the `valheim` account.
 
 ## Custom modpack (.zip)
 

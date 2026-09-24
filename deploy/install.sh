@@ -59,8 +59,13 @@ if [[ -e /var/lib/heimdall-nexus/installed.json ]]; then
   exit 2
 fi
 if [[ -e /etc/systemd/system/heimdall-valheim.service ]]; then
-  echo "An existing unmanaged Valheim game service was found. This wizard will not replace it." >&2
-  exit 2
+  if grep -q '^# ManagedBy=HeimdallNexusInstaller$' /etc/systemd/system/heimdall-valheim.service; then
+    echo "An unfinished Heimdall Nexus installation was found; the wizard will resume it." >&2
+    echo "Use the same Linux service account name as before, or run ./deploy/reset-vm.sh --purge to start over." >&2
+  else
+    echo "An existing unmanaged Valheim game service was found. This wizard will not replace it." >&2
+    exit 2
+  fi
 fi
 if command -v python3 >/dev/null && ! python3 -c 'import sys; sys.exit(sys.version_info < (3, 10))'; then
   echo "Heimdall Nexus requires Python 3.10 or newer; found $(python3 --version 2>&1)." >&2

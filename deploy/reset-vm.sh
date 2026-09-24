@@ -5,8 +5,11 @@ set -euo pipefail
 # It keeps the Git checkout, OS packages and the valheim account. The dedicated
 # panel account is removed so the wizard can offer the same name again.
 MARKER=/var/lib/heimdall-nexus/installed.json
-if [[ ! -f "$MARKER" ]]; then
-  echo "Installation marker not found: $MARKER. Refusing to remove anything." >&2
+RUNTIME_MARKER=/opt/heimdall-nexus/.heimdall-nexus-runtime
+GAME_UNIT=/etc/systemd/system/heimdall-valheim.service
+if [[ ! -f "$MARKER" && ! -f "$RUNTIME_MARKER" ]] &&
+   ! grep -qs '^# ManagedBy=HeimdallNexusInstaller$' "$GAME_UNIT"; then
+  echo "No Heimdall Nexus installation found (complete or unfinished). Refusing to remove anything." >&2
   exit 1
 fi
 if [[ "${1:-}" != --check && "${1:-}" != --purge ]]; then
@@ -28,11 +31,16 @@ if [[ "$1" == --check ]]; then exit 0; fi
 if (( EUID != 0 )); then echo 'Run with sudo.' >&2; exit 1; fi
 read -r -p 'Type RESET HEIMDALL VM to erase this installation: ' answer
 if [[ "$answer" != 'RESET HEIMDALL VM' ]]; then echo 'Cancelled.'; exit 1; fi
-PANEL_USER="$(python3 - "$MARKER" <<'PY'
+PANEL_USER=""
+if [[ -f "$MARKER" ]]; then
+  PANEL_USER="$(python3 - "$MARKER" <<'PY'
 import json,sys
 print(json.load(open(sys.argv[1])).get('system_user',''))
 PY
 )"
+elif [[ -f /etc/heimdall-nexus/panel-os-user ]]; then
+  PANEL_USER="$(head -n1 /etc/heimdall-nexus/panel-os-user)"
+fi
 for unit in "${UNITS[@]}"; do
   systemctl disable --now "$unit" >/dev/null 2>&1 || true
 done
