@@ -240,6 +240,42 @@ async def sagas_admin_opcoes(pedido: Request):
         return JSONResponse({'ok': False, 'erro': str(erro)}, status_code=400)
 
 
+@app.get(f'{RAIZ_URL}/sobre', response_class=HTMLResponse)
+async def sobre(pedido: Request):
+    exige(pedido)
+    return pagina(pedido, 'sobre.html', aba='sobre')
+
+
+@app.get(f'{RAIZ_URL}/api/sistema/atualizacao')
+async def sistema_atualizacao_estado(pedido: Request):
+    usuario = exige(pedido)
+    try:
+        return {'ok': True, **await nucleo.pede_async('sistema.estado', {}, usuario)}
+    except nucleo.Erro as erro:
+        return JSONResponse({'ok': False, 'erro': str(erro)}, status_code=503)
+
+
+@app.post(f'{RAIZ_URL}/api/sistema/atualizacao')
+async def sistema_atualizacao_acao(pedido: Request):
+    usuario = exige(pedido)
+    expected_origin = f'{pedido.url.scheme}://{pedido.headers.get("host", "")}'
+    if pedido.headers.get('origin') != expected_origin or \
+            not pedido.headers.get('content-type', '').startswith('application/json'):
+        return JSONResponse({'ok': False, 'erro': 'origem ou formato inválido'}, status_code=403)
+    raw = await pedido.body()
+    if len(raw) > 512:
+        return JSONResponse({'ok': False, 'erro': 'pedido grande demais'}, status_code=413)
+    try:
+        data = json.loads(raw)
+        actions = {'checar': 'sistema.checar', 'canal': 'sistema.canal', 'atualizar': 'sistema.atualizar'}
+        if not isinstance(data, dict) or data.get('action') not in actions:
+            raise ValueError('ação inválida')
+        verb = actions[data.pop('action')]
+        return {'ok': True, **await nucleo.pede_async(verb, data, usuario)}
+    except (ValueError, nucleo.Erro) as erro:
+        return JSONResponse({'ok': False, 'erro': str(erro)}, status_code=400)
+
+
 @app.get(f'{RAIZ_URL}/api/sagas/historias')
 async def sagas_historias_estado(pedido: Request):
     usuario = exige(pedido)

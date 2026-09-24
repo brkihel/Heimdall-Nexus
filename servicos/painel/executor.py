@@ -27,6 +27,7 @@ import tempfile
 import threading
 import urllib.request
 import uuid
+import atualizacao
 import sagas
 import stories
 from datetime import datetime, timezone
@@ -2150,7 +2151,41 @@ def v_sagas_story_request(dados):
     return {'queued': True}
 
 
+def _atualizacao(funcao, *argumentos):
+    try:
+        return funcao(*argumentos)
+    except atualizacao.UpdateError as erro:
+        raise Recusa(str(erro)) from erro
+
+
+def v_sistema_estado(_):
+    return atualizacao.status()
+
+
+def v_sistema_checar(_):
+    return _atualizacao(atualizacao.check)
+
+
+def v_sistema_canal(dados):
+    if not isinstance(dados, dict) or set(dados) != {'canal'}:
+        raise Recusa('canal inválido')
+    return {'canal': _atualizacao(atualizacao.set_channel, dados['canal'])}
+
+
+def v_sistema_atualizar(dados):
+    if not isinstance(dados, dict) or set(dados) != {'commit'}:
+        raise Recusa('versão inválida')
+    antes = atualizacao.installed().get('short', '?')
+    resultado = _atualizacao(atualizacao.start, dados['commit'])
+    resultado['de'] = antes
+    return resultado
+
+
 VERBOS = {
+    'sistema.estado': v_sistema_estado,
+    'sistema.checar': v_sistema_checar,
+    'sistema.canal': v_sistema_canal,
+    'sistema.atualizar': v_sistema_atualizar,
     'sagas.settings': v_sagas_settings,
     'sagas.status': v_sagas_status,
     'sagas.settings.gravar': v_sagas_settings_gravar,
@@ -2262,7 +2297,7 @@ class Atendente(socketserver.StreamRequestHandler):
                            'cronica.sessoes', 'cronica.ler', 'mundo.estado', 'mundo.seed', 'config.listar',
                            'arquivo.preparar_download', 'site.paginas', 'site.campos',
                            'site.versoes', 'site.versao.ver', 'site.previa.ler', 'site.identidade')
-            silenciosos += ('sagas.settings', 'sagas.status', 'sagas.story.status')
+            silenciosos += ('sagas.settings', 'sagas.status', 'sagas.story.status', 'sistema.estado')
             if verbo not in silenciosos and not (
                 verbo == 'server.config' and not dados.get('gravar') or
                 verbo in ('schedules', 'backups') and dados.get('acao', 'listar') == 'listar'):

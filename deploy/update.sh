@@ -82,6 +82,40 @@ echo "Publishing the site…"
 HEIMDALL_WEB_DIR="$WEB_ROOT" HEIMDALL_WEB_USER=www-data HEIMDALL_WEB_BACKUP_DIR=/var/backups/heimdall-web \
   HEIMDALL_SITE_DIR="$SITE_DIR" python3 "$SITE_DIR/publicar.py" vivo modpack-ui fontes cronicas tema marca sitemap robots
 
+GAME_DIR="$(sed -n 's/^HEIMDALL_VALHEIM_DIR=//p' "$ENV_FILE" | tail -n1)"
+GAME_DIR="${GAME_DIR:-/srv/valheim}"
+BRIDGE="$GAME_DIR/current/BepInEx/plugins/HeimdallSagas/HeimdallSagas.Bridge.dll"
+BRIDGE_UPDATED=false
+if [[ -f "$BRIDGE" && ! -L "$BRIDGE" && -f "$ROOT/dist/sagas/HeimdallSagas.Bridge.dll" ]] && \
+    ! cmp -s "$ROOT/dist/sagas/HeimdallSagas.Bridge.dll" "$BRIDGE"; then
+  echo "Updating the Heimdall Sagas bridge (restart Valheim to load it)…"
+  install -m 0644 -o root -g "$(stat -c %G "$BRIDGE")" "$ROOT/dist/sagas/HeimdallSagas.Bridge.dll" "$BRIDGE.new"
+  mv -f "$BRIDGE.new" "$BRIDGE"
+  BRIDGE_UPDATED=true
+fi
+
+# Record what is installed, for Jarl > Sobre.
+python3 - "$ROOT" "$RUNTIME" "$BRIDGE_UPDATED" "${HEIMDALL_UPDATE_BRANCH:-}" <<'PY'
+import json, os, subprocess, sys, time
+from pathlib import Path
+root, runtime, bridge, branch = sys.argv[1:]
+def git(*args):
+    try:
+        return subprocess.run(['git', '-c', f'safe.directory={root}', '-C', root, *args],
+                              capture_output=True, text=True, timeout=10).stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        return ''
+commit = git('rev-parse', 'HEAD')
+branch = branch or git('rev-parse', '--abbrev-ref', 'HEAD')
+info = {'commit': commit, 'short': commit[:7], 'subject': git('log', '-1', '--format=%s')[:200],
+        'date': int(git('log', '-1', '--format=%ct') or 0), 'branch': '' if branch == 'HEAD' else branch,
+        'updated_at': int(time.time()), 'bridge_updated': bridge == 'true',
+        'from_panel': root == '/var/lib/heimdall-nexus/source'}
+target = Path(runtime) / '.heimdall-version.json'
+target.write_text(json.dumps(info, ensure_ascii=False) + '\n')
+os.chmod(target, 0o644)
+PY
+
 echo "Restarting the panel…"
 systemctl restart heimdall-executor.service heimdall-panel.service
 for _ in $(seq 1 20); do
@@ -89,5 +123,5 @@ for _ in $(seq 1 20); do
   sleep 1
 done
 systemctl is-active --quiet heimdall-executor.service heimdall-panel.service
-echo "Heimdall Nexus updated to $(git -C "$ROOT" log -1 --format='%h %s' 2>/dev/null || echo 'this checkout')."
+echo "Heimdall Nexus updated to $(git -c safe.directory="$ROOT" -C "$ROOT" log -1 --format='%h %s' 2>/dev/null || echo 'this checkout')."
 echo "The Valheim server was not restarted."

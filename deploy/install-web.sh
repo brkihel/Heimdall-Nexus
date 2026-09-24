@@ -126,7 +126,7 @@ fi
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y nginx python3 python3-venv python3-pip rsync
+apt-get install -y nginx python3 python3-venv python3-pip rsync git
 
 install -d -o root -g root -m 0755 /etc/heimdall-nexus
 PANEL_ACCOUNT_MARKER=/etc/heimdall-nexus/panel-os-user

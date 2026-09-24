@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block titulo %}Sobre e atualizações{% endblock %}
+{% block cabeca %}
+<style>
+.versao{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.6rem;margin:.4rem 0 .2rem}
+.versao div{border:1px solid var(--borda);border-radius:3px;padding:.7rem .85rem;background:rgba(5,9,13,.35)}
+.versao small{display:block;font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;color:var(--fraco)}
+.versao b{display:block;color:var(--osso);font-weight:600;margin-top:.2rem;overflow-wrap:anywhere}
+.nota{color:var(--fraco);font-size:.86rem;line-height:1.55}
+.linha-acoes{display:flex;gap:.55rem;align-items:center;flex-wrap:wrap;margin:.9rem 0}
+.canal{display:grid;gap:.3rem;color:var(--osso);font-size:.86rem;max-width:360px}
+.canal select{padding:.6rem .7rem;border:1px solid var(--borda-viva);border-radius:3px;background:rgba(5,9,13,.55);color:var(--osso)}
+.mudancas{list-style:none;margin:.6rem 0 .6rem .5rem;padding:0 0 0 .1rem;border-left:1px solid var(--borda-viva);max-height:340px;overflow-y:auto;overflow-x:visible}
+.mudancas li{position:relative;padding:.35rem 0 .55rem 1.1rem}
+.mudancas li::before{content:"";position:absolute;left:-3px;top:.72rem;width:7px;height:7px;transform:rotate(45deg);border:1px solid var(--ouro);background:var(--breu)}
+.mudancas b{color:var(--osso);font-weight:600}
+.mudancas small{display:block;color:var(--fraco);font-size:.76rem}
+.resultado{border:1px solid var(--borda);border-radius:3px;padding:.8rem 1rem;margin:.6rem 0;background:rgba(5,9,13,.35)}
+.resultado.pronto{border-color:rgba(127,217,162,.45)}
+.resultado.aviso{border-color:rgba(216,177,63,.5)}
+.log{height:280px;overflow:auto;margin:.6rem 0 0;padding:.8rem 1rem;border:1px solid var(--borda);border-radius:3px;background:#081117;color:#b4c3cb;font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+</style>
+{% endblock %}
+{% block corpo %}
+<div class="topo"><h1>Sobre e atualizações</h1><span class="pastilha meio" id="estado">verificando…</span></div>
+<p class="dica">O Heimdall Nexus reúne o servidor Valheim, o site e este painel. Aqui você vê a versão instalada e atualiza sem abrir o terminal.</p>
+
+<div class="cartao"><h2>Versão instalada</h2>
+  <div class="versao">
+    <div><small>Versão</small><b id="v-commit">—</b></div>
+    <div><small>Canal</small><b id="v-canal">—</b></div>
+    <div><small>Atualizado em</small><b id="v-quando">—</b></div>
+  </div>
+  <p class="nota" id="v-assunto"></p>
+  <p class="nota" id="v-ponte" hidden></p>
+</div>
+
+<div class="cartao ornado"><h2>Atualizações</h2>
+  <p class="resumo-pronto" id="req-resumo">Verificando…</p>
+  <ul class="requisitos" id="req" aria-live="polite"></ul>
+  <label class="canal">Canal de atualização
+    <select id="canal">
+      <option value="main">Estável (main): recomendado</option>
+    </select>
+  </label>
+  <p class="nota" id="canal-nota">O canal estável recebe só versões testadas. Os canais de desenvolvimento (dev/…) trazem novidades antes e podem ter erros: use-os num servidor de teste.</p>
+  <div class="linha-acoes"><button class="btn" id="checar" type="button">Procurar atualizações</button><span id="checar-msg" role="status"></span></div>
+  <div id="resultado" hidden></div>
+  <div class="linha-acoes" id="acao-atualizar" hidden><button class="btn principal" id="atualizar" type="button">Atualizar agora</button></div>
+  <p class="nota" id="o-que-acontece" hidden>Ao atualizar, o painel baixa a versão mostrada acima e reinicia sozinho (cerca de 30 segundos; esta página volta sozinha). O servidor Valheim <b>não</b> é reiniciado, e seus mundos, mods, configurações e páginas do site não são tocados. Se a ponte Sagas mudar, ela é trocada e passa a valer no próximo reinício do Valheim.</p>
+  <pre class="log" id="log" hidden aria-live="polite"></pre>
+</div>
+
+<div class="cartao"><h2>Segurança das atualizações</h2>
+  <p class="nota">As atualizações vêm só do repositório oficial, por HTTPS: <code id="repo">—</code>. O painel mantém uma cópia própria desse repositório que a conta do site não consegue alterar. Você aprova a versão exata antes de instalar, e cada atualização fica registrada na Auditoria com quem fez e de qual versão para qual.</p>
+</div>
+{% endblock %}
+{% block script %}
+<script>
+const api={{ (raiz ~ '/api/sistema/atualizacao')|tojson }};
+const $=id=>document.getElementById(id);
+let estado=null,alvo='',acompanhando=false,alvoEsperado='',falhas=0;
+function quando(s){return s?new Date(s*1000).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'—';}
+function lista(id,itens){
+  const ul=$(id);ul.replaceChildren();
+  for(const [ok,titulo,ajuda,comando] of itens){
+    const li=document.createElement('li');if(ok)li.className='ok';
+    const b=document.createElement('strong');b.textContent=titulo;
+    const sp=document.createElement('span');sp.textContent=ajuda||(ok?'Pronto.':'');
+    if(!ok&&comando){const c=document.createElement('code');c.textContent=comando;sp.append(document.createElement('br'),c);}
+    li.append(b,sp);ul.append(li);
+  }
+  const faltam=itens.filter(i=>!i[0]).length;
+  $(id+'-resumo').textContent=faltam?'Falta '+faltam+' de '+itens.length+' passo(s)':'Pronto para atualizar';
+  $(id+'-resumo').classList.toggle('ok',!faltam);
+}
+async function post(action,dados){
+  const r=await fetch(api,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...dados})});
+  const j=await r.json();if(!r.ok||!j.ok)throw Error(j.erro||'Falha na operação');return j;
+}
+function mostraResultado(c){
+  const box=$('resultado');box.hidden=!c;$('acao-atualizar').hidden=true;$('o-que-acontece').hidden=true;
+  if(!c)return;box.replaceChildren();alvo='';
+  if(c.error){const e=document.createElement('div');e.className='resultado aviso';e.textContent='A última procura falhou: '+c.error;box.append(e);return;}
+  const div=document.createElement('div');div.className='resultado';
+  if(c.up_to_date){div.classList.add('pronto');div.textContent='Você está na versão mais recente do canal '+c.channel+' ('+c.target_short+'). Última procura: '+quando(c.checked_at)+'.';box.append(div);return;}
+  alvo=c.target;
+  const t=document.createElement('strong');t.textContent=(c.linear?c.commits.length+' mudança(s) desde a sua versão':'Versão '+c.target_short+' disponível')+' · canal '+c.channel;
+  div.append(t);
+  if(!c.linear){div.classList.add('aviso');const p=document.createElement('p');p.className='nota';
+    p.textContent='A versão instalada não faz parte deste canal (por exemplo, veio de outro canal ou de uma cópia local). Abaixo estão as mudanças mais recentes do canal; a atualização substitui o código do painel pelo desta versão.';div.append(p);}
+  const ul=document.createElement('ul');ul.className='mudancas';
+  for(const m of c.commits){const li=document.createElement('li');const b=document.createElement('b');b.textContent=m.subject;
+    const s=document.createElement('small');s.textContent=m.short+' · '+quando(m.date);li.append(b,s);ul.append(li);}
+  div.append(ul);box.append(div);
+  $('acao-atualizar').hidden=false;$('o-que-acontece').hidden=false;
+  $('atualizar').textContent='Atualizar para '+c.target_short;
+}
+function mostra(d){
+  estado=d;const v=d.installed||{};
+  $('v-commit').textContent=v.short?v.short:'desconhecida';
+  $('v-canal').textContent=v.branch||d.channel;
+  $('v-quando').textContent=quando(v.updated_at);
+  $('v-assunto').textContent=v.subject?'Última mudança: '+v.subject:'A versão será registrada na próxima atualização.';
+  $('v-ponte').hidden=!v.bridge_updated;
+  $('v-ponte').textContent='A última atualização trocou a ponte Sagas. Reinicie o servidor Valheim (aba Console) quando for conveniente para carregá-la.';
+  $('repo').textContent=d.repository;
+  const sel=$('canal'),atual=d.channel,ramos=(d.check&&d.check.branches)||[];
+  const opcoes=[...new Set(['main',...ramos,atual])];
+  if(sel.options.length!==opcoes.length||sel.value!==atual){
+    sel.replaceChildren();
+    for(const r of opcoes){const o=document.createElement('option');o.value=r;o.textContent=r==='main'?'Estável (main): recomendado':'Desenvolvimento ('+r+')';sel.append(o);}
+    sel.value=atual;
+  }
+  lista('req',[
+    [d.git,'Git instalado no servidor',d.git?'':'O painel usa o Git para baixar as versões. Na máquina do Nexus, rode:','sudo apt install git'],
+    [!d.running,'Nenhuma atualização em andamento',d.running?'Aguarde a atual terminar; o progresso aparece abaixo.':''],
+    [!(d.check&&d.check.error),'Repositório oficial acessível',d.check&&d.check.error?d.check.error:''],
+  ]);
+  const log=$('log');
+  if(d.running||acompanhando){log.hidden=false;log.textContent=(d.log||[]).join('\n');log.scrollTop=log.scrollHeight;}
+  const pastilha=$('estado');
+  const disponivel=d.check&&!d.check.error&&!d.check.up_to_date;
+  pastilha.textContent=d.running?'Atualizando…':!d.check||d.check.error?'Não verificado':disponivel?'Atualização disponível':'Em dia';
+  pastilha.className='pastilha '+(d.check&&d.check.up_to_date&&!d.running?'viva':'meio');
+  if(!acompanhando)mostraResultado(d.check);
+  $('atualizar').disabled=d.running;$('checar').disabled=d.running;
+}
+async function carrega(){
+  const r=await fetch(api,{cache:'no-store',credentials:'same-origin'});
+  const d=await r.json();if(!r.ok||!d.ok)throw Error(d.erro||'HTTP '+r.status);
+  mostra(d);return d;
+}
+async function acompanha(){
+  // The panel restarts during the update; failed polls are expected for a while.
+  try{
+    const d=await carrega();falhas=0;
+    if(!d.running&&(d.installed||{}).commit===alvoEsperado){
+      acompanhando=false;$('checar-msg').textContent='Atualizado para '+alvoEsperado.slice(0,7)+'. Recarregando…';
+      setTimeout(()=>location.reload(),1500);return;
+    }
+    if(!d.running&&falhas===0&&Date.now()-inicio>20000&&(d.installed||{}).commit!==alvoEsperado){
+      acompanhando=false;$('checar-msg').textContent='A atualização terminou sem trocar a versão. Veja o registro abaixo.';return;
+    }
+  }catch(e){falhas++;$('checar-msg').textContent='O painel está reiniciando… ('+falhas+')';}
+  setTimeout(acompanha,2000);
+}
+let inicio=0;
+$('checar').addEventListener('click',async()=>{
+  $('checar-msg').textContent='Procurando no repositório oficial…';$('checar').disabled=true;
+  try{await post('checar',{});await carrega();$('checar-msg').textContent='';}
+  catch(e){$('checar-msg').textContent=e.message;}
+  finally{$('checar').disabled=false;}
+});
+$('canal').addEventListener('change',async e=>{
+  try{await post('canal',{canal:e.target.value});$('checar-msg').textContent='Canal trocado. Procure atualizações.';await carrega();}
+  catch(err){$('checar-msg').textContent=err.message;}
+});
+$('atualizar').addEventListener('click',async()=>{
+  if(!alvo)return;
+  if(!confirm('Atualizar o Heimdall Nexus para '+alvo.slice(0,7)+'? O painel reinicia; o servidor Valheim continua ligado.'))return;
+  try{await post('atualizar',{commit:alvo});alvoEsperado=alvo;acompanhando=true;inicio=Date.now();
+    $('acao-atualizar').hidden=true;$('log').hidden=false;$('checar-msg').textContent='Atualização iniciada.';acompanha();}
+  catch(e){$('checar-msg').textContent=e.message;}
+});
+carrega().then(d=>{if(d.running){acompanhando=true;inicio=Date.now();alvoEsperado=(d.check||{}).target||'';acompanha();}})
+  .catch(e=>{$('estado').textContent='Estado indisponível';$('checar-msg').textContent=e.message;});
+</script>
+{% endblock %}
