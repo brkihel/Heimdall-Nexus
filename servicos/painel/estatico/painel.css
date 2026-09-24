@@ -213,13 +213,6 @@ select{background:#04080c; border:1px solid var(--borda); border-radius:3px;
 select:focus{outline:none; border-color:var(--borda-viva)}
 .interruptor{display:inline-flex; align-items:center; gap:.5rem; font-size:.86rem;
   color:var(--texto); cursor:pointer; user-select:none; white-space:nowrap}
-.interruptor input{appearance:none; width:36px; height:20px; border-radius:99px;
-  background:var(--ardosia); border:1px solid var(--borda); position:relative;
-  cursor:pointer; transition:background .15s, border-color .15s; margin:0}
-.interruptor input::after{content:''; position:absolute; top:2px; left:2px; width:14px;
-  height:14px; border-radius:50%; background:var(--fraco); transition:transform .15s, background .15s}
-.interruptor input:checked{background:rgba(200,164,92,.22); border-color:var(--ouro)}
-.interruptor input:checked::after{transform:translateX(16px); background:var(--ouro)}
 
 .jeito{display:inline-flex; border:1px solid var(--borda); border-radius:3px; overflow:hidden}
 .jeito button{background:var(--ardosia); border:none; padding:.55rem .7rem; cursor:pointer;
@@ -331,14 +324,6 @@ kbd{font-family:ui-monospace,monospace; font-size:.72rem; border:1px solid var(-
 
 /* Toggle switch: a checkbox styled as a sliding switch. */
 .alavanca{display:inline-flex; align-items:center; gap:.65rem; cursor:pointer; user-select:none}
-.alavanca input{appearance:none; -webkit-appearance:none; flex:none; width:2.5rem; height:1.35rem; margin:0;
-  border-radius:1rem; background:#0b141b; border:1px solid var(--borda); position:relative; cursor:pointer;
-  transition:background .15s, border-color .15s}
-.alavanca input::after{content:''; position:absolute; top:.15rem; left:.15rem; width:.95rem; height:.95rem;
-  border-radius:50%; background:var(--fraco); transition:transform .15s, background .15s}
-.alavanca input:checked{background:rgba(127,217,162,.18); border-color:rgba(127,217,162,.6)}
-.alavanca input:checked::after{transform:translateX(1.15rem); background:var(--bom)}
-.alavanca input:focus-visible{outline:2px solid var(--ouro); outline-offset:2px}
 
 /* ================= GenesisMods standard components (docs/PADROES-GENESISMODS.md) ================= */
 .btn{background:transparent; border-color:rgba(200,164,92,.45); color:var(--ouro-claro)}
@@ -415,3 +400,16 @@ kbd{font-family:ui-monospace,monospace; font-size:.72rem; border:1px solid var(-
 .sagas-opcao input:checked+.sagas-trilho{background:rgba(200,164,92,.22);border-color:var(--ouro)}
 .sagas-opcao input:checked+.sagas-trilho::after{transform:translateX(20px);background:var(--ouro-claro)}
 .sagas-opcao input:focus-visible+.sagas-trilho{outline:2px solid var(--ouro-claro);outline-offset:3px}
+
+/* ---- Standard switch: every checkbox in Jarl is a switch (docs/PADROES-GENESISMODS.md).
+   :where() keeps specificity at zero, so components that hide their input win. ---- */
+:where(input[type=checkbox]){appearance:none; -webkit-appearance:none; flex:none; position:relative;
+  width:2.6rem; height:1.45rem; margin:0; border-radius:99px; border:1px solid var(--borda-viva);
+  background:var(--ardosia); cursor:pointer; vertical-align:middle; transition:background .18s, border-color .18s}
+:where(input[type=checkbox])::after{content:''; position:absolute; top:2px; left:2px;
+  width:calc(1.45rem - 6px); height:calc(1.45rem - 6px); border-radius:50%; background:var(--fraco);
+  transition:transform .18s, background .18s}
+:where(input[type=checkbox]):checked{background:rgba(200,164,92,.22); border-color:var(--ouro)}
+:where(input[type=checkbox]):checked::after{transform:translateX(1.15rem); background:var(--ouro-claro)}
+:where(input[type=checkbox]):focus-visible{outline:2px solid var(--ouro-claro); outline-offset:2px}
+:where(input[type=checkbox]):disabled{opacity:.5; cursor:not-allowed}

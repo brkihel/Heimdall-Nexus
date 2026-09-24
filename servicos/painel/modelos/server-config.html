@@ -20,16 +20,21 @@
   <p id="mensagem" role="status"></p>
 </div>
 <div class="cartao" style="max-width:850px" id="cartao-modificadores">
-  <h2>Modificadores de mundo</h2>
-  <p>Os mesmos ajustes da tela "Hospedar servidor" do Valheim. Eles ficam gravados no mundo e passam a valer quando o servidor inicia.</p>
-  <div class="sagas-opcoes"><label class="sagas-opcao principal"><span><strong>Gerenciar modificadores pelo Jarl</strong><small>Desligado, o mundo mantém os modificadores que já tem. Ligado, as escolhas abaixo substituem as do mundo no próximo início.</small></span><input type="checkbox" id="mod-gerenciar"><span class="sagas-trilho" aria-hidden="true"></span></label></div>
-  <fieldset id="mod-campos" class="mod-campos">
-    <div id="mod-deslizantes"></div>
+  <div class="mod-topo">
+    <div><h2>Modificadores de mundo</h2><p class="nota-cfg">Os ajustes da tela "Hospedar servidor" do Valheim.</p></div>
+    <label class="mod-gerenciar" title="Desligado, o mundo mantém os modificadores que já tem."><span>Gerenciar pelo Jarl</span><input type="checkbox" id="mod-gerenciar"></label>
+  </div>
+  <p class="mod-desligado" id="mod-desligado">O mundo está usando os modificadores que já tem. Ligue <b>Gerenciar pelo Jarl</b> para escolher aqui; suas escolhas substituem as do mundo no próximo início do servidor.</p>
+  <div id="mod-campos" hidden>
+    <div class="ajustes" id="mod-ajustes"></div>
     <h3 class="mod-subtitulo">Regras do mundo</h3>
-    <div class="sagas-opcoes" id="mod-chaves"></div>
-  </fieldset>
+    <div class="regras" id="mod-chaves"></div>
+  </div>
   <p class="nota-cfg" id="mod-aviso" hidden></p>
-  <div class="acoes"><button id="mod-salvar" class="btn principal" type="button">Salvar modificadores</button><button id="mod-reiniciar" class="btn" type="button" hidden>Reiniciar para aplicar</button></div>
+  <div class="mod-rodape">
+    <p class="mod-resumo" id="mod-resumo"></p>
+    <div class="acoes"><button id="mod-reiniciar" class="btn" type="button" hidden>Reiniciar para aplicar</button><button id="mod-salvar" class="btn principal" type="button">Salvar</button></div>
+  </div>
 </div>
 <div class="cartao" style="max-width:850px" id="cartao-acesso">
   <h2>Admins, whitelist e banidos</h2>
@@ -77,18 +82,32 @@
   <div class="acoes" style="margin-top:1rem"><button id="confirmar-acao" class="btn ruim">Confirmar</button><button id="cancelar-acao" class="btn">Cancelar</button></div>
 </dialog>
 <style>
-.mod-campos{border:0;margin:0;padding:0;min-width:0}
-.mod-campos:disabled{opacity:.5}
-.mod-linha{margin:1rem 0}
-.mod-linha>strong{display:block;color:var(--osso);font-family:'Cinzel',serif;font-size:.78rem}
-.mod-linha>small{display:block;color:var(--fraco);font-size:.82rem;margin:.15rem 0 .5rem}
-.segmentos{display:flex;flex-wrap:wrap;border:1px solid var(--borda-viva);border-radius:3px;overflow:hidden}
-.segmentos label{flex:1 1 90px;position:relative;cursor:pointer}
-.segmentos input{position:absolute;opacity:0;width:1px;height:1px}
-.segmentos span{display:block;padding:.55rem .5rem;text-align:center;font-size:.8rem;color:var(--fraco);border-right:1px solid var(--borda);background:rgba(5,9,13,.4)}
-.segmentos label:last-child span{border-right:0}
-.segmentos input:checked+span{background:rgba(200,164,92,.16);color:var(--ouro-claro);box-shadow:inset 0 -2px 0 var(--ouro)}
-.segmentos input:focus-visible+span{outline:2px solid var(--ouro-claro);outline-offset:-2px}
+#cartao-acesso>.acoes{margin-top:1.2rem}
+.mod-topo{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.mod-topo h2{margin-bottom:.25rem}.mod-topo p{margin:0}
+.mod-gerenciar{display:flex;align-items:center;gap:.7rem;padding:.55rem .8rem;border:1px solid rgba(200,164,92,.35);border-radius:3px;background:rgba(200,164,92,.05);color:var(--osso);font-size:.88rem;cursor:pointer;white-space:nowrap}
+.mod-desligado{margin:1rem 0 0;padding:.8rem 1rem;border:1px dashed var(--borda-viva);border-radius:3px;color:var(--fraco);font-size:.88rem;line-height:1.5}
+.ajustes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem;margin-top:1.1rem}
+.ajuste{display:grid;gap:.45rem;padding:.75rem .85rem;border:1px solid var(--borda);border-radius:3px;background:rgba(5,9,13,.35)}
+.ajuste.mudou{border-color:rgba(200,164,92,.45)}
+.ajuste-nome{color:var(--osso);font-size:.86rem}
+.passo{display:grid;grid-template-columns:36px 1fr 36px;align-items:center;border:1px solid var(--borda-viva);border-radius:3px;background:rgba(5,9,13,.5)}
+.passo button{height:36px;border:0;background:none;color:var(--ouro-claro);font-size:1.1rem;cursor:pointer}
+.passo button:hover:not(:disabled){background:rgba(200,164,92,.12)}
+.passo button:disabled{color:var(--borda-viva);cursor:default}
+.passo output{text-align:center;color:var(--osso);font-weight:600;font-size:.92rem}
+.marcas{display:flex;justify-content:center;gap:5px}
+.marcas i{width:6px;height:6px;border-radius:50%;background:var(--borda-viva)}
+.marcas i.normal{background:transparent;border:1px solid var(--fraco)}
+.marcas i.atual{background:var(--ouro)}
+.regras{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.4rem .6rem}
+.regra{display:flex;align-items:center;justify-content:space-between;gap:.8rem;padding:.6rem .85rem;border:1px solid var(--borda);border-radius:3px;background:rgba(5,9,13,.35);color:var(--texto);font-size:.88rem;cursor:pointer}
+.regra.ligada{border-color:rgba(200,164,92,.45);color:var(--osso)}
+.mod-rodape{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-top:1.2rem;padding-top:1rem;border-top:1px solid var(--borda)}
+.mod-resumo{margin:0;color:var(--fraco);font-size:.84rem;flex:1 1 280px}
+.mod-resumo b{color:var(--ouro-claro);font-weight:600}
+.mod-rodape .acoes{margin:0}
+@media(max-width:640px){.ajustes,.regras{grid-template-columns:1fr}}
 .mod-subtitulo,.lista-acesso h3{font-size:.85rem;margin:1.3rem 0 .3rem;color:var(--osso)}
 .nota-cfg{color:var(--fraco);font-size:.85rem;line-height:1.5}
 .ajuda-id{margin:.6rem 0 .4rem;font-size:.86rem}
@@ -102,7 +121,6 @@
 .jogadores .vazio{color:var(--fraco);font-size:.85rem;border-style:dashed}
 .jogadores button{margin-left:auto}
 .jogadores .auto{margin-left:auto;color:var(--fraco);font-size:.75rem}
-#cartao-acesso>.acoes,#cartao-modificadores>.acoes{margin-top:1.2rem}
 .adicionar{display:grid;grid-template-columns:1fr 1.3fr auto;gap:.5rem}
 .adicionar input{background:#101b23;color:#f0e5cf;border:1px solid var(--borda-viva);border-radius:3px;padding:.55rem .65rem;min-width:0}
 @media(max-width:620px){.adicionar{grid-template-columns:1fr}}
@@ -134,32 +152,61 @@ const CHAVES=[
   ['passivemobs','Criaturas passivas','As criaturas só atacam quando provocadas.'],
   ['nobuildcost','Construção sem custo','Construir não gasta materiais.'],
 ];
+let modValores={},modChaves=new Set();
+function rotulo(id,valor){const m=MODS.find(x=>x[0]===id);return (m[3].find(o=>o[0]===valor)||[,'Normal'])[1];}
+function atualizaResumo(){
+  const gerenciar=$('mod-gerenciar').checked;
+  $('mod-desligado').hidden=gerenciar;$('mod-campos').hidden=!gerenciar;
+  const partes=[];
+  for(const [id,titulo] of MODS)if(modValores[id]!=='default')partes.push(titulo+': '+rotulo(id,modValores[id]).toLowerCase());
+  for(const [id,titulo] of CHAVES)if(modChaves.has(id))partes.push(titulo);
+  const r=$('mod-resumo');r.replaceChildren();
+  if(!gerenciar){r.textContent='Nenhuma mudança: o mundo mantém o que já tem.';return;}
+  if(!partes.length){r.textContent='Tudo no padrão do Valheim.';return;}
+  const b=document.createElement('b');b.textContent='No próximo início: ';r.append(b,document.createTextNode(partes.join(' · ')));
+}
 function montaModificadores(){
-  const box=$('mod-deslizantes');box.replaceChildren();
+  const box=$('mod-ajustes');box.replaceChildren();
   for(const [id,titulo,desc,opcoes] of MODS){
-    const linha=document.createElement('div');linha.className='mod-linha';
-    const t=document.createElement('strong');t.textContent=titulo;const d=document.createElement('small');d.textContent=desc;
-    const seg=document.createElement('div');seg.className='segmentos';seg.setAttribute('role','radiogroup');seg.setAttribute('aria-label',titulo);
-    for(const [valor,rotulo] of opcoes){const l=document.createElement('label');const i=document.createElement('input');i.type='radio';i.name='mod-'+id;i.value=valor;
-      const s=document.createElement('span');s.textContent=rotulo;l.append(i,s);seg.append(l);}
-    linha.append(t,d,seg);box.append(linha);
+    const card=document.createElement('div');card.className='ajuste';card.title=desc;card.id='ajuste-'+id;
+    const nome=document.createElement('span');nome.className='ajuste-nome';nome.id='nome-'+id;nome.textContent=titulo;
+    const passo=document.createElement('div');passo.className='passo';passo.setAttribute('role','group');passo.setAttribute('aria-labelledby','nome-'+id);
+    const menos=document.createElement('button');menos.type='button';menos.textContent='‹';menos.setAttribute('aria-label',titulo+': opção anterior');
+    const valor=document.createElement('output');valor.setAttribute('aria-live','polite');
+    const mais=document.createElement('button');mais.type='button';mais.textContent='›';mais.setAttribute('aria-label',titulo+': próxima opção');
+    passo.append(menos,valor,mais);
+    const marcas=document.createElement('div');marcas.className='marcas';marcas.setAttribute('aria-hidden','true');
+    for(const [v] of opcoes){const i=document.createElement('i');if(v==='default')i.classList.add('normal');marcas.append(i);}
+    const move=d=>{const idx=opcoes.findIndex(o=>o[0]===modValores[id]);const n=Math.max(0,Math.min(opcoes.length-1,idx+d));modValores[id]=opcoes[n][0];desenhaAjuste(id);atualizaResumo();};
+    menos.onclick=()=>move(-1);mais.onclick=()=>move(1);
+    card.append(nome,passo,marcas);box.append(card);
   }
-  const chaves=$('mod-chaves');chaves.replaceChildren();
+  const regras=$('mod-chaves');regras.replaceChildren();
   for(const [id,titulo,desc] of CHAVES){
-    const l=document.createElement('label');l.className='sagas-opcao';
-    l.innerHTML='<span><strong></strong><small></small></span><input type="checkbox"><span class="sagas-trilho" aria-hidden="true"></span>';
-    l.querySelector('strong').textContent=titulo;l.querySelector('small').textContent=desc;l.querySelector('input').id='chave-'+id;chaves.append(l);
+    const l=document.createElement('label');l.className='regra';l.title=desc;
+    const t=document.createElement('span');t.textContent=titulo;
+    const i=document.createElement('input');i.type='checkbox';i.id='chave-'+id;
+    i.onchange=()=>{i.checked?modChaves.add(id):modChaves.delete(id);l.classList.toggle('ligada',i.checked);atualizaResumo();};
+    l.append(t,i);regras.append(l);
   }
-  $('mod-gerenciar').addEventListener('change',()=>{$('mod-campos').disabled=!$('mod-gerenciar').checked;});
+  $('mod-gerenciar').addEventListener('change',atualizaResumo);
+}
+function desenhaAjuste(id){
+  const opcoes=MODS.find(m=>m[0]===id)[3],idx=Math.max(0,opcoes.findIndex(o=>o[0]===modValores[id]));
+  const card=$('ajuste-'+id),[menos,valor,mais]=card.querySelector('.passo').children;
+  valor.textContent=opcoes[idx][1];menos.disabled=idx===0;mais.disabled=idx===opcoes.length-1;
+  card.classList.toggle('mudou',opcoes[idx][0]!=='default');
+  card.querySelectorAll('.marcas i').forEach((i,n)=>i.classList.toggle('atual',n===idx));
 }
 function mostraModificadores(c){
   const m=c.modificadores;if(!m)return;
-  $('mod-gerenciar').checked=m.gerenciar;$('mod-campos').disabled=!m.gerenciar;
-  for(const [id] of MODS){const r=document.querySelector(`input[name="mod-${id}"][value="${m.valores[id]}"]`);if(r)r.checked=true;}
-  for(const [id] of CHAVES)$('chave-'+id).checked=m.chaves.includes(id);
+  $('mod-gerenciar').checked=m.gerenciar;modValores={...m.valores};modChaves=new Set(m.chaves);
+  for(const [id] of MODS)desenhaAjuste(id);
+  for(const [id] of CHAVES){const i=$('chave-'+id);i.checked=modChaves.has(id);i.closest('.regra').classList.toggle('ligada',i.checked);}
   $('mod-aviso').hidden=c.modificadores_suportados;
   $('mod-aviso').textContent='O lançador instalado ainda não aceita modificadores. Atualize o Heimdall em Sobre e atualizações.';
   $('mod-salvar').disabled=!c.modificadores_suportados;
+  atualizaResumo();
 }
 const CATALOGO={{ (codigos or {})|tojson }};
 function avisoErro(e,titulo){
@@ -167,10 +214,8 @@ function avisoErro(e,titulo){
   avisar({tipo:'erro',codigo:m?m[1]:'',titulo:info.titulo||titulo,texto:m?m[2]:e.message,solucao:info.solucao});
 }
 $('mod-salvar').onclick=async()=>{
-  const valores={};for(const [id] of MODS)valores[id]=document.querySelector(`input[name="mod-${id}"]:checked`)?.value||'default';
-  const chaves=CHAVES.map(([id])=>id).filter(id=>$('chave-'+id).checked);
-  if($('mod-gerenciar').checked&&!confirm('No próximo início, estas escolhas substituem os modificadores atuais do mundo. Continuar?'))return;
-  try{const d=await api('server.config',{gravar:true,modificadores:{gerenciar:$('mod-gerenciar').checked,valores,chaves}});
+  if($('mod-gerenciar').checked&&!confirm('No próximo início do servidor, estas escolhas substituem os modificadores atuais do mundo. Continuar?'))return;
+  try{const d=await api('server.config',{gravar:true,modificadores:{gerenciar:$('mod-gerenciar').checked,valores:modValores,chaves:[...modChaves]}});
     const c=d.configuracao||d;mostraModificadores(c);$('comando').textContent=(c.comando||[]).map(x=>/\s/.test(x)?JSON.stringify(x):x).join(' ');
     $('mod-reiniciar').hidden=!d.reinicio_necessario;
     avisar({tipo:'ok',titulo:'Modificadores salvos',texto:d.reinicio_necessario?'Reinicie o servidor para aplicar.':'Valem no próximo início do servidor.'});

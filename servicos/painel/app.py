@@ -4,6 +4,7 @@ Roda como o usuario 'painel', que nao pode nada: toda acao vai por pedido ao
 executor. Fica atras do nginx, num caminho que nao aparece em lugar nenhum do
 site publico.
 """
+import hashlib
 import json
 import os
 import re
@@ -43,6 +44,11 @@ app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 app.mount(f'{RAIZ_URL}/estatico', StaticFiles(directory=BASE / 'estatico'), name='estatico')
 modelos = Jinja2Templates(directory=str(BASE / 'modelos'))
 modelos.env.globals['raiz'] = RAIZ_URL
+# Static files change with every update; a content hash in their URLs makes
+# browsers fetch the new CSS/JS instead of reusing a cached copy.
+modelos.env.globals['v'] = hashlib.sha256(b''.join(
+    path.read_bytes() for path in sorted((BASE / 'estatico').rglob('*'))
+    if path.is_file() and path.suffix in ('.css', '.js'))).hexdigest()[:10]
 modelos.env.filters['tamanho'] = nucleo.tamanho_legivel
 portaria = nucleo.Portaria()
 
