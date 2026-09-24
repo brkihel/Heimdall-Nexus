@@ -402,3 +402,16 @@ kbd{font-family:ui-monospace,monospace; font-size:.72rem; border:1px solid var(-
   transform-origin:left; animation:aviso-tempo linear forwards}
 @keyframes aviso-entra{from{opacity:0; transform:translateY(8px)}}
 @keyframes aviso-tempo{to{transform:scaleX(0)}}
+
+/* ---- Switch rows (shared: Sagas, Server Config) ---- */
+.sagas-opcoes{display:grid;gap:.6rem;margin:1rem 0}
+.sagas-opcao{display:flex;align-items:center;justify-content:space-between;gap:1.2rem;padding:.85rem 1rem;border:1px solid var(--borda);border-radius:3px;background:rgba(5,9,13,.38);cursor:pointer}
+.sagas-opcao.principal{border-color:rgba(200,164,92,.35);background:rgba(200,164,92,.05)}
+.sagas-opcao strong{display:block;color:var(--osso);font-family:'Cinzel',serif;font-size:.78rem}
+.sagas-opcao small{display:block;color:var(--fraco);font-size:.84rem;line-height:1.4;margin-top:.2rem}
+.sagas-opcao input{position:absolute;opacity:0;width:1px;height:1px}
+.sagas-trilho{position:relative;flex:none;width:46px;height:26px;border-radius:99px;border:1px solid var(--borda-viva);background:var(--ardosia);transition:background .18s,border-color .18s}
+.sagas-trilho::after{content:'';position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:var(--fraco);transition:transform .18s,background .18s}
+.sagas-opcao input:checked+.sagas-trilho{background:rgba(200,164,92,.22);border-color:var(--ouro)}
+.sagas-opcao input:checked+.sagas-trilho::after{transform:translateX(20px);background:var(--ouro-claro)}
+.sagas-opcao input:focus-visible+.sagas-trilho{outline:2px solid var(--ouro-claro);outline-offset:3px}

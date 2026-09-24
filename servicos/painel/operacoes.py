@@ -9,12 +9,15 @@ from contextlib import contextmanager
 import fcntl
 import json
 import os
+import pwd
 import re
 import shutil
 import subprocess
 import tarfile
 import tempfile
 import uuid
+
+import codigos
 from pathlib import Path
 
 
@@ -29,6 +32,16 @@ MAINTENANCE_LOCK = Path(os.environ.get('HEIMDALL_MAINTENANCE_LOCK', '/run/lock/h
 NAME = re.compile(r'^[^\x00-\x1f]{1,80}$')
 WORLD = re.compile(r'^[A-Za-z0-9_ -]{1,40}$')
 ID = re.compile(r'^[0-9a-f]{32}$')
+# World modifiers offered by Valheim's own "host a server" screen. Values match
+# the -modifier options; 'default' means the slider's middle (not passed).
+MODIFIERS = {
+    'combat': ('veryeasy', 'easy', 'default', 'hard', 'veryhard'),
+    'deathpenalty': ('casual', 'veryeasy', 'easy', 'default', 'hard', 'hardcore'),
+    'resources': ('muchless', 'less', 'default', 'more', 'muchmore', 'most'),
+    'raids': ('none', 'muchless', 'less', 'default', 'more', 'muchmore'),
+    'portals': ('casual', 'default', 'hard', 'veryhard'),
+}
+WORLD_KEYS = ('playerevents', 'fire', 'nomap', 'passivemobs', 'nobuildcost')
 ARCHIVE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9_.-]{0,100}\.tar\.gz$')
 WORLD_ARCHIVE = re.compile(r'^\d{8}T\d{6}(?:\d{6})?Z\.tar\.gz$')
 
@@ -125,8 +138,15 @@ def server_read():
             '-name', env.get('VH_NAME', ''), '-world', env.get('VH_WORLD', ''),
             '-port', env.get('VH_PORT', '2456'), '-public', env.get('VH_PUBLIC', '0'),
             '-savedir', env.get('VH_SAVEDIR', str(GAME / 'saves'))]
-    if env.get('VH_RESOURCES') and '-modifier resources' in script:
-        args += ['-modifier', 'resources', env['VH_RESOURCES']]
+    modifiers = _modifiers(env)
+    supports_modifiers = 'VH_MODIFIERS_MANAGED' in script
+    if supports_modifiers and modifiers['gerenciar']:
+        args.append('-resetmodifiers')
+        for name, value in modifiers['valores'].items():
+            if value != 'default':
+                args += ['-modifier', name, value]
+        for key in modifiers['chaves']:
+            args += ['-setkey', key]
     if env.get('VH_LOG') and '-logFile' in script:
         args += ['-logFile', env['VH_LOG']]
     if supports_password and env.get('VH_PASSWORD'):
@@ -140,8 +160,36 @@ def server_read():
             'senha_suportada': supports_password,
             'mod_sem_senha': blank_password_mod(),
             'descricao': _json(PROFILE, {}).get('description', ''),
+            'modificadores': modifiers, 'modificadores_suportados': supports_modifiers,
             'comando': [str(launcher or 'valheim-launch.sh'), '→', *args],
             'ativo': online()}
+
+
+def _modifiers(env: dict) -> dict:
+    values = {name: 'default' for name in MODIFIERS}
+    for pair in env.get('VH_MODIFIERS', '').split(','):
+        name, _, value = pair.partition('=')
+        if name in MODIFIERS and value in MODIFIERS[name]:
+            values[name] = value
+    keys = [key for key in env.get('VH_SETKEYS', '').split(',') if key in WORLD_KEYS]
+    return {'gerenciar': env.get('VH_MODIFIERS_MANAGED') == '1', 'valores': values, 'chaves': keys}
+
+
+def _modifier_changes(data) -> dict:
+    if not isinstance(data, dict) or set(data) != {'gerenciar', 'valores', 'chaves'} or \
+            not isinstance(data['gerenciar'], bool) or not isinstance(data['valores'], dict) or \
+            not isinstance(data['chaves'], list):
+        raise Problem(codigos.com_codigo('HN-CFG-007', 'modificadores de mundo inválidos'))
+    if set(data['valores']) != set(MODIFIERS) or any(
+            data['valores'][name] not in options for name, options in MODIFIERS.items()):
+        raise Problem(codigos.com_codigo('HN-CFG-007', 'valor de modificador inválido'))
+    if any(key not in WORLD_KEYS for key in data['chaves']) or \
+            len(set(data['chaves'])) != len(data['chaves']):
+        raise Problem(codigos.com_codigo('HN-CFG-007', 'opção de mundo inválida'))
+    return {'VH_MODIFIERS_MANAGED': '1' if data['gerenciar'] else '0',
+            'VH_MODIFIERS': ','.join(f'{name}={value}' for name, value in data['valores'].items()
+                                     if value != 'default'),
+            'VH_SETKEYS': ','.join(key for key in WORLD_KEYS if key in data['chaves'])}
 
 
 def server_save(data: dict):
@@ -176,6 +224,10 @@ def server_save(data: dict):
         if len(value) < 5 or len(value) > 100 or '\n' in value or '\r' in value:
             raise Problem('a senha do jogo precisa de 5 a 100 caracteres')
         changes['VH_PASSWORD'] = value
+    if 'modificadores' in data:
+        if not current['modificadores_suportados']:
+            raise Problem(codigos.com_codigo('HN-CFG-008', 'o lançador atual não aceita modificadores'))
+        changes.update(_modifier_changes(data['modificadores']))
     env = _env()
     final_name = changes.get('VH_NAME', env.get('VH_NAME', ''))
     final_password = changes.get('VH_PASSWORD', env.get('VH_PASSWORD', ''))
@@ -467,3 +519,148 @@ def schedules_tick():
                 backup_create()
             else:
                 _system(task['acao'])
+
+
+# ---- Admins, whitelist and bans (Valheim's adminlist/permittedlist/bannedlist) ----
+# Valheim reads one ID per line, skips lines starting with "//" and reloads
+# the files about every 10 seconds, so no restart is needed. Names live in
+# "// heimdall: ID Name" comment lines, which Valheim keeps when it rewrites a
+# list itself (for example after an in-game ban). A disabled whitelist keeps
+# its players as "// heimdall-off: ID Name" lines: Valheim ignores comments,
+# so an empty list means everyone may join.
+PLAYER_ID = re.compile(r'^(7656119\d{10}|[A-Za-z]{2,16}_[A-Za-z0-9-]{3,64})$')
+PLAYER_NAME = re.compile(r'^[^\x00-\x1f/]{0,40}$')
+LISTS = {'admins': ('adminlist.txt', 'List admin players ID  ONE per line'),
+         'whitelist': ('permittedlist.txt', 'List permitted players ID ONE per line'),
+         'banidos': ('bannedlist.txt', 'List banned players ID  ONE per line')}
+MAX_LIST = 500
+
+
+def _save_dir() -> Path:
+    path = Path(_env().get('VH_SAVEDIR') or GAME / 'saves')
+    if path.is_symlink() or not path.is_dir():
+        raise Problem(codigos.com_codigo('HN-CFG-005', f'pasta de saves não encontrada: {path}'))
+    return path
+
+
+def _read_list(path: Path) -> dict:
+    active, off, names, other = [], [], {}, []
+    try:
+        lines = path.read_text(encoding='utf-8', errors='replace').splitlines()
+    except FileNotFoundError:
+        lines = []
+    for raw in lines:
+        line = raw.strip()
+        if not line:
+            continue
+        for prefix, target in (('// heimdall-off:', off), ('// heimdall:', None)):
+            if line.startswith(prefix):
+                player, _, name = line[len(prefix):].strip().partition(' ')
+                if PLAYER_ID.fullmatch(player):
+                    names[player] = name.strip()[:40]
+                    if target is not None and player not in target:
+                        target.append(player)
+                break
+        else:
+            if line.startswith('//'):
+                other.append(line)
+            elif line not in active:
+                active.append(line)
+    return {'active': active, 'off': off, 'names': names, 'comments': other}
+
+
+def access_read() -> dict:
+    folder = _save_dir()
+    lists = {key: _read_list(folder / name) for key, (name, _) in LISTS.items()}
+    entry = lambda data, player: {'id': player, 'nome': data['names'].get(player, ''),
+                                  'valida': bool(PLAYER_ID.fullmatch(player))}
+    admins = [entry(lists['admins'], p) for p in lists['admins']['active']]
+    admin_ids = {a['id'] for a in admins}
+    white = lists['whitelist']
+    enabled = bool(white['active'])
+    players = [entry(white, p) for p in (white['active'] if enabled else white['off'])
+               if p not in admin_ids]
+    return {'pasta': str(folder), 'admins': admins,
+            'whitelist': {'ativa': enabled, 'jogadores': players},
+            'banidos': [entry(lists['banidos'], p) for p in lists['banidos']['active']]}
+
+
+def _entries(value, label: str) -> list[tuple[str, str]]:
+    if not isinstance(value, list) or len(value) > MAX_LIST:
+        raise Problem(codigos.com_codigo('HN-CFG-009', f'lista de {label} inválida'))
+    result, seen = [], set()
+    for item in value:
+        if not isinstance(item, dict) or set(item) - {'id', 'nome'}:
+            raise Problem(codigos.com_codigo('HN-CFG-009', f'item inválido em {label}'))
+        player = str(item.get('id', '')).strip()
+        name = ' '.join(str(item.get('nome', '')).split())
+        if not PLAYER_ID.fullmatch(player):
+            raise Problem(codigos.com_codigo('HN-CFG-001', f'ID inválida em {label}: {player[:40] or "(vazia)"}'))
+        if not PLAYER_NAME.fullmatch(name):
+            raise Problem(codigos.com_codigo('HN-CFG-002', f'nome inválido em {label}'))
+        if player not in seen:
+            seen.add(player)
+            result.append((player, name))
+    return result
+
+
+def _write_list(path: Path, header: str, comments: list[str], active, off=()) -> None:
+    lines = [f'// {header}', '// Managed by Heimdall Nexus (Jarl > Server Config).']
+    lines += [c for c in comments if c not in lines]
+    for player, name in active:
+        lines.append(f'// heimdall: {player} {name}'.rstrip())
+    for player, name in off:
+        lines.append(f'// heimdall-off: {player} {name}'.rstrip())
+    lines += [player for player, _ in active]
+    content = '\n'.join(lines) + '\n'
+    game = pwd.getpwnam('valheim') if _user_exists('valheim') else None
+    with tempfile.NamedTemporaryFile('w', encoding='utf-8', dir=path.parent,
+                                     prefix='.heimdall-', delete=False) as stream:
+        temp = Path(stream.name)
+        stream.write(content)
+    try:
+        # The game must own its lists: in-game ban/permit commands rewrite them.
+        if game:
+            os.chown(temp, game.pw_uid, game.pw_gid)
+        os.chmod(temp, 0o644)
+        if path.is_symlink():
+            raise Problem(codigos.com_codigo('HN-CFG-006', f'{path.name} é um link simbólico'))
+        os.replace(temp, path)
+    finally:
+        temp.unlink(missing_ok=True)
+
+
+def _user_exists(name: str) -> bool:
+    try:
+        pwd.getpwnam(name)
+        return True
+    except KeyError:
+        return False
+
+
+def access_save(data: dict) -> dict:
+    if not isinstance(data, dict) or set(data) != {'admins', 'whitelist_ativa', 'whitelist', 'banidos'} \
+            or not isinstance(data['whitelist_ativa'], bool):
+        raise Problem(codigos.com_codigo('HN-CFG-009', 'dados de acesso inválidos'))
+    admins = _entries(data['admins'], 'admins')
+    players = _entries(data['whitelist'], 'whitelist')
+    banned = _entries(data['banidos'], 'banidos')
+    admin_ids = {player for player, _ in admins}
+    clash = admin_ids & {player for player, _ in banned}
+    if clash:
+        raise Problem(codigos.com_codigo('HN-CFG-003', 'admin e banido ao mesmo tempo: ' + ', '.join(sorted(clash))))
+    if data['whitelist_ativa'] and not admins and not players:
+        raise Problem(codigos.com_codigo('HN-CFG-004', 'adicione pelo menos um jogador antes de ativar a whitelist'))
+    folder = _save_dir()
+    current = {key: _read_list(folder / name) for key, (name, _) in LISTS.items()}
+    _write_list(folder / LISTS['admins'][0], LISTS['admins'][1], current['admins']['comments'], admins)
+    # Admins are always allowed in: the whitelist includes them automatically.
+    permitted = admins + [p for p in players if p[0] not in admin_ids]
+    if data['whitelist_ativa']:
+        _write_list(folder / LISTS['whitelist'][0], LISTS['whitelist'][1],
+                    current['whitelist']['comments'], permitted)
+    else:
+        _write_list(folder / LISTS['whitelist'][0], LISTS['whitelist'][1],
+                    current['whitelist']['comments'], [], players)
+    _write_list(folder / LISTS['banidos'][0], LISTS['banidos'][1], current['banidos']['comments'], banned)
+    return access_read()

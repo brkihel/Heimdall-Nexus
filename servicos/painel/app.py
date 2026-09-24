@@ -447,7 +447,7 @@ async def configuracoes(pedido: Request):
 @app.get(f'{RAIZ_URL}/server-config', response_class=HTMLResponse)
 async def server_config(pedido: Request):
     exige(pedido)
-    return pagina(pedido, 'server-config.html', aba='server-config')
+    return pagina(pedido, 'server-config.html', aba='server-config', codigos=codigos.CATALOGO)
 
 
 @app.get(f'{RAIZ_URL}/tarefas', response_class=HTMLResponse)
@@ -470,11 +470,13 @@ async def backups(pedido: Request):
 @app.post(f'{RAIZ_URL}/api/administracao')
 async def api_administracao(pedido: Request):
     usuario = exige(pedido)
-    if not pedido.headers.get('content-type', '').startswith('application/json'):
+    expected_origin = f'{pedido.url.scheme}://{pedido.headers.get("host", "")}'
+    if pedido.headers.get('origin') not in (None, expected_origin) or \
+            not pedido.headers.get('content-type', '').startswith('application/json'):
         return JSONResponse({'ok': False, 'erro': 'pedido inválido'}, status_code=400)
     body = await pedido.json()
     verb = body.get('verbo')
-    if verb not in {'server.config', 'server.reinstall', 'schedules', 'backups'}:
+    if verb not in {'server.config', 'server.acesso', 'server.reinstall', 'schedules', 'backups'}:
         return JSONResponse({'ok': False, 'erro': 'ação inválida'}, status_code=400)
     try:
         return {'ok': True, **await nucleo.pede_async(verb, body.get('dados') or {}, usuario)}

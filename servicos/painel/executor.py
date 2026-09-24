@@ -1938,6 +1938,13 @@ def v_server_config(dados):
     return _operacao(operacoes.server_save, dados) if dados.get('gravar') else operacoes.server_read()
 
 
+def v_server_acesso(dados):
+    if dados.get('gravar'):
+        payload = {k: v for k, v in dados.items() if k != 'gravar'}
+        return _operacao(operacoes.access_save, payload)
+    return _operacao(operacoes.access_read)
+
+
 def v_server_reinstall(dados):
     import nucleo
     if not nucleo.confere_senha(str(dados.get('senha_admin') or ''),
@@ -2195,6 +2202,7 @@ VERBOS = {
     'sagas.story.request': v_sagas_story_request,
     'server.config': v_server_config,
     'server.reinstall': v_server_reinstall,
+    'server.acesso': v_server_acesso,
     'schedules': v_schedules,
     'backups': v_backups,
     'ping': v_ping,
@@ -2299,7 +2307,7 @@ class Atendente(socketserver.StreamRequestHandler):
                            'site.versoes', 'site.versao.ver', 'site.previa.ler', 'site.identidade')
             silenciosos += ('sagas.settings', 'sagas.status', 'sagas.story.status', 'sistema.estado')
             if verbo not in silenciosos and not (
-                verbo == 'server.config' and not dados.get('gravar') or
+                verbo in ('server.config', 'server.acesso') and not dados.get('gravar') or
                 verbo in ('schedules', 'backups') and dados.get('acao', 'listar') == 'listar'):
                 audita(quem, verbo, registro, 'feito')
             self.responde({'ok': True, 'dados': resposta})

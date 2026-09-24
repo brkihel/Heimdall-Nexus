@@ -16,8 +16,49 @@
   <label>Descrição para o painel e o site<textarea id="descricao" maxlength="500" rows="2" style="min-height:0;height:4.2rem;resize:vertical;font-family:inherit"></textarea></label>
   <p id="senha-aviso"></p>
   <label class="alavanca" id="remover-senha-linha" hidden><input id="remover-senha" type="checkbox" role="switch"> Servidor sem senha <span id="remover-senha-mod" style="color:var(--fraco);font-size:.85em"></span></label>
-  <div class="acoes"><button id="salvar" class="btn bom">Salvar</button><button id="reiniciar" class="btn" hidden>Reiniciar para aplicar</button></div>
+  <div class="acoes"><button id="salvar" class="btn principal">Salvar</button><button id="reiniciar" class="btn" hidden>Reiniciar para aplicar</button></div>
   <p id="mensagem" role="status"></p>
+</div>
+<div class="cartao" style="max-width:850px" id="cartao-modificadores">
+  <h2>Modificadores de mundo</h2>
+  <p>Os mesmos ajustes da tela "Hospedar servidor" do Valheim. Eles ficam gravados no mundo e passam a valer quando o servidor inicia.</p>
+  <div class="sagas-opcoes"><label class="sagas-opcao principal"><span><strong>Gerenciar modificadores pelo Jarl</strong><small>Desligado, o mundo mantém os modificadores que já tem. Ligado, as escolhas abaixo substituem as do mundo no próximo início.</small></span><input type="checkbox" id="mod-gerenciar"><span class="sagas-trilho" aria-hidden="true"></span></label></div>
+  <fieldset id="mod-campos" class="mod-campos">
+    <div id="mod-deslizantes"></div>
+    <h3 class="mod-subtitulo">Regras do mundo</h3>
+    <div class="sagas-opcoes" id="mod-chaves"></div>
+  </fieldset>
+  <p class="nota-cfg" id="mod-aviso" hidden></p>
+  <div class="acoes"><button id="mod-salvar" class="btn principal" type="button">Salvar modificadores</button><button id="mod-reiniciar" class="btn" type="button" hidden>Reiniciar para aplicar</button></div>
+</div>
+<div class="cartao" style="max-width:850px" id="cartao-acesso">
+  <h2>Admins, whitelist e banidos</h2>
+  <p>O Valheim reconhece cada jogador pela ID da plataforma, não pelo nome. O nome aqui é só um lembrete para você. As mudanças valem em cerca de 10 segundos, sem reiniciar o servidor.</p>
+  <details class="ajuda-id"><summary>Como achar a ID de um jogador</summary>
+    <ol>
+      <li><b>Steam:</b> no Steam, clique no seu nome no canto superior direito → <i>Detalhes da conta</i>. A <i>Steam ID</i> de 17 dígitos (começa com 7656119) aparece no topo. Pelo navegador, ela também está no endereço do perfil: steamcommunity.com/profiles/<b>7656119…</b></li>
+      <li><b>Xbox ou outra plataforma (crossplay):</b> com a whitelist ativa, peça para a pessoa tentar entrar. O log do servidor (aba Console) mostra <code>Kicking player not in permitted list NOME host: ID</code>; copie a ID completa, como <code>Xbox_123…</code>.</li>
+    </ol>
+  </details>
+  <section class="lista-acesso">
+    <h3>Admins</h3>
+    <p class="nota-cfg">Admins podem expulsar e banir no jogo e usar o console (F5) com <code>devcommands</code>. Eles entram mesmo com a whitelist ativa.</p>
+    <ul class="jogadores" id="lista-admins"></ul>
+    <div class="adicionar" data-lista="admins"><input placeholder="Nome (lembrete)" maxlength="40" aria-label="Nome do admin"><input placeholder="Steam ID ou Plataforma_ID" maxlength="80" aria-label="ID do admin" spellcheck="false"><button class="btn" type="button">Adicionar</button></div>
+  </section>
+  <section class="lista-acesso">
+    <h3>Whitelist</h3>
+    <div class="sagas-opcoes"><label class="sagas-opcao"><span><strong>Whitelist ativa</strong><small>Só entram os jogadores desta lista e os admins. Desligada, qualquer pessoa com o endereço e a senha entra; a lista fica guardada para quando você religar.</small></span><input type="checkbox" id="whitelist-ativa"><span class="sagas-trilho" aria-hidden="true"></span></label></div>
+    <ul class="jogadores" id="lista-whitelist"></ul>
+    <div class="adicionar" data-lista="whitelist"><input placeholder="Nome (lembrete)" maxlength="40" aria-label="Nome do jogador"><input placeholder="Steam ID ou Plataforma_ID" maxlength="80" aria-label="ID do jogador" spellcheck="false"><button class="btn" type="button">Adicionar</button></div>
+  </section>
+  <section class="lista-acesso">
+    <h3>Banidos</h3>
+    <p class="nota-cfg">Banidos não entram, mesmo que estejam na whitelist. Um ban feito no jogo também aparece aqui.</p>
+    <ul class="jogadores" id="lista-banidos"></ul>
+    <div class="adicionar" data-lista="banidos"><input placeholder="Nome (lembrete)" maxlength="40" aria-label="Nome do banido"><input placeholder="Steam ID ou Plataforma_ID" maxlength="80" aria-label="ID do banido" spellcheck="false"><button class="btn" type="button">Adicionar</button></div>
+  </section>
+  <div class="acoes"><button id="acesso-salvar" class="btn principal" type="button">Salvar acesso</button><span id="acesso-msg" role="status"></span></div>
 </div>
 <div class="cartao" style="max-width:850px">
   <h2>Inicialização atual</h2><p>Prévia dos argumentos efetivos. A senha é sempre ocultada.</p>
@@ -36,6 +77,35 @@
   <div class="acoes" style="margin-top:1rem"><button id="confirmar-acao" class="btn ruim">Confirmar</button><button id="cancelar-acao" class="btn">Cancelar</button></div>
 </dialog>
 <style>
+.mod-campos{border:0;margin:0;padding:0;min-width:0}
+.mod-campos:disabled{opacity:.5}
+.mod-linha{margin:1rem 0}
+.mod-linha>strong{display:block;color:var(--osso);font-family:'Cinzel',serif;font-size:.78rem}
+.mod-linha>small{display:block;color:var(--fraco);font-size:.82rem;margin:.15rem 0 .5rem}
+.segmentos{display:flex;flex-wrap:wrap;border:1px solid var(--borda-viva);border-radius:3px;overflow:hidden}
+.segmentos label{flex:1 1 90px;position:relative;cursor:pointer}
+.segmentos input{position:absolute;opacity:0;width:1px;height:1px}
+.segmentos span{display:block;padding:.55rem .5rem;text-align:center;font-size:.8rem;color:var(--fraco);border-right:1px solid var(--borda);background:rgba(5,9,13,.4)}
+.segmentos label:last-child span{border-right:0}
+.segmentos input:checked+span{background:rgba(200,164,92,.16);color:var(--ouro-claro);box-shadow:inset 0 -2px 0 var(--ouro)}
+.segmentos input:focus-visible+span{outline:2px solid var(--ouro-claro);outline-offset:-2px}
+.mod-subtitulo,.lista-acesso h3{font-size:.85rem;margin:1.3rem 0 .3rem;color:var(--osso)}
+.nota-cfg{color:var(--fraco);font-size:.85rem;line-height:1.5}
+.ajuda-id{margin:.6rem 0 .4rem;font-size:.86rem}
+.ajuda-id summary{cursor:pointer;color:var(--ouro-claro)}
+.ajuda-id ol{color:var(--texto);line-height:1.55;padding-left:1.2rem}
+.jogadores{list-style:none;margin:.5rem 0;padding:0;display:grid;gap:.35rem}
+.jogadores li{display:flex;align-items:center;gap:.7rem;padding:.5rem .7rem;border:1px solid var(--borda);border-radius:3px;background:rgba(5,9,13,.35)}
+.jogadores li.invalida{border-color:rgba(239,142,124,.5)}
+.jogadores b{color:var(--osso);font-weight:600;min-width:0;overflow-wrap:anywhere}
+.jogadores code{color:var(--fraco);font-size:.8rem;overflow-wrap:anywhere}
+.jogadores .vazio{color:var(--fraco);font-size:.85rem;border-style:dashed}
+.jogadores button{margin-left:auto}
+.jogadores .auto{margin-left:auto;color:var(--fraco);font-size:.75rem}
+#cartao-acesso>.acoes,#cartao-modificadores>.acoes{margin-top:1.2rem}
+.adicionar{display:grid;grid-template-columns:1fr 1.3fr auto;gap:.5rem}
+.adicionar input{background:#101b23;color:#f0e5cf;border:1px solid var(--borda-viva);border-radius:3px;padding:.55rem .65rem;min-width:0}
+@media(max-width:620px){.adicionar{grid-template-columns:1fr}}
 .grade-cfg{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin:1rem 0}
 .grade-cfg label:not(.alavanca),.cartao>label{display:grid;gap:.3rem} .grade-cfg .alavanca{align-self:center} .grade-cfg input:not([type=checkbox]),.cartao textarea{width:100%;box-sizing:border-box;background:#101b23;color:#f0e5cf;border:1px solid #755c39;border-radius:3px;padding:.6rem;font:inherit}
 </style>
@@ -44,12 +114,106 @@
 <script>
 const ROOT={{ raiz|tojson }}, $=id=>document.getElementById(id);
 async function api(verbo,dados={}){const r=await fetch(ROOT+'/api/administracao',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({verbo,dados})});const d=await r.json();if(!d.ok)throw Error(d.erro||'Falha');return d}
-async function load(){try{const d=await api('server.config'),c=d.configuracao||d;for(const key of ['nome','mundo','porta','descricao'])$(key).value=c[key]||'';for(const key of ['publico','crossplay'])$(key).checked=!!c[key];$('senha').disabled=!c.senha_suportada;$('remover-senha').checked=false;$('remover-senha-linha').hidden=!(c.mod_sem_senha&&c.senha_suportada);$('remover-senha-mod').textContent=c.mod_sem_senha?`(permitido pelo mod ${c.mod_sem_senha})`:'';$('senha-aviso').textContent=c.senha_suportada?(c.senha_definida?'Há uma senha configurada. Digite outra para trocar; a senha atual não é exibida.'+(c.mod_sem_senha?'':' Ela só pode ser removida com um mod de servidor sem senha instalado.'):(c.mod_sem_senha?'Servidor sem senha, permitido pelo mod '+c.mod_sem_senha+'. Digite uma senha para voltar a exigi-la.':'Sem senha configurada: qualquer pessoa com o endereço pode entrar. Defina uma senha agora.')):'O lançador atual não aceita VH_PASSWORD. A troca de senha pelo painel está indisponível nesta instalação.';$('comando').textContent=(c.comando||[]).map(x=>/\s/.test(x)?JSON.stringify(x):x).join(' ');$('status').textContent=c.ativo?'Ligado':'Desligado';}catch(e){$('mensagem').textContent=e.message}}
+async function load(){try{const d=await api('server.config'),c=d.configuracao||d;for(const key of ['nome','mundo','porta','descricao'])$(key).value=c[key]||'';for(const key of ['publico','crossplay'])$(key).checked=!!c[key];$('senha').disabled=!c.senha_suportada;$('remover-senha').checked=false;$('remover-senha-linha').hidden=!(c.mod_sem_senha&&c.senha_suportada);$('remover-senha-mod').textContent=c.mod_sem_senha?`(permitido pelo mod ${c.mod_sem_senha})`:'';$('senha-aviso').textContent=c.senha_suportada?(c.senha_definida?'Há uma senha configurada. Digite outra para trocar; a senha atual não é exibida.'+(c.mod_sem_senha?'':' Ela só pode ser removida com um mod de servidor sem senha instalado.'):(c.mod_sem_senha?'Servidor sem senha, permitido pelo mod '+c.mod_sem_senha+'. Digite uma senha para voltar a exigi-la.':'Sem senha configurada: qualquer pessoa com o endereço pode entrar. Defina uma senha agora.')):'O lançador atual não aceita VH_PASSWORD. A troca de senha pelo painel está indisponível nesta instalação.';$('comando').textContent=(c.comando||[]).map(x=>/\s/.test(x)?JSON.stringify(x):x).join(' ');$('status').textContent=c.ativo?'Ligado':'Desligado';mostraModificadores(c);}catch(e){$('mensagem').textContent=e.message}}
 $('salvar').onclick=async()=>{try{const data={gravar:true,nome:$('nome').value,mundo:$('mundo').value,porta:$('porta').value,descricao:$('descricao').value,publico:$('publico').checked,crossplay:$('crossplay').checked};if($('senha').value)data.senha=$('senha').value;if($('remover-senha').checked){if(data.senha){$('mensagem').textContent='Escolha entre trocar ou remover a senha.';return}if(!confirm('Remover a senha do jogo? Qualquer pessoa com o endereço poderá entrar.'))return;data.remover_senha=true}const d=await api('server.config',data);$('senha').value='';$('mensagem').textContent=d.reinicio_necessario?'Salvo. Reinicie o jogo para aplicar.':'Salvo.';$('reiniciar').hidden=!d.reinicio_necessario;await load()}catch(e){$('mensagem').textContent=e.message}};
 $('reiniciar').onclick=async()=>{if(!confirm('Reiniciar o jogo agora? Jogadores conectados serão desconectados.'))return;const r=await fetch(ROOT+'/api/servico',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'restart'})});const d=await r.json();$('mensagem').textContent=d.ok?'Reinício solicitado.':d.erro};
 $('reinstalar').onclick=()=>{$('senha-admin').value='';$('confirmar-reinstalacao').showModal();$('senha-admin').focus()};
 $('cancelar-acao').onclick=()=>$('confirmar-reinstalacao').close();
 $('confirmar-acao').onclick=async()=>{const senha=$('senha-admin').value;$('senha-admin').value='';$('confirmar-reinstalacao').close();try{const d=await api('server.reinstall',{senha_admin:senha});$('mensagem').textContent='Reinstalação iniciada. Tarefa '+d.tarefa+'. Acompanhe em Mods ou no log do executor.'}catch(e){$('mensagem').textContent=e.message}};
+const MODS=[
+  ['combat','Dificuldade de combate','Força e dano das criaturas.',[['veryeasy','Muito fácil'],['easy','Fácil'],['default','Normal'],['hard','Difícil'],['veryhard','Muito difícil']]],
+  ['deathpenalty','Penalidade de morte','O que o Viking perde ao morrer.',[['casual','Casual'],['veryeasy','Muito fácil'],['easy','Fácil'],['default','Normal'],['hard','Difícil'],['hardcore','Pesadelo']]],
+  ['resources','Taxa de recursos','Quantidade de materiais que caem.',[['muchless','Muito menos'],['less','Menos'],['default','Normal'],['more','Mais'],['muchmore','Muito mais'],['most','Máximo']]],
+  ['raids','Taxa de invasões','Frequência dos ataques à base.',[['none','Nenhuma'],['muchless','Muito menos'],['less','Menos'],['default','Normal'],['more','Mais'],['muchmore','Muito mais']]],
+  ['portals','Portais','O que pode atravessar os portais.',[['casual','Casual'],['default','Normal'],['hard','Difícil'],['veryhard','Muito difícil']]],
+];
+const CHAVES=[
+  ['playerevents','Invasões com base em jogadores','As invasões dependem do progresso de quem está perto da base, não do mundo inteiro.'],
+  ['fire','Risco de incêndio','O fogo se espalha e pode queimar construções de madeira.'],
+  ['nomap','Sem mapa','Desliga o mapa e o minimapa para todos.'],
+  ['passivemobs','Criaturas passivas','As criaturas só atacam quando provocadas.'],
+  ['nobuildcost','Construção sem custo','Construir não gasta materiais.'],
+];
+function montaModificadores(){
+  const box=$('mod-deslizantes');box.replaceChildren();
+  for(const [id,titulo,desc,opcoes] of MODS){
+    const linha=document.createElement('div');linha.className='mod-linha';
+    const t=document.createElement('strong');t.textContent=titulo;const d=document.createElement('small');d.textContent=desc;
+    const seg=document.createElement('div');seg.className='segmentos';seg.setAttribute('role','radiogroup');seg.setAttribute('aria-label',titulo);
+    for(const [valor,rotulo] of opcoes){const l=document.createElement('label');const i=document.createElement('input');i.type='radio';i.name='mod-'+id;i.value=valor;
+      const s=document.createElement('span');s.textContent=rotulo;l.append(i,s);seg.append(l);}
+    linha.append(t,d,seg);box.append(linha);
+  }
+  const chaves=$('mod-chaves');chaves.replaceChildren();
+  for(const [id,titulo,desc] of CHAVES){
+    const l=document.createElement('label');l.className='sagas-opcao';
+    l.innerHTML='<span><strong></strong><small></small></span><input type="checkbox"><span class="sagas-trilho" aria-hidden="true"></span>';
+    l.querySelector('strong').textContent=titulo;l.querySelector('small').textContent=desc;l.querySelector('input').id='chave-'+id;chaves.append(l);
+  }
+  $('mod-gerenciar').addEventListener('change',()=>{$('mod-campos').disabled=!$('mod-gerenciar').checked;});
+}
+function mostraModificadores(c){
+  const m=c.modificadores;if(!m)return;
+  $('mod-gerenciar').checked=m.gerenciar;$('mod-campos').disabled=!m.gerenciar;
+  for(const [id] of MODS){const r=document.querySelector(`input[name="mod-${id}"][value="${m.valores[id]}"]`);if(r)r.checked=true;}
+  for(const [id] of CHAVES)$('chave-'+id).checked=m.chaves.includes(id);
+  $('mod-aviso').hidden=c.modificadores_suportados;
+  $('mod-aviso').textContent='O lançador instalado ainda não aceita modificadores. Atualize o Heimdall em Sobre e atualizações.';
+  $('mod-salvar').disabled=!c.modificadores_suportados;
+}
+const CATALOGO={{ (codigos or {})|tojson }};
+function avisoErro(e,titulo){
+  const m=/^(HN-[A-Z]{3,5}-\d{3}): ([\s\S]*)$/.exec(e.message||''),info=m?CATALOGO[m[1]]||{}:{};
+  avisar({tipo:'erro',codigo:m?m[1]:'',titulo:info.titulo||titulo,texto:m?m[2]:e.message,solucao:info.solucao});
+}
+$('mod-salvar').onclick=async()=>{
+  const valores={};for(const [id] of MODS)valores[id]=document.querySelector(`input[name="mod-${id}"]:checked`)?.value||'default';
+  const chaves=CHAVES.map(([id])=>id).filter(id=>$('chave-'+id).checked);
+  if($('mod-gerenciar').checked&&!confirm('No próximo início, estas escolhas substituem os modificadores atuais do mundo. Continuar?'))return;
+  try{const d=await api('server.config',{gravar:true,modificadores:{gerenciar:$('mod-gerenciar').checked,valores,chaves}});
+    const c=d.configuracao||d;mostraModificadores(c);$('comando').textContent=(c.comando||[]).map(x=>/\s/.test(x)?JSON.stringify(x):x).join(' ');
+    $('mod-reiniciar').hidden=!d.reinicio_necessario;
+    avisar({tipo:'ok',titulo:'Modificadores salvos',texto:d.reinicio_necessario?'Reinicie o servidor para aplicar.':'Valem no próximo início do servidor.'});
+  }catch(e){avisoErro(e,'Não foi possível salvar os modificadores');}
+};
+$('mod-reiniciar').onclick=()=>$('reiniciar').onclick();
+let acesso={admins:[],whitelist:[],banidos:[]};
+function desenhaLista(nome){
+  const ul=$('lista-'+nome);ul.replaceChildren();
+  if(nome==='whitelist')for(const a of acesso.admins){const li=document.createElement('li');const b=document.createElement('b');b.textContent=a.nome||'Admin';
+    const c=document.createElement('code');c.textContent=a.id;const s=document.createElement('span');s.className='auto';s.textContent='admin · incluído automaticamente';li.append(b,c,s);ul.append(li);}
+  const itens=acesso[nome];
+  if(!itens.length&&!(nome==='whitelist'&&acesso.admins.length)){const li=document.createElement('li');li.className='vazio';li.textContent=nome==='admins'?'Nenhum admin.':nome==='banidos'?'Ninguém banido.':'Nenhum jogador na whitelist.';ul.append(li);}
+  itens.forEach((j,i)=>{const li=document.createElement('li');if(j.valida===false)li.className='invalida';
+    const b=document.createElement('b');b.textContent=j.nome||'Sem nome';const c=document.createElement('code');c.textContent=j.id+(j.valida===false?' · ID inválida, remova':'');
+    const x=document.createElement('button');x.type='button';x.className='btn mini ruim';x.textContent='Remover';
+    x.onclick=()=>{itens.splice(i,1);desenhaLista(nome);if(nome==='admins')desenhaLista('whitelist');};
+    li.append(b,c,x);ul.append(li);});
+}
+function desenhaAcesso(){for(const n of ['admins','whitelist','banidos'])desenhaLista(n);}
+async function carregaAcesso(){
+  try{const d=await api('server.acesso');acesso={admins:d.admins,whitelist:d.whitelist.jogadores,banidos:d.banidos};
+    $('whitelist-ativa').checked=d.whitelist.ativa;desenhaAcesso();}
+  catch(e){$('acesso-msg').textContent=e.message;$('acesso-salvar').disabled=true;}
+}
+const ID_JOGADOR=/^(7656119\d{10}|[A-Za-z]{2,16}_[A-Za-z0-9-]{3,64})$/;
+for(const caixa of document.querySelectorAll('.adicionar')){
+  const [nome,id]=caixa.querySelectorAll('input'),botao=caixa.querySelector('button'),lista=caixa.dataset.lista;
+  const adiciona=()=>{const valor=id.value.trim();
+    if(!ID_JOGADOR.test(valor)){avisar({tipo:'erro',titulo:'ID inválida',texto:'Use a Steam ID de 17 dígitos (começa com 7656119) ou Plataforma_ID, como Xbox_123…',solucao:'Abra "Como achar a ID de um jogador" acima.'});id.focus();return;}
+    if(acesso[lista].some(j=>j.id===valor)){avisar({tipo:'info',titulo:'Essa ID já está na lista'});return;}
+    acesso[lista].push({id:valor,nome:nome.value.trim().replace(/\//g,''),valida:true});nome.value='';id.value='';desenhaLista(lista);if(lista==='admins')desenhaLista('whitelist');nome.focus();};
+  botao.onclick=adiciona;id.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();adiciona();}});
+}
+$('acesso-salvar').onclick=async()=>{
+  const limpa=l=>l.map(j=>({id:j.id,nome:j.nome||''}));
+  if($('whitelist-ativa').checked&&!acesso.admins.length&&!acesso.whitelist.length){avisar({tipo:'erro',titulo:'Whitelist vazia',texto:'Adicione pelo menos um jogador (de preferência você mesmo como admin) antes de ativar a whitelist.'});return;}
+  try{const d=await api('server.acesso',{gravar:true,admins:limpa(acesso.admins),whitelist_ativa:$('whitelist-ativa').checked,whitelist:limpa(acesso.whitelist),banidos:limpa(acesso.banidos)});
+    acesso={admins:d.admins,whitelist:d.whitelist.jogadores,banidos:d.banidos};desenhaAcesso();
+    avisar({tipo:'ok',titulo:'Acesso salvo',texto:'O servidor aplica em cerca de 10 segundos, sem reiniciar.'});
+  }catch(e){avisoErro(e,'Não foi possível salvar o acesso');}
+};
+montaModificadores();carregaAcesso();
 load();
 </script>
 {% endblock %}

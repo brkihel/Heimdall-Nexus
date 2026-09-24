@@ -10,6 +10,7 @@ dele (`python3 ferramentas/gerar-codigos.py`) e um teste confere que as duas bat
 | Área | Significado |
 |---|---|
 | UPD | Atualizações pelo Jarl e `deploy/update.sh` |
+| CFG | Server Config: admins, whitelist, banidos e modificadores de mundo |
 
 | Código | O que houve | Como resolver |
 |---|---|---|
@@ -36,3 +37,12 @@ dele (`python3 ferramentas/gerar-codigos.py`) e um teste confere que as duas bat
 | `HN-UPD-108` | O painel não voltou depois de reiniciar | Veja: sudo journalctl -u heimdall-panel -n 80. Pelo terminal: cd ~/Heimdall-Nexus && sudo ./deploy/update.sh |
 | `HN-UPD-120` | A atualização terminou sem trocar a versão | Veja o registro técnico. Se não houver erro nele, procure atualizações de novo. |
 | `HN-UPD-121` | A atualização foi interrompida | O processo parou sem concluir (reinício da máquina ou falta de memória). Rode a atualização de novo. |
+| `HN-CFG-001` | ID de jogador inválida | Use a Steam ID de 17 dígitos (começa com 7656119) ou Plataforma_ID, como Xbox_123… |
+| `HN-CFG-002` | Nome de jogador inválido | Use até 40 caracteres, sem barra (/). |
+| `HN-CFG-003` | A mesma ID está como admin e banida | Remova a ID de uma das duas listas. |
+| `HN-CFG-004` | Whitelist ativa sem nenhum jogador | Adicione pelo menos um jogador (de preferência você como admin) antes de ativar. |
+| `HN-CFG-005` | Pasta de saves do Valheim não encontrada | Confira VH_SAVEDIR em server.env (aba Arquivos) ou reinstale pelo instalador. |
+| `HN-CFG-006` | Arquivo de lista é um link simbólico | Por segurança o painel não segue links. Substitua o link por um arquivo comum. |
+| `HN-CFG-007` | Modificador de mundo inválido | Recarregue a página e escolha uma das opções mostradas. |
+| `HN-CFG-008` | O lançador instalado não aceita modificadores | Atualize o Heimdall em Sobre e atualizações. |
+| `HN-CFG-009` | Dados de acesso inválidos | Recarregue a página e tente de novo. |

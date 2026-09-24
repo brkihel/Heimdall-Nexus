@@ -59,6 +59,25 @@ CATALOGO: dict[str, dict[str, str]] = {
                    'solucao': 'Veja o registro técnico. Se não houver erro nele, procure atualizações de novo.'},
     'HN-UPD-121': {'titulo': 'A atualização foi interrompida',
                    'solucao': 'O processo parou sem concluir (reinício da máquina ou falta de memória). Rode a atualização de novo.'},
+    # --- Server Config: access lists and world modifiers ---
+    'HN-CFG-001': {'titulo': 'ID de jogador inválida',
+                   'solucao': 'Use a Steam ID de 17 dígitos (começa com 7656119) ou Plataforma_ID, como Xbox_123…'},
+    'HN-CFG-002': {'titulo': 'Nome de jogador inválido',
+                   'solucao': 'Use até 40 caracteres, sem barra (/).'},
+    'HN-CFG-003': {'titulo': 'A mesma ID está como admin e banida',
+                   'solucao': 'Remova a ID de uma das duas listas.'},
+    'HN-CFG-004': {'titulo': 'Whitelist ativa sem nenhum jogador',
+                   'solucao': 'Adicione pelo menos um jogador (de preferência você como admin) antes de ativar.'},
+    'HN-CFG-005': {'titulo': 'Pasta de saves do Valheim não encontrada',
+                   'solucao': 'Confira VH_SAVEDIR em server.env (aba Arquivos) ou reinstale pelo instalador.'},
+    'HN-CFG-006': {'titulo': 'Arquivo de lista é um link simbólico',
+                   'solucao': 'Por segurança o painel não segue links. Substitua o link por um arquivo comum.'},
+    'HN-CFG-007': {'titulo': 'Modificador de mundo inválido',
+                   'solucao': 'Recarregue a página e escolha uma das opções mostradas.'},
+    'HN-CFG-008': {'titulo': 'O lançador instalado não aceita modificadores',
+                   'solucao': 'Atualize o Heimdall em Sobre e atualizações.'},
+    'HN-CFG-009': {'titulo': 'Dados de acesso inválidos',
+                   'solucao': 'Recarregue a página e tente de novo.'},
 }
 
 

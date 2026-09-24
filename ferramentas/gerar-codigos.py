@@ -7,7 +7,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'servicos/painel'))
 import codigos  # noqa: E402
 
-AREAS = {'UPD': 'Atualizações pelo Jarl e `deploy/update.sh`'}
+AREAS = {'UPD': 'Atualizações pelo Jarl e `deploy/update.sh`',
+         'CFG': 'Server Config: admins, whitelist, banidos e modificadores de mundo'}
 
 
 def render() -> str:
