@@ -45,7 +45,8 @@ if systemctl is-enabled --quiet heimdall-sagas-ingest.timer 2>/dev/null; then
 from pathlib import Path
 import sys
 root, panel = sys.argv[1:]
-for name in ('heimdall-sagas-ingest.service', 'heimdall-sagas-ingest.timer'):
+  for name in ('heimdall-sagas-ingest.service', 'heimdall-sagas-ingest.timer',
+               'heimdall-sagas-story.service', 'heimdall-sagas-story.timer'):
     text = (Path(root) / 'deploy/systemd' / name).read_text()
     text = text.replace('@ROOT@', root).replace('@PANEL_OS_USER@', panel)
     target = Path('/etc/systemd/system') / name
@@ -54,6 +55,7 @@ for name in ('heimdall-sagas-ingest.service', 'heimdall-sagas-ingest.timer'):
 PY
   systemctl daemon-reload
   systemctl restart heimdall-sagas-ingest.timer
+  systemctl enable --now heimdall-sagas-story.timer
 fi
 
 echo "Updating site helpers (your pages and identity stay as they are)…"

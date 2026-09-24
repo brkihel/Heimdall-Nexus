@@ -105,7 +105,8 @@ try:
 finally:
     if os.path.exists(temporary):
         os.unlink(temporary)
-for name in ('heimdall-sagas-ingest.service', 'heimdall-sagas-ingest.timer'):
+for name in ('heimdall-sagas-ingest.service', 'heimdall-sagas-ingest.timer',
+             'heimdall-sagas-story.service', 'heimdall-sagas-story.timer'):
     content = (root / 'deploy/systemd' / name).read_text()
     content = content.replace('@ROOT@', str(root)).replace('@PANEL_OS_USER@', panel)
     destination = pathlib.Path('/etc/systemd/system') / name
@@ -147,4 +148,5 @@ fi
 systemctl reload nginx
 systemctl daemon-reload
 systemctl enable --now heimdall-sagas-ingest.timer
+systemctl enable --now heimdall-sagas-story.timer
 echo "Heimdall Sagas extension installed. Restart Valheim when convenient to load the bridge."

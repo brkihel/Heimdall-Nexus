@@ -194,6 +194,11 @@ class SagasContractTests(unittest.TestCase):
     def test_private_profile_drops_equipment_and_rejects_oversized_snapshot(self):
         hidden = sagas.validate(presence(share_profile=False))
         self.assertEqual(hidden['gear'], [])
+        self.assertFalse(sagas.validate(presence())['share_stories'])
+        self.assertFalse(sagas.validate(presence(share_profile=False,
+            share_stories=True))['share_stories'])
+        with self.assertRaises(sagas.InvalidPacket):
+            sagas.validate(presence(share_stories='yes'))
         with self.assertRaises(sagas.InvalidPacket):
             sagas.validate(presence(gear=[{'name': 'x'}] * 33))
 
@@ -253,6 +258,7 @@ class SagasContractTests(unittest.TestCase):
                            x REAL, z REAL, occurred_at INTEGER, PRIMARY KEY(world,actor,id))''')
             with sagas.connect(dbfile) as db:
                 self.assertIn('gear_json', {r[1] for r in db.execute('PRAGMA table_info(players)')})
+                self.assertIn('share_stories', {r[1] for r in db.execute('PRAGMA table_info(players)')})
                 self.assertIn('name', {r[1] for r in db.execute('PRAGMA table_info(worlds)')})
                 self.assertTrue({'boss', 'elite', 'biome'}.issubset(
                     {r[1] for r in db.execute('PRAGMA table_info(events)')}))

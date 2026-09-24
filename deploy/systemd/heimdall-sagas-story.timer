@@ -1,0 +1,11 @@
+[Unit]
+Description=Check for optional Heimdall Sagas story requests
+
+[Timer]
+OnBootSec=45s
+OnUnitActiveSec=30s
+AccuracySec=2s
+Unit=heimdall-sagas-story.service
+
+[Install]
+WantedBy=timers.target

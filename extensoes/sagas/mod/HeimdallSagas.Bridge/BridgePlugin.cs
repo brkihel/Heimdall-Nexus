@@ -14,7 +14,7 @@ using UnityEngine;
 
 namespace Heimdall.Sagas.Mod
 {
-    [BepInPlugin("gg.heimdall.sagas.bridge", "Heimdall Sagas Bridge", "0.1.3")]
+    [BepInPlugin("gg.heimdall.sagas.bridge", "Heimdall Sagas Bridge", "0.1.4")]
     public sealed class BridgePlugin : BaseUnityPlugin
     {
         private const string Rpc = "Heimdall.Sagas.V1";
@@ -166,6 +166,7 @@ namespace Heimdall.Sagas.Mod
             packet.name = SafeName(peer.m_playerName);
             if (packet.type == "presence") {
                 packet.online = true;
+                packet.share_stories &= packet.share_profile;
                 packet.share_position &= peer.m_publicRefPos;
                 if (!packet.share_position) packet.x = packet.z = 0;
                 packet.gear = packet.share_profile && settings.gear

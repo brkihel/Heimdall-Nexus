@@ -47,13 +47,15 @@ também precisa de BepInEx e da DLL Client.
    **Bridge**, não o ZIP. Ele cria a fila privada, configura o serviço de
    importação e a rota pública; o reinício carrega a DLL no Valheim.
 4. No computador do jogador, instale BepInEx para Valheim e extraia
-   `dist/sagas/HeimdallSagas.Client-0.1.3.zip` na pasta do jogo. O ZIP
+   `dist/sagas/HeimdallSagas.Client-0.1.4.zip` na pasta do jogo. O ZIP
    coloca `HeimdallSagas.Client.dll` em
    `BepInEx/plugins/HeimdallSagas/`. Não instale a Bridge no cliente.
 5. Abra o jogo uma vez para gerar
    `BepInEx/config/gg.heimdall.sagas.client.cfg`. As opções
-   `ShareProfile`, `ShareMap` e `SharePosition` começam em `false`.
+   `ShareProfile`, `ShareMap`, `SharePosition` e `ShareStories` começam em `false`.
    Feche e reabra o jogo depois de editar o arquivo.
+   Para histórias, ative `ShareProfile` e `ShareStories`. Depois de a presença
+   aparecer no Jarl, configure a chave OpenRouter em Sagas e peça um capítulo.
 6. Antes de entrar no mundo, confira `/jarl/sagas` no site de teste. Ele deve
    indicar que a DLL da ponte está instalada. Confira também os logs BepInEx
    do servidor para saber se ela carregou. O status do Jarl verifica a

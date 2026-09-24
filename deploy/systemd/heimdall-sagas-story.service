@@ -1,0 +1,17 @@
+[Unit]
+Description=Generate one optional Heimdall Sagas story
+
+[Service]
+Type=oneshot
+User=@PANEL_OS_USER@
+Group=@PANEL_OS_USER@
+UMask=0077
+EnvironmentFile=/etc/heimdall-nexus/heimdall.env
+WorkingDirectory=@ROOT@/servicos/painel
+ExecStart=/usr/bin/python3 @ROOT@/servicos/painel/story-worker.py
+TimeoutStartSec=90s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/heimdall-nexus/sagas

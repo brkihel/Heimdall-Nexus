@@ -1,6 +1,6 @@
 # Heimdall Sagas extension
 
-Status: **0.1.3 development preview**. The extension is opt-in and separate
+Status: **0.1.4 development preview**. The extension is opt-in and separate
 from the existing `saga.json` skill ranking. It has not been installed on a live
 server or published to Hexium.
 
@@ -24,7 +24,8 @@ There are three components:
    database, AI worker, website, or port listener.
 3. **Nexus extension:** imports the spool into SQLite, provides consent-filtered
    read-only APIs through the existing panel process and Nginx domain, and
-   renders pages with the site's appearance tokens.
+   renders pages with the site's appearance tokens. A separate one-shot worker
+   makes OpenRouter requests only after an administrator queues a chapter.
 
 The client and bridge negotiate protocol version 1 before telemetry is sent.
 Client events retain an ID across retries; the database has a unique key on
@@ -37,7 +38,7 @@ withdrawing map consent erases stored event coordinates. Position also requires
 Valheim's own public map setting. A missing or invalid settings file disables
 the extension until an administrator repairs it.
 The bridge checks a 10,000-packet spool limit every 30 seconds. The importer
-prunes SQLite to the 100,000 most recent events each hour and commits each
+prunes SQLite to the 100,000 most recent events and 1,000 stories each hour and commits each
 five-second import batch in one transaction. The client sends presence every
 30 seconds while connected.
 
@@ -52,6 +53,20 @@ coordinates. The public Crônicas page marks bosses, elites, and high-star
 kills, offers matching filters, and builds a recent-feats panel from visible
 events. The panel only summarizes the latest events returned by the API.
 
+Stories require a separate `ShareStories` client consent, off by default.
+Only players who also share their profile can be included in Viking or server
+chapters. The admin enables stories in Jarl, saves an OpenRouter key there,
+and requests a chapter for a Viking or the server. The key is stored outside
+the game process and outside SQLite, with mode 0600, and is never returned to
+the browser or written to the audit log. The worker sends only selected event
+facts, dates and public Viking names to OpenRouter and its selected model
+provider; it excludes coordinates, opaque IDs,
+equipment and map data. It reserves one of the daily attempts before each
+request, including failed attempts. `openrouter/free` is the default; a paid
+model requires an explicit admin opt-in. Stories are labeled as AI fiction and
+retain visible event references. Opting out of `ShareStories` deletes chapters
+that reference that Viking while keeping ordinary shared events.
+
 ## Feature inventory
 
 | Capability | State | Completion requirement |
@@ -65,7 +80,8 @@ events. The panel only summarizes the latest events returned by the API.
 | Rankings, comparisons, trophy hall | Planned | Credited fact ledger and time-window rules |
 | SLS, Epic Loot, Jewelcrafting | Planned | Independent soft adapters and absent-mod tests |
 | Personal login and player settings | Planned | One-time challenge, owner verification, revocation |
-| Personal/server stories and journey replay | Planned | Fact ledger, budgets, provider key custody, fiction labeling |
+| On-demand Viking/server stories via OpenRouter | Implemented in preview | One-client consent and live provider playtest |
+| Multi-scene journey replay and automatic milestones | Planned | Fact-ledger sequencing, budgets, provider key custody |
 | Installer toggle and modpack link | Planned | Versioned release artifacts and staged upgrade flow |
 
 ## Delivery sequence
@@ -91,10 +107,9 @@ events. The panel only summarizes the latest events returned by the API.
    only validated image formats and dimensions before the web server serves
    them. Add verified personal login and self-service revocation before any
    private profile views.
-5. **Create optional stories.** Generate from the credited fact ledger in a
-   separate Nexus worker with a budget and server-owned provider key. Label
-   generated prose as fiction, keep factual event links, and offer a no-AI
-   journey replay. No model call runs in the game process.
+5. **Extend optional stories.** Add scene-by-scene replay, character
+   biographies and automatic milestones after the on-demand worker passes a
+   real provider test. No model call runs in the game process.
 6. **Polish the Heimdall experience.** Use the existing identity, colors,
    typography, page publication, backups, and Jarl permissions. Keep the
    ValheimSagas sense of spacious maps and editorial cards through original

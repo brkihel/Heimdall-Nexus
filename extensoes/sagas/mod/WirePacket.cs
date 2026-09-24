@@ -33,6 +33,7 @@ namespace Heimdall.Sagas.Mod
         public int quantity = 1;
         public bool online;
         public bool share_profile;
+        public bool share_stories;
         public bool share_map;
         public bool share_position;
         public bool has_location;

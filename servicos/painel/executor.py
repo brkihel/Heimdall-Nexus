@@ -28,6 +28,7 @@ import threading
 import urllib.request
 import uuid
 import sagas
+import stories
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -2043,10 +2044,114 @@ def v_sagas_settings_gravar(dados):
     return {'settings': settings}
 
 
+def _sagas_story_write(state, name, content):
+    path = state / name
+    temporary = state / ('.story-' + uuid.uuid4().hex + '.tmp')
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        owner = pwd.getpwnam(GRUPO)
+        os.fchown(descriptor, owner.pw_uid, owner.pw_gid)
+        with os.fdopen(descriptor, 'w', encoding='utf-8') as file:
+            descriptor = -1
+            file.write(content)
+            file.flush()
+            os.fsync(file.fileno())
+        os.replace(temporary, path)
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        temporary.unlink(missing_ok=True)
+
+
+def v_sagas_story_status(_):
+    status = stories.admin_status(HEIMDALL_STATE_ROOT / 'sagas')
+    try:
+        status['worker_timer_active'] = subprocess.run(
+            ['systemctl', 'is-active', '--quiet', 'heimdall-sagas-story.timer'],
+            timeout=3, check=False).returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        status['worker_timer_active'] = False
+    return status
+
+
+def v_sagas_story_config(dados):
+    state = HEIMDALL_STATE_ROOT / 'sagas'
+    if not (state / 'settings.json').is_file():
+        raise Recusa('instale Sagas antes de configurar histórias')
+    try:
+        config = stories.valid_config(dados)
+    except stories.StoryError as error:
+        raise Recusa(str(error)) from error
+    _sagas_story_write(state, 'story-settings.json',
+                       json.dumps(config, ensure_ascii=False, separators=(',', ':')) + '\n')
+    return {'config': config}
+
+
+def v_sagas_story_key(dados):
+    state = HEIMDALL_STATE_ROOT / 'sagas'
+    if not (state / 'settings.json').is_file() or not isinstance(dados, dict) or \
+            set(dados) not in ({'key'}, {'clear'}):
+        raise Recusa('solicitação de chave inválida')
+    if dados.get('clear') is True:
+        (state / 'openrouter.key').unlink(missing_ok=True)
+        return {'has_key': False}
+    key = dados.get('key')
+    if not stories.valid_key(key):
+        raise Recusa('chave do OpenRouter inválida')
+    _sagas_story_write(state, 'openrouter.key', key + '\n')
+    return {'has_key': True}
+
+
+def v_sagas_story_request(dados):
+    state = HEIMDALL_STATE_ROOT / 'sagas'
+    if not isinstance(dados, dict) or set(dados) != {'world', 'actor'} or \
+            not isinstance(dados['world'], str) or \
+            not sagas.IDENTIFIER.fullmatch(dados['world']) or \
+            not isinstance(dados['actor'], str) or \
+            dados['actor'] and not sagas.IDENTIFIER.fullmatch(dados['actor']):
+        raise Recusa('mundo ou Viking inválido')
+    status = stories.admin_status(state)
+    if not status['config']['enabled'] or not status['has_key']:
+        raise Recusa('ative histórias e configure a chave do OpenRouter')
+    world = next((item for item in status['worlds'] if item['id'] == dados['world']), None)
+    if world is None or dados['actor'] and not any(
+            player['id'] == dados['actor'] for player in world['players']):
+        raise Recusa('mundo ou Viking indisponível')
+    queue = state / 'story-jobs'
+    if queue.is_symlink():
+        raise Recusa('fila de histórias inválida')
+    queue.mkdir(mode=0o700, exist_ok=True)
+    owner = pwd.getpwnam(GRUPO)
+    os.chown(queue, owner.pw_uid, owner.pw_gid)
+    os.chmod(queue, 0o700)
+    if sum(1 for _ in queue.glob('*.json')) >= 5:
+        raise Recusa('fila de histórias cheia')
+    name = f'{int(time.time() * 1000):013d}-{uuid.uuid4().hex}.json'
+    temporary = queue / ('.' + name + '.tmp')
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        os.fchown(descriptor, owner.pw_uid, owner.pw_gid)
+        with os.fdopen(descriptor, 'w', encoding='utf-8') as file:
+            descriptor = -1
+            json.dump(dados, file, separators=(',', ':'))
+            file.flush()
+            os.fsync(file.fileno())
+        os.replace(temporary, queue / name)
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        temporary.unlink(missing_ok=True)
+    return {'queued': True}
+
+
 VERBOS = {
     'sagas.settings': v_sagas_settings,
     'sagas.status': v_sagas_status,
     'sagas.settings.gravar': v_sagas_settings_gravar,
+    'sagas.story.status': v_sagas_story_status,
+    'sagas.story.config': v_sagas_story_config,
+    'sagas.story.key': v_sagas_story_key,
+    'sagas.story.request': v_sagas_story_request,
     'server.config': v_server_config,
     'server.reinstall': v_server_reinstall,
     'schedules': v_schedules,
@@ -2097,6 +2202,22 @@ VERBOS = {
 }
 
 
+def audit_payload(verbo, dados):
+    """Keep credentials and edited page bodies out of the privileged audit log."""
+    if verbo == 'sagas.story.key':
+        return {'acao': 'remover' if isinstance(dados, dict) and dados.get('clear') is True
+                else 'definir'}
+    if verbo in ('server.config', 'server.reinstall'):
+        return {'acao': 'gravar' if dados.get('gravar') else 'ler'}
+    if verbo == 'site.gravar' and isinstance(dados.get('alteracoes'), list):
+        return {'pagina': dados.get('pagina'), 'url': dados.get('url'),
+                'campos': [str(c.get('campo'))[:40] for c in dados['alteracoes']
+                           if isinstance(c, dict)][:100],
+                'operacoes': [f"{o.get('op')}:{o.get('alvo')}" for o in
+                              (dados.get('operacoes') or []) if isinstance(o, dict)][:100]}
+    return dados
+
+
 class Atendente(socketserver.StreamRequestHandler):
     timeout = 300
 
@@ -2114,16 +2235,7 @@ class Atendente(socketserver.StreamRequestHandler):
         funcao = VERBOS.get(verbo)
         if verbo in ('site.gravar', 'site.versao.restaurar', 'site.previa'):
             dados = {**dados, '_quem': quem}
-        # Edited HTML would bloat the audit log; record which fields, not their text.
-        registro = dados
-        if verbo in ('server.config', 'server.reinstall'):
-            registro = {'acao': 'gravar' if dados.get('gravar') else 'ler'}
-        elif verbo == 'site.gravar' and isinstance(dados.get('alteracoes'), list):
-            registro = {'pagina': dados.get('pagina'), 'url': dados.get('url'),
-                        'campos': [str(c.get('campo'))[:40] for c in dados['alteracoes']
-                                   if isinstance(c, dict)][:100],
-                        'operacoes': [f"{o.get('op')}:{o.get('alvo')}" for o in
-                                      (dados.get('operacoes') or []) if isinstance(o, dict)][:100]}
+        registro = audit_payload(verbo, dados)
         if funcao is None:
             audita(quem, verbo, registro, 'recusado', 'verbo desconhecido')
             self.responde({'ok': False, 'erro': f'não conheço o verbo {verbo}'})
@@ -2143,7 +2255,7 @@ class Atendente(socketserver.StreamRequestHandler):
                            'cronica.sessoes', 'cronica.ler', 'mundo.estado', 'mundo.seed', 'config.listar',
                            'arquivo.preparar_download', 'site.paginas', 'site.campos',
                            'site.versoes', 'site.versao.ver', 'site.previa.ler', 'site.identidade')
-            silenciosos += ('sagas.settings', 'sagas.status')
+            silenciosos += ('sagas.settings', 'sagas.status', 'sagas.story.status')
             if verbo not in silenciosos and not (
                 verbo == 'server.config' and not dados.get('gravar') or
                 verbo in ('schedules', 'backups') and dados.get('acao', 'listar') == 'listar'):

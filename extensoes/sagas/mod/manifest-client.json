@@ -1,6 +1,6 @@
 {
   "name": "HeimdallSagasClient",
-  "version_number": "0.1.3",
+  "version_number": "0.1.4",
   "website_url": "https://github.com/brkihel/Heimdall-Nexus",
   "description": "Optional Heimdall Nexus companion for player-approved Valheim Sagas data.",
   "dependencies": []

@@ -34,7 +34,15 @@
 .sagas-estado{color:var(--fraco);font-size:.86rem}
 .sagas-estado.erro{color:var(--ruim)}
 #feedback{margin-left:.7rem;font-size:.86rem}
+.story-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.85rem;margin:1rem 0}
+.story-field{display:grid;gap:.3rem;color:var(--osso);font-size:.84rem}
+.story-field input,.story-field select{width:100%;min-width:0;padding:.65rem .75rem;border:1px solid var(--borda-viva);border-radius:8px;background:rgba(5,9,13,.55);color:var(--osso)}
+.story-actions{display:flex;gap:.55rem;align-items:center;flex-wrap:wrap;margin:.75rem 0}
+.story-note{color:var(--fraco);font-size:.84rem;line-height:1.5}
+.story-check{display:flex;align-items:center;gap:.55rem;color:var(--texto);font-size:.85rem}
+.story-check input{accent-color:var(--ouro)}
 @media(max-width:520px){.sagas-opcao{gap:.7rem;padding:.8rem}.sagas-modos{grid-template-columns:1fr}}
+@media(max-width:620px){.story-grid{grid-template-columns:1fr}}
 </style>
 {% endblock %}
 {% block corpo %}
@@ -72,6 +80,23 @@
   <button class="btn" id="save" type="button" disabled>Salvar opções</button>
   <span id="feedback" role="status"></span>
 </div>
+<div class="cartao"><h2>Histórias dos Vikings</h2>
+  <p class="story-note">O Nexus escreve capítulos a partir de eventos dos jogadores que ativaram ShareStories no BepInEx. A geração só acontece quando você pedir. Nome e descrição dos eventos vão ao OpenRouter e ao provedor do modelo; coordenadas, IDs internos e equipamentos não vão.</p>
+  <label class="story-check"><input type="checkbox" id="story-enabled"> Ativar histórias na página pública e permitir geração</label>
+  <div class="story-grid">
+    <label class="story-field">Modelo OpenRouter<input id="story-model" type="text" maxlength="110" value="openrouter/free" spellcheck="false" autocomplete="off"></label>
+    <label class="story-field">Tentativas por dia (UTC)<input id="story-limit" type="number" min="1" max="20" value="3"></label>
+  </div>
+  <label class="story-check"><input type="checkbox" id="story-paid"> Permitir modelo pago (o controle de gastos também deve ser configurado na conta OpenRouter)</label>
+  <div class="story-actions"><button class="btn" id="story-save" type="button">Salvar histórias</button><span id="story-config-feedback" role="status"></span></div>
+  <div class="story-grid">
+    <label class="story-field">Chave OpenRouter<input id="story-key" type="password" maxlength="256" autocomplete="new-password" placeholder="sk-or-…"></label>
+    <label class="story-field">Gerar capítulo para<select id="story-target"><option value="">Carregando mundos…</option></select></label>
+  </div>
+  <p class="story-note" id="story-key-state">Chave: verificando…</p>
+  <div class="story-actions"><button class="btn" id="story-key-save" type="button">Guardar chave</button><button class="btn" id="story-key-clear" type="button">Remover chave</button><button class="btn" id="story-generate" type="button">Gerar história</button></div>
+  <p class="story-note" id="story-last" role="status">Verificando histórias…</p>
+</div>
 <div class="cartao"><h2>Privacidade</h2><p>Perfil, mapa e posição têm permissões separadas. Retirar o perfil apaga os eventos guardados desse Viking; retirar o mapa apaga coordenadas antigas. Posição também depende da visibilidade do mapa dentro do Valheim.</p></div>
 {% endblock %}
 {% block script %}
@@ -79,6 +104,7 @@
 const sagasKeys=['enabled','gear','events','clock'];
 const sagasGet={{ (raiz ~ '/api/sagas/estado')|tojson }};
 const sagasPost={{ (raiz ~ '/api/sagas/opcoes')|tojson }};
+const storyApi={{ (raiz ~ '/api/sagas/historias')|tojson }};
 function sagasShow(d){
   for(const k of ['worlds','players','events','queued'])
     document.getElementById(k==='events'?'events-count':k).textContent=d.storage_error&&k!=='queued'?'—':d[k];
@@ -137,5 +163,72 @@ document.getElementById('save').addEventListener('click',async()=>{
   }catch(error){feedback.textContent=error.message||'Falha ao salvar';}
   finally{button.disabled=false;}
 });
+async function storyPost(action,data){
+  const response=await fetch(storyApi,{method:'POST',headers:{'Content-Type':'application/json'},
+    credentials:'same-origin',body:JSON.stringify({action,...data})});
+  const result=await response.json();
+  if(!response.ok||!result.ok)throw Error(result.erro||'Falha na operação');
+  return result;
+}
+async function storyLoad(initial=false){
+  try{
+    const response=await fetch(storyApi,{cache:'no-store',credentials:'same-origin'});
+    const data=await response.json();
+    if(!response.ok||!data.ok)throw Error(data.erro||'Falha ao consultar histórias');
+    if(initial){
+      document.getElementById('story-enabled').checked=data.config.enabled;
+      document.getElementById('story-model').value=data.config.model;
+      document.getElementById('story-paid').checked=data.config.allow_paid;
+      document.getElementById('story-limit').value=data.config.daily_limit;
+    }
+    document.getElementById('story-key-state').textContent=data.has_key?'Chave configurada. O valor não é exibido.':'Nenhuma chave configurada.';
+    const select=document.getElementById('story-target'), previous=select.value;
+    select.replaceChildren();
+    for(const world of data.worlds){
+      const name=world.name||'Mundo '+world.id.slice(0,8);
+      const server=document.createElement('option');server.value=world.id+':';
+      server.textContent=name+' · história do servidor';select.append(server);
+      for(const player of world.players){
+        const option=document.createElement('option');option.value=world.id+':'+player.id;
+        option.textContent=name+' · '+player.name;select.append(option);
+      }
+    }
+    if([...select.options].some(option=>option.value===previous))select.value=previous;
+    if(!select.options.length){const option=document.createElement('option');option.textContent='Aguardando eventos';option.value='';select.append(option);}
+    const last=data.last||{};
+    document.getElementById('story-last').textContent=
+      (data.worker_timer_active?'Gerador ativo. ':'Gerador parado; reinstale a extensão. ')+
+      data.attempts_today+'/'+data.config.daily_limit+' tentativas hoje · '+
+      data.pending+' pedido(s) na fila. '+
+      (last.at?(last.ok?'Última história gerada.':'Última tentativa: '+last.message):'Nenhuma história gerada ainda.');
+  }catch(error){document.getElementById('story-last').textContent=error.message;}
+}
+document.getElementById('story-save').addEventListener('click',async()=>{
+  const feedback=document.getElementById('story-config-feedback');feedback.textContent='Salvando…';
+  try{await storyPost('config',{enabled:document.getElementById('story-enabled').checked,
+    model:document.getElementById('story-model').value.trim(),
+    allow_paid:document.getElementById('story-paid').checked,
+    daily_limit:Number(document.getElementById('story-limit').value)});
+    feedback.textContent='Opções salvas.';await storyLoad(true);
+  }catch(error){feedback.textContent=error.message;}
+});
+document.getElementById('story-key-save').addEventListener('click',async()=>{
+  const field=document.getElementById('story-key');
+  try{await storyPost('key',{key:field.value.trim()});field.value='';await storyLoad();}
+  catch(error){document.getElementById('story-last').textContent=error.message;}
+});
+document.getElementById('story-key-clear').addEventListener('click',async()=>{
+  try{await storyPost('key',{clear:true});document.getElementById('story-key').value='';await storyLoad();}
+  catch(error){document.getElementById('story-last').textContent=error.message;}
+});
+document.getElementById('story-generate').addEventListener('click',async()=>{
+  const value=document.getElementById('story-target').value;
+  if(!value)return;
+  const [world,actor]=value.split(':');
+  try{await storyPost('request',{world,actor});await storyLoad();}
+  catch(error){document.getElementById('story-last').textContent=error.message;}
+});
+storyLoad(true);
+setInterval(()=>storyLoad(),15000);
 </script>
 {% endblock %}

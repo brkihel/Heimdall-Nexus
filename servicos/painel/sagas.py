@@ -28,6 +28,7 @@ KINDS = {'kill', 'death', 'drop', 'collect', 'pickup', 'boss', 'bounty'}
 MAX_PACKET = 64 * 1024
 MAX_BATCH = 500
 MAX_EVENTS_STORED = 100000
+MAX_STORIES_STORED = 1000
 KILL_MODES = {'all', 'notable', 'bosses'}
 DEFAULT_SETTINGS = {'version': 1, 'enabled': False, 'gear': True,
                     'events': True, 'clock': True, 'kill_mode': 'all'}
@@ -103,6 +104,9 @@ def validate(raw: object) -> dict:
             if not isinstance(raw.get(key), bool):
                 raise InvalidPacket('invalid sharing flag')
             out[key] = raw[key]
+        if not isinstance(raw.get('share_stories', False), bool):
+            raise InvalidPacket('invalid story sharing flag')
+        out['share_stories'] = bool(raw.get('share_stories', False) and out['share_profile'])
         if out['share_position'] and out['online']:
             out['x'] = _number(raw.get('x'), -20000, 20000)
             out['z'] = _number(raw.get('z'), -20000, 20000)
@@ -168,6 +172,7 @@ CREATE TABLE IF NOT EXISTS players (
   world TEXT NOT NULL, id TEXT NOT NULL, name TEXT NOT NULL,
   online INTEGER NOT NULL, share_profile INTEGER NOT NULL,
   share_map INTEGER NOT NULL, share_position INTEGER NOT NULL,
+  share_stories INTEGER NOT NULL DEFAULT 0,
   x REAL, z REAL, seen_at INTEGER NOT NULL,
   gear_json TEXT NOT NULL DEFAULT '[]',
   PRIMARY KEY(world, id), FOREIGN KEY(world) REFERENCES worlds(id)
@@ -183,6 +188,22 @@ CREATE TABLE IF NOT EXISTS events (
 CREATE INDEX IF NOT EXISTS events_by_time ON events(world, occurred_at DESC);
 CREATE INDEX IF NOT EXISTS events_by_actor ON events(world, actor, occurred_at DESC);
 CREATE INDEX IF NOT EXISTS events_by_age ON events(occurred_at DESC);
+CREATE TABLE IF NOT EXISTS stories (
+  id TEXT PRIMARY KEY, world TEXT NOT NULL, scope TEXT NOT NULL,
+  actor TEXT NOT NULL, title TEXT NOT NULL, text TEXT NOT NULL,
+  model TEXT NOT NULL, fingerprint TEXT NOT NULL, created_at INTEGER NOT NULL,
+  UNIQUE(world, scope, actor, fingerprint)
+);
+CREATE INDEX IF NOT EXISTS stories_by_world ON stories(world, created_at DESC);
+CREATE TABLE IF NOT EXISTS story_refs (
+  story_id TEXT NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+  world TEXT NOT NULL, actor TEXT NOT NULL, event_id TEXT NOT NULL,
+  PRIMARY KEY(story_id, world, actor, event_id)
+);
+CREATE INDEX IF NOT EXISTS story_refs_by_actor ON story_refs(world, actor);
+CREATE TABLE IF NOT EXISTS story_attempts (
+  day TEXT PRIMARY KEY, count INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS maintenance (key TEXT PRIMARY KEY, value INTEGER NOT NULL);
 """
 
@@ -196,6 +217,8 @@ def connect(path: Path = DATABASE) -> sqlite3.Connection:
     columns = {row[1] for row in db.execute('PRAGMA table_info(players)')}
     if 'gear_json' not in columns:
         db.execute("ALTER TABLE players ADD COLUMN gear_json TEXT NOT NULL DEFAULT '[]'")
+    if 'share_stories' not in columns:
+        db.execute('ALTER TABLE players ADD COLUMN share_stories INTEGER NOT NULL DEFAULT 0')
     world_columns = {row[1] for row in db.execute('PRAGMA table_info(worlds)')}
     if 'name' not in world_columns:
         db.execute("ALTER TABLE worlds ADD COLUMN name TEXT NOT NULL DEFAULT ''")
@@ -215,6 +238,9 @@ def ingest(db: sqlite3.Connection, packet: dict, now: int | None = None,
     with (db if commit else nullcontext()):
         db.execute('INSERT OR IGNORE INTO worlds(id) VALUES(?)', (world,))
         if packet['type'] == 'withdraw':
+            db.execute('''DELETE FROM stories WHERE id IN
+                          (SELECT story_id FROM story_refs WHERE world=? AND actor=?)''',
+                       (world, packet['actor']))
             db.execute('DELETE FROM events WHERE world=? AND actor=?',
                        (world, packet['actor']))
             db.execute('DELETE FROM players WHERE world=? AND id=?',
@@ -224,16 +250,23 @@ def ingest(db: sqlite3.Connection, packet: dict, now: int | None = None,
                        (packet['world_name'], packet['day'], packet['fraction'], now, world))
         elif packet['type'] == 'presence':
             db.execute('''INSERT INTO players(world,id,name,online,share_profile,share_map,
-                          share_position,x,z,seen_at,gear_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)
+                          share_position,share_stories,x,z,seen_at,gear_json)
+                          VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
                           ON CONFLICT(world,id) DO UPDATE SET
                           name=excluded.name, online=excluded.online,
                           share_profile=excluded.share_profile, share_map=excluded.share_map,
-                          share_position=excluded.share_position, x=excluded.x, z=excluded.z,
+                          share_position=excluded.share_position,
+                          share_stories=excluded.share_stories, x=excluded.x, z=excluded.z,
                           seen_at=excluded.seen_at, gear_json=excluded.gear_json''',
                        (world, packet['actor'], packet['name'], int(packet['online']),
                         int(packet['share_profile']), int(packet['share_map']),
-                        int(packet['share_position']), packet['x'], packet['z'], now,
+                        int(packet['share_position']), int(packet['share_stories']),
+                        packet['x'], packet['z'], now,
                         json.dumps(packet['gear'], ensure_ascii=False, separators=(',', ':'))))
+            if not packet['share_stories']:
+                db.execute('''DELETE FROM stories WHERE id IN
+                              (SELECT story_id FROM story_refs WHERE world=? AND actor=?)''',
+                           (world, packet['actor']))
             if not packet['share_profile']:
                 db.execute('DELETE FROM events WHERE world=? AND actor=?',
                            (world, packet['actor']))
@@ -267,6 +300,13 @@ def maintain(db: sqlite3.Connection, now: int | None = None) -> None:
         db.execute('''DELETE FROM events WHERE rowid IN (
                       SELECT rowid FROM events ORDER BY occurred_at DESC, rowid DESC
                       LIMIT -1 OFFSET ?)''', (MAX_EVENTS_STORED,))
+        db.execute('''DELETE FROM stories WHERE EXISTS (
+                      SELECT 1 FROM story_refs r LEFT JOIN events e ON
+                        e.world=r.world AND e.actor=r.actor AND e.id=r.event_id
+                      WHERE r.story_id=stories.id AND e.id IS NULL)''')
+        db.execute('''DELETE FROM stories WHERE id IN (
+                      SELECT id FROM stories ORDER BY created_at DESC, id DESC
+                      LIMIT -1 OFFSET ?)''', (MAX_STORIES_STORED,))
         db.execute('''INSERT INTO maintenance(key,value) VALUES('last_prune',?)
                       ON CONFLICT(key) DO UPDATE SET value=excluded.value''', (now,))
 

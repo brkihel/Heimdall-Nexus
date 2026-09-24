@@ -21,6 +21,7 @@ from itsdangerous import BadSignature, URLSafeTimedSerializer
 
 import nucleo
 import sagas
+import stories
 
 BASE = Path(__file__).parent
 RAIZ_URL = os.environ.get('PAINEL_RAIZ', '/jarl')
@@ -51,6 +52,15 @@ async def sagas_public_overview(world: str = '', limit: int = 50):
         data = sagas.public_view(world=world, limit=limit)
     except (OSError, ValueError, sagas.sqlite3.Error):
         data = {'available': False, 'worlds': [], 'players': [], 'events': []}
+    try:
+        data['stories'] = stories.public_list(sagas.DATABASE, data.get('world', '')) \
+            if data.get('available') else []
+        data['stories_enabled'] = bool(data.get('available') and
+            sagas.load_settings(sagas.STATE)['events'] and
+            stories.load_config(sagas.STATE)['enabled'])
+    except (OSError, ValueError, sagas.sqlite3.Error):
+        data['stories'] = []
+        data['stories_enabled'] = False
     return JSONResponse(data, headers={'Cache-Control': 'no-store'})
 
 
@@ -214,6 +224,35 @@ async def sagas_admin_opcoes(pedido: Request):
     try:
         data = json.loads(raw)
         return {'ok': True, **await nucleo.pede_async('sagas.settings.gravar', data, usuario)}
+    except (ValueError, nucleo.Erro) as erro:
+        return JSONResponse({'ok': False, 'erro': str(erro)}, status_code=400)
+
+
+@app.get(f'{RAIZ_URL}/api/sagas/historias')
+async def sagas_historias_estado(pedido: Request):
+    usuario = exige(pedido)
+    try:
+        return {'ok': True, **await nucleo.pede_async('sagas.story.status', {}, usuario)}
+    except nucleo.Erro as erro:
+        return JSONResponse({'ok': False, 'erro': str(erro)}, status_code=503)
+
+
+@app.post(f'{RAIZ_URL}/api/sagas/historias')
+async def sagas_historias_acao(pedido: Request):
+    usuario = exige(pedido)
+    expected_origin = f'{pedido.url.scheme}://{pedido.headers.get("host", "")}'
+    if pedido.headers.get('origin') != expected_origin or \
+            not pedido.headers.get('content-type', '').startswith('application/json'):
+        return JSONResponse({'ok': False, 'erro': 'origem ou formato inválido'}, status_code=403)
+    raw = await pedido.body()
+    if len(raw) > 1024:
+        return JSONResponse({'ok': False, 'erro': 'pedido grande demais'}, status_code=413)
+    try:
+        data = json.loads(raw)
+        if not isinstance(data, dict) or data.get('action') not in ('config', 'key', 'request'):
+            raise ValueError('ação inválida')
+        action = data.pop('action')
+        return {'ok': True, **await nucleo.pede_async('sagas.story.' + action, data, usuario)}
     except (ValueError, nucleo.Erro) as erro:
         return JSONResponse({'ok': False, 'erro': str(erro)}, status_code=400)
 

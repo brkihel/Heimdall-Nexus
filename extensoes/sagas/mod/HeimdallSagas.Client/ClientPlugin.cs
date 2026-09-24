@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace Heimdall.Sagas.Mod
 {
-    [BepInPlugin("gg.heimdall.sagas.client", "Heimdall Sagas Client", "0.1.3")]
+    [BepInPlugin("gg.heimdall.sagas.client", "Heimdall Sagas Client", "0.1.4")]
     public sealed class ClientPlugin : BaseUnityPlugin
     {
         private const string Rpc = "Heimdall.Sagas.V1";
@@ -23,6 +23,7 @@ namespace Heimdall.Sagas.Mod
         private ConfigEntry<bool> shareProfile;
         private ConfigEntry<bool> shareMap;
         private ConfigEntry<bool> sharePosition;
+        private ConfigEntry<bool> shareStories;
         private Harmony harmony;
         private float nextPresence;
         private float bridgeUntil;
@@ -31,7 +32,8 @@ namespace Heimdall.Sagas.Mod
         private string bridgeKillMode = "all";
         private float nextProbe;
         private float nextRetry;
-        private bool lastProfile, lastMap, lastPosition;
+        private bool lastProfile, lastMap, lastPosition, lastStories;
+        private int consentRepeats;
         private bool sentPresence;
         private ZRpc registeredServer;
         private string outbox;
@@ -47,9 +49,12 @@ namespace Heimdall.Sagas.Mod
                 "Allow shared exploration and event locations on the Heimdall atlas.");
             sharePosition = Config.Bind("Privacy", "SharePosition", false,
                 "Allow a live marker when Valheim's own map visibility is also enabled.");
+            shareStories = Config.Bind("Privacy", "ShareStories", false,
+                "Allow your Viking name and selected shared events to be sent to OpenRouter and its selected model provider for public AI stories. Requires ShareProfile.");
             lastProfile = shareProfile.Value;
             lastMap = shareMap.Value;
             lastPosition = sharePosition.Value;
+            lastStories = shareStories.Value;
             outbox = Path.Combine(Paths.ConfigPath, "HeimdallSagas", "outbox");
             try {
                 Directory.CreateDirectory(outbox);
@@ -74,12 +79,14 @@ namespace Heimdall.Sagas.Mod
         private void Update()
         {
             if (lastProfile != shareProfile.Value || lastMap != shareMap.Value ||
-                lastPosition != sharePosition.Value) {
+                lastPosition != sharePosition.Value || lastStories != shareStories.Value) {
                 nextPresence = 0;
+                consentRepeats = 2;
                 sentPresence = false;
                 lastProfile = shareProfile.Value;
                 lastMap = shareMap.Value;
                 lastPosition = sharePosition.Value;
+                lastStories = shareStories.Value;
             }
             if (!shareProfile.Value && pending.Count != 0) {
                 ClearPending();
@@ -128,6 +135,7 @@ namespace Heimdall.Sagas.Mod
             // Send one consent snapshot after joining. Full opt-out removes
             // a previously shared profile instead of leaving it behind.
             var wantsBridge = shareProfile.Value || shareMap.Value || sharePosition.Value ||
+                              shareStories.Value ||
                               pending.Count > 0 || !sentPresence;
             if (wantsBridge && Time.unscaledTime >= nextProbe) {
                 nextProbe = Time.unscaledTime + 15f;
@@ -141,7 +149,7 @@ namespace Heimdall.Sagas.Mod
                 }
             }
             if (Time.unscaledTime < nextPresence) return;
-            nextPresence = Time.unscaledTime + 30f;
+            nextPresence = Time.unscaledTime + (consentRepeats > 0 ? 5f : 30f);
             var player = Player.m_localPlayer;
             if (player == null || ZNet.instance == null || ZNet.instance.IsServer() ||
                 Time.unscaledTime >= bridgeUntil) return;
@@ -151,10 +159,12 @@ namespace Heimdall.Sagas.Mod
                 type = optedOut ? "withdraw" : "presence",
                 name = optedOut ? "" : player.GetPlayerName(), online = !optedOut,
                 share_profile = shareProfile.Value, share_map = shareMap.Value,
+                share_stories = shareProfile.Value && shareStories.Value,
                 share_position = visible, x = visible ? player.transform.position.x : 0,
                 z = visible ? player.transform.position.z : 0,
                 gear = shareProfile.Value && bridgeGear ? Equipped(player) : Array.Empty<GearItem>()
             });
+            if (consentRepeats > 0) consentRepeats--;
             sentPresence = true;
         }
 
