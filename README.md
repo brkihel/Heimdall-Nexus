@@ -47,6 +47,10 @@ After installation, open https://YOUR-DOMAIN/jarl/entrar or http://YOUR-IP/jarl/
 
 With Steam networking, open the selected UDP game port and the next one. Nginx uses TCP 80 and, with HTTPS, TCP 443. See the [official Valheim server guide](https://valheim.com/support/a-guide-to-dedicated-servers/).
 
+## Updating
+
+On an installed server: `cd ~/Heimdall-Nexus && git pull --ff-only && sudo ./deploy/update.sh`. It updates the panel and tools without touching worlds, mods or site content, and does not restart Valheim.
+
 ## Documentation
 
 - [Wiki home](docs/wiki/Home.md) / [Português](docs/wiki/pt-BR/Inicio.md)

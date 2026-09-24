@@ -87,19 +87,25 @@ try:
     # Continuamos recusando save truncado: o .db2 mais recente tem de ter o seu .ok.
     mundos = ROOT/'saves/worlds_local'
     dbs = sorted(mundos.rglob('_main.*.db2'), key=lambda p: p.stat().st_mtime)
-    assert dbs, 'nenhum mundo em saves/worlds_local'
-    atual = dbs[-1]
-    ok = atual.with_suffix('.ok')
-    assert ok.exists(), f'save incompleto: {atual.name} sem marcador .ok'
-    novos = [p for p in mundos.rglob('*.ok') if p.stat().st_mtime >= marca]
-    if novos:
+    # A fresh server has no saved world until its first save; then there is
+    # nothing to protect beyond the configs, which the backup still carries.
+    if not dbs:
+        print('\nnenhum mundo salvo ainda; o backup leva configs e opcoes do servidor')
+    atual = dbs[-1] if dbs else None
+    ok = atual.with_suffix('.ok') if atual else None
+    assert not atual or ok.exists(), f'save incompleto: {atual.name} sem marcador .ok'
+    novos = [p for p in mundos.rglob('*.ok') if p.stat().st_mtime >= marca] if mundos.is_dir() else []
+    if not atual:
+        pass
+    elif novos:
         print(f'\nmundo salvo agora: {[p.name for p in novos]}')
     else:
         idade = (time.time() - ok.stat().st_mtime)/60
         print(f'\nmundo integro em {atual.name} (marcador de {idade:.0f} min atras); '
               f'sem save novo porque nada mudou')
     with tarfile.open(backup,'w:gz') as tar:
-        for item in ['saves','config','server.env','run.sh']: tar.add(ROOT/item, arcname=item)
+        for item in ['saves','config','server.env','run.sh']:
+            if (ROOT/item).exists(): tar.add(ROOT/item, arcname=item)
         tar.add(lock_rel, arcname='release/mods.lock.json')
         tar.add(f'/etc/systemd/system/{SERVICE}.service', arcname=f'service/{SERVICE}.service')
         for pasta,_ in alvos:

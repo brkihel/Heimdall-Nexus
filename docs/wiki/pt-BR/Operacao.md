@@ -18,6 +18,18 @@ Na aba **Tarefas**, crie uma rotina com nome e cinco campos cron. Depois use **A
 
 **Criar backup agora** faz uma cópia dos salvos, configurações e opções de partida. Se o jogo estiver ligado, ele é desligado para uma cópia consistente e volta depois. A tela permite baixar, restaurar, travar e apagar. Um backup travado não pode ser excluído pelo painel. Antes de restaurar, o sistema cria outro backup do estado atual. Arquivos de manutenção de mods aparecem para download, mas só arquivos de mundo permitem restauração pela tela.
 
+## Atualizar o Heimdall Nexus
+
+Para trazer uma versão nova do GitHub para um servidor já instalado:
+
+```bash
+cd ~/Heimdall-Nexus
+git pull --ff-only
+sudo ./deploy/update.sh
+```
+
+O `update.sh` troca o código do painel e das ferramentas em `/opt/heimdall-nexus`, atualiza os scripts do site, republica o site e reinicia o painel. Mundos, mods, configurações do jogo, páginas e identidade do site ficam como estão, e o servidor de Valheim não é reiniciado.
+
 ## Repetir a instalação numa VM de teste
 
 O comando abaixo **apaga mundos, backups, site e configurações dessa instalação**. Execute apenas na VM de teste. O repositório Git e os pacotes APT são preservados:

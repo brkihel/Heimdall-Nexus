@@ -18,6 +18,18 @@ In the **Tarefas** tab, a routine has a name and five cron fields. Use **Adicion
 
 **Create backup now** archives saves, configuration and launch settings. If the game is running, it stops for a consistent copy and starts again afterward. You can download, restore, lock and delete backups. Locked archives cannot be deleted by the panel. A restore first makes a safety backup of the current state. Mod maintenance archives are available for download, but only world archives can be restored from this page.
 
+## Update Heimdall Nexus
+
+To bring a new version from GitHub to an installed server:
+
+```bash
+cd ~/Heimdall-Nexus
+git pull --ff-only
+sudo ./deploy/update.sh
+```
+
+`update.sh` replaces the panel and tool code in `/opt/heimdall-nexus`, refreshes the site's helper scripts, republishes the site and restarts the panel. Worlds, mods, game settings, site pages and identity stay as they are, and the Valheim server is not restarted.
+
 ## Repeat installation on a test VM
 
 These commands **erase that installation's worlds, backups, site and settings**. Run them only on your test VM. The Git checkout and APT packages remain:

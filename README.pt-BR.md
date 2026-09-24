@@ -47,6 +47,10 @@ Depois, entre em https://SEU-DOMINIO/jarl/entrar ou http://SEU-IP/jarl/entrar se
 
 Com a rede Steam, libere a porta UDP escolhida e a seguinte. O Nginx usa TCP 80 e, com HTTPS, TCP 443. Veja o [guia oficial do servidor Valheim](https://valheim.com/support/a-guide-to-dedicated-servers/).
 
+## Atualizar
+
+Num servidor já instalado: `cd ~/Heimdall-Nexus && git pull --ff-only && sudo ./deploy/update.sh`. Atualiza o painel e as ferramentas sem mexer em mundos, mods ou conteúdo do site, e não reinicia o Valheim.
+
 ## Documentação
 
 - [Início da Wiki](docs/wiki/pt-BR/Inicio.md) / [English](docs/wiki/Home.md)
