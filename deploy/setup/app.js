@@ -7,7 +7,9 @@
   let step = 0;
   let language = localStorage.getItem('heimdall_setup_language') === 'en' ? 'en' : 'pt';
   let polling = null;
+  var modsReady = false;
   const en = {
+    modsTitle:'World modifiers', modsHint:'Optional. The same settings as Valheim\'s "Host a server" screen. Leave them alone for the default game.', modsRules:'World rules', modsLater:'You can change all of this later in the panel, under Server Config.',
     wizard:'SETUP WIZARD', hero:'Your server, site and panel in one place.', heroText:'This wizard installs SteamCMD, Valheim Dedicated Server, the panel and the site. Choose which features to enable.',
     stepSite:'Site', stepSiteHint:'Address and HTTPS', stepGame:'Server', stepGameHint:'World and access', stepOptions:'Features', stepOptionsHint:'Mods and live data', stepAdmin:'Administrator', stepAdminHint:'Linux account and panel login', stepReview:'Review', stepReviewHint:'Install and monitor', localOnly:'Temporary wizard · private HTTPS link',
     siteTitle:'Where will the site live?', siteIntro:'Enter the domain pointing to this machine. You may also use an IP address and configure HTTPS later.', domain:'Site domain or IP', domainHint:'The wizard configures Nginx for this address.', gameAddress:'Game connection address', gameAddressHint:'Leave blank to use the site domain.', https:'Configure HTTPS automatically', httpsHint:'DNS must point to this server and TCP port 80 must be reachable. Certbot will request a Let’s Encrypt certificate.', email:'Certificate email', emailHint:'Used by Let’s Encrypt for renewal notices.', siteNoteTitle:'Before continuing', siteNote:'The temporary link uses Cloudflare and closes with the installer. Keep the token URL private. To avoid this external service, run install.sh with --local-only and use SSH.',
@@ -17,8 +19,8 @@
     reviewTitle:'Ready to install', reviewIntro:'Review your choices. Downloading Valheim may take several minutes; follow each step here.', startGame:'Start Valheim after installation and at boot', startGameHint:'Leave unchecked to start it manually from the panel.', reviewNoteTitle:'What will be installed', reviewNote:'SteamCMD, Valheim Dedicated Server, a systemd service, Nginx, the site and panel. BepInEx is included if selected.', back:'Back', next:'Continue', install:'Install everything', progressNumber:'INSTALLATION', progressTitle:'Preparing your server…', progressHint:'Keep the terminal and this page open. Follow the steps below.', successTitle:'Heimdall Nexus is ready', successHint:'Use the panel to edit the site and control the server.', footer:'Heimdall Nexus · created by BRKiHeL', officialGuide:'Official Valheim guide ↗'
   };
   const words = {
-    pt: {systemAccount:'Conta Linux', panelLogin:'Login do painel', yes:'Sim', no:'Não', vanilla:'Vanilla', site:'Site', address:'Jogo', server:'Servidor', world:'Mundo', port:'Porta UDP', mods:'Mods', serverMods:'mods no servidor', siteOnly:'lista no site', live:'Dados ao vivo', https:'HTTPS', gameStart:'Iniciar jogo', passwordMismatch:'As senhas do painel não conferem.', ipHttps:'HTTPS automático exige um domínio público, não um IP. Desmarque HTTPS para usar IP.', started:'Instalação em andamento…', failed:'A instalação parou. Corrija o problema e execute novamente no mesmo assistente.', panel:'Abrir painel', openSite:'Abrir site', retry:'Tentar novamente', installFailed:'Falha na instalação', modpackRead:'Modpack identificado:', modpackUnknown:'Não reconheci esse link. Cole o endereço da página do modpack na Thunderstore ou no Hexium.'},
-    en: {systemAccount:'Linux account', panelLogin:'Panel login', yes:'Yes', no:'No', vanilla:'Vanilla', site:'Site', address:'Game address', server:'Server', world:'World', port:'UDP port', mods:'Mods', serverMods:'server mods', siteOnly:'site list only', live:'Live data', https:'HTTPS', gameStart:'Start game', passwordMismatch:'The panel passwords do not match.', ipHttps:'Automatic HTTPS requires a public domain, not an IP. Disable HTTPS to use an IP.', started:'Installation is in progress…', failed:'Installation stopped. Fix the problem and retry in this wizard.', panel:'Open panel', openSite:'Open site', retry:'Retry', installFailed:'Installation failed', modpackRead:'Modpack found:', modpackUnknown:'This link was not recognized. Paste the modpack page address from Thunderstore or Hexium.'}
+    pt: {worldMods:'Modificadores', gameDefault:'Padrão do jogo', systemAccount:'Conta Linux', panelLogin:'Login do painel', yes:'Sim', no:'Não', vanilla:'Vanilla', site:'Site', address:'Jogo', server:'Servidor', world:'Mundo', port:'Porta UDP', mods:'Mods', serverMods:'mods no servidor', siteOnly:'lista no site', live:'Dados ao vivo', https:'HTTPS', gameStart:'Iniciar jogo', passwordMismatch:'As senhas do painel não conferem.', ipHttps:'HTTPS automático exige um domínio público, não um IP. Desmarque HTTPS para usar IP.', started:'Instalação em andamento…', failed:'A instalação parou. Corrija o problema e execute novamente no mesmo assistente.', panel:'Abrir painel', openSite:'Abrir site', retry:'Tentar novamente', installFailed:'Falha na instalação', modpackRead:'Modpack identificado:', modpackUnknown:'Não reconheci esse link. Cole o endereço da página do modpack na Thunderstore ou no Hexium.'},
+    en: {worldMods:'World modifiers', gameDefault:'Game default', systemAccount:'Linux account', panelLogin:'Panel login', yes:'Yes', no:'No', vanilla:'Vanilla', site:'Site', address:'Game address', server:'Server', world:'World', port:'UDP port', mods:'Mods', serverMods:'server mods', siteOnly:'site list only', live:'Live data', https:'HTTPS', gameStart:'Start game', passwordMismatch:'The panel passwords do not match.', ipHttps:'Automatic HTTPS requires a public domain, not an IP. Disable HTTPS to use an IP.', started:'Installation is in progress…', failed:'Installation stopped. Fix the problem and retry in this wizard.', panel:'Open panel', openSite:'Open site', retry:'Retry', installFailed:'Installation failed', modpackRead:'Modpack found:', modpackUnknown:'This link was not recognized. Paste the modpack page address from Thunderstore or Hexium.'}
   };
   const t = key => words[language][key] || key;
 
@@ -32,6 +34,8 @@
     $('server_address').placeholder = language === 'pt' ? 'Igual ao domínio do site' : 'Same as site domain';
     $('game_password').placeholder = language === 'pt' ? 'Mínimo 5 caracteres' : 'At least 5 characters';
     if (step === 4) review();
+    // translate() also runs before the modifier definitions below exist.
+    if (modsReady) buildModifiers();
   }
   document.querySelectorAll('[data-i18n]').forEach(el => el.dataset.pt = el.textContent);
   document.querySelectorAll('[data-lang]').forEach(button => button.addEventListener('click', () => {
@@ -119,6 +123,65 @@
   });
   $('email').required = true;
 
+  // World modifiers: same options as the panel (Server Config) and the launcher.
+  const MODS = [
+    ['combat', {pt:'Dificuldade de combate', en:'Combat'}, [['veryeasy','Muito fácil','Very easy'],['easy','Fácil','Easy'],['default','Normal','Normal'],['hard','Difícil','Hard'],['veryhard','Muito difícil','Very hard']]],
+    ['deathpenalty', {pt:'Penalidade de morte', en:'Death penalty'}, [['casual','Casual','Casual'],['veryeasy','Muito fácil','Very easy'],['easy','Fácil','Easy'],['default','Normal','Normal'],['hard','Difícil','Hard'],['hardcore','Pesadelo','Hardcore']]],
+    ['resources', {pt:'Taxa de recursos', en:'Resources'}, [['muchless','Muito menos','Much less'],['less','Menos','Less'],['default','Normal','Normal'],['more','Mais','More'],['muchmore','Muito mais','Much more'],['most','Máximo','Most']]],
+    ['raids', {pt:'Taxa de invasões', en:'Raids'}, [['none','Nenhuma','None'],['muchless','Muito menos','Much less'],['less','Menos','Less'],['default','Normal','Normal'],['more','Mais','More'],['muchmore','Muito mais','Much more']]],
+    ['portals', {pt:'Portais', en:'Portals'}, [['casual','Casual','Casual'],['default','Normal','Normal'],['hard','Difícil','Hard'],['veryhard','Muito difícil','Very hard']]],
+  ];
+  const RULES = [
+    ['playerevents', {pt:'Invasões com base em jogadores', en:'Player-based raids'}],
+    ['fire', {pt:'Risco de incêndio', en:'Fire hazard'}],
+    ['nomap', {pt:'Sem mapa', en:'No map'}],
+    ['passivemobs', {pt:'Criaturas passivas', en:'Passive enemies'}],
+    ['nobuildcost', {pt:'Construção sem custo', en:'No build cost'}],
+  ];
+  const modValues = Object.fromEntries(MODS.map(([id]) => [id, 'default']));
+  const ruleValues = new Set();
+  const optionLabel = (id, value) => { const o = MODS.find(m => m[0] === id)[2].find(x => x[0] === value); return language === 'pt' ? o[1] : o[2]; };
+  function modsSummary() {
+    const parts = MODS.filter(([id]) => modValues[id] !== 'default').map(([id, name]) => `${name[language]}: ${optionLabel(id, modValues[id])}`)
+      .concat(RULES.filter(([id]) => ruleValues.has(id)).map(([, name]) => name[language]));
+    return parts;
+  }
+  function buildModifiers() {
+    const grid = $('mods-grid'); grid.replaceChildren();
+    for (const [id, name, options] of MODS) {
+      const box = document.createElement('div'); box.className = 'mod';
+      const label = document.createElement('span'); label.id = `mod-${id}`; label.textContent = name[language];
+      const stepper = document.createElement('div'); stepper.className = 'stepper'; stepper.setAttribute('role', 'group'); stepper.setAttribute('aria-labelledby', `mod-${id}`);
+      const back = document.createElement('button'); back.type = 'button'; back.textContent = '‹'; back.setAttribute('aria-label', language === 'pt' ? 'Opção anterior' : 'Previous option');
+      const out = document.createElement('output'); out.setAttribute('aria-live', 'polite');
+      const next = document.createElement('button'); next.type = 'button'; next.textContent = '›'; next.setAttribute('aria-label', language === 'pt' ? 'Próxima opção' : 'Next option');
+      const pips = document.createElement('div'); pips.className = 'pips'; pips.setAttribute('aria-hidden', 'true');
+      options.forEach(([value]) => { const i = document.createElement('i'); if (value === 'default') i.className = 'normal'; pips.append(i); });
+      const draw = () => {
+        const index = options.findIndex(o => o[0] === modValues[id]);
+        out.textContent = optionLabel(id, modValues[id]); back.disabled = index === 0; next.disabled = index === options.length - 1;
+        box.classList.toggle('changed', modValues[id] !== 'default');
+        [...pips.children].forEach((i, n) => i.classList.toggle('on', n === index));
+        const count = modsSummary().length;
+        $('mods-count').textContent = count ? (language === 'pt' ? `${count} ajuste(s)` : `${count} change(s)`) : (language === 'pt' ? 'Padrão do jogo' : 'Game default');
+      };
+      const move = step => { const index = options.findIndex(o => o[0] === modValues[id]); modValues[id] = options[Math.max(0, Math.min(options.length - 1, index + step))][0]; draw(); };
+      back.addEventListener('click', () => move(-1)); next.addEventListener('click', () => move(1));
+      stepper.append(back, out, next); box.append(label, stepper, pips); grid.append(box); draw();
+    }
+    const rules = $('rules-grid'); rules.replaceChildren();
+    for (const [id, name] of RULES) {
+      const label = document.createElement('label'); label.className = 'rule';
+      const text = document.createElement('span'); text.textContent = name[language];
+      const input = document.createElement('input'); input.type = 'checkbox'; input.checked = ruleValues.has(id);
+      input.addEventListener('change', () => { input.checked ? ruleValues.add(id) : ruleValues.delete(id); const count = modsSummary().length;
+        $('mods-count').textContent = count ? (language === 'pt' ? `${count} ajuste(s)` : `${count} change(s)`) : (language === 'pt' ? 'Padrão do jogo' : 'Game default'); });
+      label.append(text, input); rules.append(label);
+    }
+  }
+  buildModifiers();
+  modsReady = true;
+
   function collect() {
     const value = id => $(id).value.trim();
     return {domain:value('domain'), server_address:value('server_address'), server_name:value('server_name'),
@@ -127,13 +190,15 @@
       modpack:modpackName(value('modpack')), install_modpack:$('bepinex').checked && !!value('modpack') && $('install_modpack').checked,
       features:[...document.querySelectorAll('[name=features]:checked')].map(el => el.value),
       system_user:value('system_user'), panel_user:value('panel_user'), panel_password:$('panel_password').value,
-      tls:$('tls').checked, email:value('email'), start_game:$('start_game').checked};
+      tls:$('tls').checked, email:value('email'), start_game:$('start_game').checked,
+      modifiers:{...modValues}, world_keys:[...ruleValues]};
   }
   function review() {
     const c = collect(), list = $('summary');
     const rows = [[t('site'),c.domain],[t('address'),c.server_address || c.domain],[t('server'),c.server_name],
       [t('world'),c.world],[t('port'),String(c.port)],[t('mods'),c.bepinex ? 'BepInEx' + (c.modpack ? ` · ${c.modpack} · ${c.install_modpack ? t('serverMods') : t('siteOnly')}` : '') : t('vanilla')],
       [t('live'),c.features.join(', ') || '—'],[t('systemAccount'),c.system_user],[t('panelLogin'),c.panel_user],[t('https'),c.tls ? t('yes') : t('no')],
+      [t('worldMods'),modsSummary().join(' · ') || t('gameDefault')],
       [t('gameStart'),c.start_game ? t('yes') : t('no')]];
     list.replaceChildren();
     rows.forEach(([label,value]) => { const dt=document.createElement('dt'),dd=document.createElement('dd'); dt.textContent=label; dd.textContent=value; list.append(dt,dd); });

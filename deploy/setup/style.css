@@ -37,7 +37,11 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 .field input{width:100%;border:1px solid #45596b;border-radius:3px;background:#101a22;color:#f5f0e8;padding:13px 14px;min-height:46px;outline:none;transition:border-color .16s,box-shadow .16s}
 .field input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(208,170,97,.12)}.field input::placeholder{color:#778996}
 .check,.choice{display:flex;gap:12px;align-items:flex-start;cursor:pointer}
-.check input,.choice input,.feature-grid input{accent-color:var(--gold);margin:3px 0 0;flex:none;width:16px;height:16px}
+/* Every checkbox is a switch (docs/PADROES-GENESISMODS.md). */
+.check input,.choice input,.feature-grid input,.rule input{appearance:none;-webkit-appearance:none;position:relative;flex:none;width:38px;height:21px;margin:1px 0 0;border-radius:99px;border:1px solid #33475a;background:#152029;cursor:pointer;transition:background .18s,border-color .18s}
+.check input::after,.choice input::after,.feature-grid input::after,.rule input::after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:#78848f;transition:transform .18s,background .18s}
+.check input:checked,.choice input:checked,.feature-grid input:checked,.rule input:checked{background:rgba(200,164,92,.22);border-color:var(--gold)}
+.check input:checked::after,.choice input:checked::after,.feature-grid input:checked::after,.rule input:checked::after{transform:translateX(17px);background:var(--gold-light)}
 .check b,.choice b{display:block;font-size:14px}.check small,.choice small{display:block;margin-top:5px;color:#9cacb9;font-size:12px;line-height:1.45}
 .check.prominent{padding:17px;border:1px solid var(--line);border-radius:3px;background:#16232e;margin:8px 0 22px}
 .checks{display:grid;gap:15px;margin:5px 0 25px}.choice{align-items:center;border:1px solid var(--line);border-radius:3px;padding:17px;background:#15232d;margin-bottom:23px}.choice:has(input:checked){border-color:#937849;background:#201e1a}
@@ -60,3 +64,30 @@ footer{display:flex;justify-content:space-between;gap:20px;padding:18px clamp(24
 .field small.modpack-lido.erro{color:#ef8e7c}
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+
+/* World modifiers (step 2) */
+.world-mods{margin:22px 0 0;border:1px solid var(--line);border-radius:3px;background:#101a22}
+.world-mods summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 17px;cursor:pointer;list-style:none}
+.world-mods summary::-webkit-details-marker{display:none}
+.world-mods summary b{display:block;font-size:14px}.world-mods summary small{display:block;margin-top:4px;color:#9cacb9;font-size:12px;line-height:1.45}
+.world-mods summary em{font-style:normal;color:var(--gold-light);font-size:12px;white-space:nowrap}
+.world-mods summary::after{content:"▾";color:var(--gold);transition:transform .18s}
+.world-mods[open] summary::after{transform:rotate(180deg)}
+.world-mods>:not(summary){margin-left:17px;margin-right:17px}
+.world-mods>.micro{margin-bottom:16px}
+.mods-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.mod{display:grid;gap:7px;padding:11px 12px;border:1px solid var(--line);border-radius:3px;background:#0b141b}
+.mod.changed{border-color:rgba(200,164,92,.5)}
+.mod span{font-size:13px;color:var(--text)}
+.stepper{display:grid;grid-template-columns:34px 1fr 34px;align-items:center;border:1px solid #33475a;border-radius:3px;background:#081117}
+.stepper button{height:34px;border:0;background:none;color:var(--gold-light);font-size:17px;cursor:pointer}
+.stepper button:disabled{color:#33475a;cursor:default}
+.stepper output{text-align:center;font-size:14px;font-weight:700}
+.pips{display:flex;justify-content:center;gap:5px}
+.pips i{width:6px;height:6px;border-radius:50%;background:#33475a}
+.pips i.normal{background:transparent;border:1px solid #78848f}
+.pips i.on{background:var(--gold)}
+.mods-sub{font:700 13px 'Cinzel',Georgia,serif!important;margin:18px 17px 8px!important;color:var(--text)!important}
+.rules-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.rule{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:3px;background:#0b141b;font-size:13px;cursor:pointer}
+@media(max-width:700px){.mods-grid,.rules-grid{grid-template-columns:1fr}}

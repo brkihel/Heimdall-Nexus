@@ -49,6 +49,12 @@
             <div class="grid"><div class="field"><label for="port" data-i18n="gamePort">Porta UDP</label><input id="port" name="port" type="number" value="2456" min="1024" max="65534" required><small data-i18n="portHint">Valheim usa esta porta e a seguinte.</small></div><div class="field"><label for="game_password" data-i18n="gamePassword">Senha do jogo</label><input id="game_password" name="game_password" type="password" minlength="5" maxlength="100" required autocomplete="new-password" placeholder="Mínimo 5 caracteres"><small data-i18n="passwordHint">Obrigatória, com pelo menos 5 caracteres e sem repetir o nome do servidor. Os jogadores digitam essa senha para entrar.</small></div></div>
             <div class="checks"><label class="check"><input id="public" name="public" type="checkbox" checked><span><b data-i18n="public">Aparecer na lista de servidores</b><small data-i18n="publicHint">Jogadores também podem entrar pelo endereço direto.</small></span></label><label class="check"><input id="crossplay" name="crossplay" type="checkbox"><span><b data-i18n="crossplay">Ativar crossplay</b><small data-i18n="crossplayHint">Permite jogadores de outras plataformas; utiliza o backend PlayFab.</small></span></label></div>
             <div class="note"><b data-i18n="portsTitle">Rede</b><p data-i18n="portsNote">Com o backend Steam, encaminhe as portas UDP escolhida e seguinte no firewall e roteador. Com crossplay, o Valheim usa um relay.</p></div>
+            <details class="world-mods" id="world-mods"><summary><span><b data-i18n="modsTitle">Modificadores de mundo</b><small data-i18n="modsHint">Opcional. Os mesmos ajustes da tela "Hospedar servidor" do Valheim. Sem mexer, o mundo fica no padrão do jogo.</small></span><em id="mods-count"></em></summary>
+              <div class="mods-grid" id="mods-grid"></div>
+              <h3 class="mods-sub" data-i18n="modsRules">Regras do mundo</h3>
+              <div class="rules-grid" id="rules-grid"></div>
+              <p class="micro" data-i18n="modsLater">Você pode mudar tudo isso depois no painel, em Server Config.</p>
+            </details>
           </section>
 
           <section class="page" data-step="2" hidden>

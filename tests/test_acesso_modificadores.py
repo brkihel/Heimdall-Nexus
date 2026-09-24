@@ -122,3 +122,19 @@ def test_launcher_passes_only_known_modifiers(tmp_path):
     assert args[args.index('-resetmodifiers'):] == ['-resetmodifiers', '-modifier', 'combat', 'hard',
                                                     '-modifier', 'raids', 'none', '-setkey', 'nomap', '']
     assert '-resetmodifiers' not in run(VH_MODIFIERS='combat=hard')
+
+
+def test_panel_installer_and_launcher_offer_the_same_modifiers():
+    import re
+    root = Path(__file__).resolve().parents[1]
+    sys.path.insert(0, str(root / 'deploy'))
+    import installer
+    assert installer.MODIFIERS == operacoes.MODIFIERS
+    assert installer.WORLD_KEYS == operacoes.WORLD_KEYS
+    launcher = (root / 'deploy/valheim-launch.sh').read_text()
+    allowed = set(re.findall(r'(\w+)=(\w+)[|)]', launcher))
+    expected = {(name, value) for name, values in operacoes.MODIFIERS.items()
+                for value in values if value != 'default'}
+    assert allowed == expected
+    keys = re.search(r'\n\s*(playerevents[^)]*)\)', launcher).group(1).split('|')
+    assert tuple(keys) == operacoes.WORLD_KEYS

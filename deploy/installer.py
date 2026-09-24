@@ -55,6 +55,30 @@ class InstallError(RuntimeError):
     """An installation error suitable for the wizard to display."""
 
 
+# Same options as servicos/painel/operacoes.py and deploy/valheim-launch.sh;
+# tests/test_acesso_modificadores.py keeps the three in sync.
+MODIFIERS = {
+    'combat': ('veryeasy', 'easy', 'default', 'hard', 'veryhard'),
+    'deathpenalty': ('casual', 'veryeasy', 'easy', 'default', 'hard', 'hardcore'),
+    'resources': ('muchless', 'less', 'default', 'more', 'muchmore', 'most'),
+    'raids': ('none', 'muchless', 'less', 'default', 'more', 'muchmore'),
+    'portals': ('casual', 'default', 'hard', 'veryhard'),
+}
+WORLD_KEYS = ('playerevents', 'fire', 'nomap', 'passivemobs', 'nobuildcost')
+
+
+def _parse_modifiers(data: dict) -> tuple[tuple[tuple[str, str], ...], tuple[str, ...]]:
+    raw = data.get('modifiers') or {}
+    keys = data.get('world_keys') or []
+    if not isinstance(raw, dict) or set(raw) - set(MODIFIERS) or \
+            any(raw[name] not in MODIFIERS[name] for name in raw):
+        raise InstallError('Invalid world modifier.')
+    if not isinstance(keys, list) or any(key not in WORLD_KEYS for key in keys):
+        raise InstallError('Invalid world option.')
+    chosen = tuple((name, raw[name]) for name in MODIFIERS if raw.get(name, 'default') != 'default')
+    return chosen, tuple(key for key in WORLD_KEYS if key in keys)
+
+
 @dataclass(frozen=True)
 class Choices:
     domain: str
@@ -75,6 +99,8 @@ class Choices:
     tls: bool
     email: str
     start_game: bool
+    modifiers: tuple[tuple[str, str], ...] = ()
+    world_keys: tuple[str, ...] = ()
 
     @classmethod
     def parse(cls, data: dict) -> 'Choices':
@@ -153,7 +179,7 @@ class Choices:
                    system_user, panel_user, panel_password, port,
                    data.get('public') is True, data.get('crossplay') is True,
                    bepinex, modpack, install_modpack, features, tls, email,
-                   data.get('start_game') is True)
+                   data.get('start_game') is True, *_parse_modifiers(data))
 
     def public_summary(self) -> dict:
         """Safe to return to the browser or write to the installation record."""
@@ -164,7 +190,8 @@ class Choices:
                 'install_modpack': self.install_modpack,
                 'features': list(self.features), 'tls': self.tls,
                 'start_game': self.start_game, 'system_user': self.system_user,
-                'panel_user': self.panel_user}
+                'panel_user': self.panel_user,
+                'modifiers': dict(self.modifiers), 'world_keys': list(self.world_keys)}
 
 
 def fetch_bytes(url: str, limit: int) -> bytes:
@@ -471,6 +498,11 @@ class Installer:
             'VH_BEPINEX': '1' if selected.bepinex else '0',
             'VH_GAMEDIR': str(self.game_files),
             'VH_SAVEDIR': str(self.game_root / 'saves'),
+            # A new world has no modifiers to preserve: manage them from the start
+            # when the admin chose any (Jarl > Server Config shows the same options).
+            'VH_MODIFIERS_MANAGED': '1' if selected.modifiers or selected.world_keys else '0',
+            'VH_MODIFIERS': ','.join(f'{name}={value}' for name, value in selected.modifiers),
+            'VH_SETKEYS': ','.join(selected.world_keys),
         }
         body = '# Heimdall Nexus managed Valheim settings\n' + ''.join(
             f'{key}={_env_value(value)}\n' for key, value in settings.items())

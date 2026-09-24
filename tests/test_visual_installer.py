@@ -30,6 +30,18 @@ def choices(**updates):
 
 
 class VisualInstallerTests(unittest.TestCase):
+    def test_world_modifiers_are_validated_and_default_to_none(self):
+        self.assertEqual((choices().modifiers, choices().world_keys), ((), ()))
+        data = choices(modifiers={'combat': 'hard', 'raids': 'default', 'portals': 'casual'},
+                       world_keys=['nomap', 'fire'])
+        self.assertEqual(data.modifiers, (('combat', 'hard'), ('portals', 'casual')))
+        self.assertEqual(data.world_keys, ('fire', 'nomap'))
+        self.assertEqual(data.public_summary()['world_keys'], ['fire', 'nomap'])
+        for bad in ({'modifiers': {'combat': 'godmode'}}, {'modifiers': {'gravity': 'low'}},
+                    {'world_keys': ['nomap; reboot']}, {'modifiers': 'hard'}):
+            with self.subTest(bad=bad), self.assertRaises(installer.InstallError):
+                choices(**bad)
+
     def test_vanilla_defaults_to_stopped_game(self):
         data = choices()
         self.assertFalse(data.bepinex)
