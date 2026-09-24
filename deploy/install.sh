@@ -7,12 +7,13 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PORT=8765
 CHECK_ONLY=0
 LOCAL_ONLY=0
+DIRECT=0
 
 usage() {
   cat <<'EOF'
 Heimdall Nexus — visual installer for Ubuntu/Debian
 
-  sudo ./deploy/install.sh [--port 8765] [--local-only]
+  sudo ./deploy/install.sh [--port 8765] [--local-only | --direct]
   ./deploy/install.sh --check
 
 The wizard listens on 127.0.0.1 and tries to print a temporary Cloudflare
@@ -22,6 +23,9 @@ is needed. The link exists only while this process is running.
 To avoid the third-party link, use --local-only and forward the port yourself:
 
   ssh -L 8765:127.0.0.1:8765 user@your-server
+
+On a network you trust (for example a VM on your LAN), --direct skips
+Cloudflare and prints a plain HTTP link to this machine's IP instead.
 
 Open the URL printed in the server terminal in your local browser.
 The wizard installs SteamCMD, Valheim Dedicated Server, the optional BepInEx
@@ -34,6 +38,7 @@ while (($#)); do
     --port) PORT="${2:?port required}"; shift 2 ;;
     --check) CHECK_ONLY=1; shift ;;
     --local-only) LOCAL_ONLY=1; shift ;;
+    --direct) DIRECT=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
   esac
@@ -79,4 +84,5 @@ if ! python3 -c 'import sys; sys.exit(sys.version_info < (3, 10))'; then
 fi
 ARGS=(--port "$PORT")
 if ((LOCAL_ONLY)); then ARGS+=(--local-only); fi
+if ((DIRECT)); then ARGS+=(--direct); fi
 exec python3 "$ROOT/deploy/setup_server.py" "${ARGS[@]}"

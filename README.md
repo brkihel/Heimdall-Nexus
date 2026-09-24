@@ -27,19 +27,19 @@ cd Heimdall-Nexus
 sudo ./deploy/install.sh
 ~~~
 
-The command prints a temporary HTTPS link for your personal browser. The installer creates it with Cloudflare Quick Tunnel; its local service still listens only on 127.0.0.1:8765. The link closes when the installer exits. Keep its token private. To avoid the external relay, use local mode on the server:
+The terminal shows how to open the wizard in your browser. There are three ways:
+
+- **Temporary HTTPS link (default).** The installer creates it with Cloudflare Quick Tunnel and prints it only after checking that it opens. If the link stops working, it creates a new one and prints it. The wizard itself still listens only on 127.0.0.1:8765.
+- **Direct link, `--direct`.** For a machine on a network you trust, such as a VM on your LAN. The wizard listens on the machine's IP and prints `http://IP:8765/claim?token=…`. It uses plain HTTP, so avoid it on public networks. Allow TCP 8765 if the firewall blocks it.
+- **SSH forwarding, `--local-only`.** No external service and no open port.
 
 ~~~bash
-sudo ./deploy/install.sh --local-only
-~~~
-
-Then forward the port from your own computer:
-
-~~~bash
+sudo ./deploy/install.sh --direct       # VM on your network
+sudo ./deploy/install.sh --local-only   # then, on your computer:
 ssh -L 8765:127.0.0.1:8765 user@your-server
 ~~~
 
-Open the printed URL in your local browser. Choose the domain or IP, game name/world/port, optional BepInEx, live data, a Linux service account name, a separate panel login, and whether to start the game. **Starting Valheim defaults to off.** The wizard displays each install step.
+Every link carries a one-time token; keep it private. Open the printed URL in your local browser. Choose the domain or IP, game name/world/port, optional BepInEx, live data, a Linux service account name, a separate panel login, and whether to start the game. **Starting Valheim defaults to off.** The wizard displays each install step.
 
 It downloads SteamCMD from Valve and installs Valheim Dedicated Server (Steam App 896660), a systemd game service, persistent saves, Nginx, the site, and the panel. Service code is copied to `/opt/heimdall-nexus`, so the panel works even when the repository was cloned under a private home directory. BepInExPack Valheim is optional. A Hexium modpack selection fills the **site listing** and can install its server-compatible packages and dependencies in one batch. When dependency versions conflict, the highest required version is used. Explicit client-only packages are skipped. Review mod-specific configuration after installation.
 

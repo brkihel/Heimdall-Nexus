@@ -46,13 +46,19 @@ cd Heimdall-Nexus
 sudo ./deploy/install.sh
 ~~~
 
-O terminal imprime um link HTTPS temporário para abrir no seu navegador pessoal. O Cloudflare Quick Tunnel encaminha a conexão ao assistente na própria VPS, sem abrir porta de instalação. O novo endereço pode levar alguns segundos para funcionar. O link com token é privado e termina ao fechar o instalador. A Cloudflare processa essa conexão. Para evitar o serviço externo, rode o instalador com --local-only na VPS, deixe seu terminal aberto e crie o túnel no seu computador:
+O terminal mostra como abrir o assistente no navegador. São três jeitos:
+
+- **Link HTTPS temporário (padrão).** O instalador cria o link com o Cloudflare Quick Tunnel e só o mostra depois de confirmar que ele abre. Se o link parar de funcionar, ele cria outro e mostra o novo. O assistente continua escutando só em 127.0.0.1:8765.
+- **Link direto, `--direct`.** Para uma máquina numa rede de confiança, como uma VM na sua rede local. O assistente escuta no IP da máquina e mostra `http://IP:8765/claim?token=…`. Usa HTTP sem criptografia, então evite em redes públicas. Libere a porta TCP 8765 se o firewall bloquear.
+- **Túnel SSH, `--local-only`.** Sem serviço externo e sem porta aberta.
 
 ~~~bash
+sudo ./deploy/install.sh --direct       # VM na sua rede
+sudo ./deploy/install.sh --local-only   # depois, no seu computador:
 ssh -L 8765:127.0.0.1:8765 usuario@seu-servidor
 ~~~
 
-Abra no navegador do seu computador o link completo mostrado no terminal, incluindo o token. Deixe terminal e navegador abertos até a conclusão.
+Todo link leva um token de uso único; não o compartilhe. Abra no navegador do seu computador o link completo mostrado no terminal, incluindo o token. Deixe terminal e navegador abertos até a conclusão.
 
 ## 4. Preencha as cinco telas
 
@@ -72,7 +78,7 @@ Pastas: /opt/heimdall-nexus para o código instalado dos serviços; /srv/valheim
 
 ## Problemas comuns
 
-- **Não abre o assistente:** confira se o instalador ainda está rodando e tente o link HTTPS mostrado. Se o link temporário falhar, use --local-only e confira o encaminhamento SSH. O assistente em si só escuta em 127.0.0.1.
+- **Não abre o assistente:** confira se o instalador ainda está rodando. Se o link da Cloudflare falhar, o instalador tenta de novo e mostra outro; numa VM da sua rede, rode de novo com `--direct`. Senão, use `--local-only` com túnel SSH.
 - **Aparece a página padrão do Nginx ou `/jarl/entrar` dá 404 após instalar:** na VM, rode `sudo nginx -t && sudo systemctl reload nginx`. O Nginx pode estar usando a configuração carregada antes de o instalador criar o site. Confira o painel com `sudo systemctl status heimdall-panel --no-pager`. Nas próximas instalações, o assistente recarrega o Nginx e confere as duas rotas antes de mostrar sucesso.
 - **`/jarl/entrar` dá 502 e o painel registra `status=200/CHDIR`:** uma instalação antiga pode ter deixado o código sob uma pasta pessoal inacessível ao serviço. A instalação atual usa `/opt/heimdall-nexus` e evita isso. Para recuperar uma instalação antiga sem reinstalar, entre na pasta do repositório e execute `sudo apt install -y acl`, `sudo setfacl -m u:painel:--x "$HOME" "$PWD" "$PWD/servicos"` e `sudo systemctl restart heimdall-panel`. Isso libera apenas a travessia dessas pastas para `painel`, sem expor a listagem.
 - **HTTPS falhou:** confirme DNS e TCP 80. Corrija e tente novamente no mesmo assistente.

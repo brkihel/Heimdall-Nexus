@@ -6,7 +6,10 @@ import argparse
 import hmac
 import json
 import os
+import ipaddress
+import re
 import secrets
+import socket
 import subprocess
 import threading
 from http import HTTPStatus
@@ -70,11 +73,45 @@ class SetupServer(ThreadingHTTPServer):
     allow_reuse_address = True
     daemon_threads = True
 
-    def __init__(self, port: int):
-        super().__init__(('127.0.0.1', port), SetupHandler)
+    def __init__(self, port: int, *, direct: bool = False):
+        super().__init__(('0.0.0.0' if direct else '127.0.0.1', port), SetupHandler)
         self.token = secrets.token_urlsafe(32)
         self.state = InstallState()
         self.public_origin: str | None = None
+        self.direct = direct
+
+    def allowed_origins(self, host_header: str | None) -> set[str]:
+        allowed = {f'http://127.0.0.1:{self.server_port}'}
+        if self.public_origin:
+            allowed.add(self.public_origin)
+        # In direct mode the browser reaches us by whatever address the admin
+        # typed (LAN IP, public IP, DNS name). Same-origin means Origin equals
+        # the address the browser actually connected to.
+        if self.direct and host_header and HOST.fullmatch(host_header):
+            allowed.add(f'http://{host_header}')
+        return allowed
+
+
+HOST = re.compile(r'^[A-Za-z0-9.-]{1,253}:\d{1,5}$')
+
+
+def local_addresses() -> list[str]:
+    """IPv4 addresses a browser on another machine can use to reach this one."""
+    found = []
+    try:
+        output = subprocess.run(['ip', '-4', '-o', 'addr', 'show', 'scope', 'global'],
+                                capture_output=True, text=True, timeout=5).stdout
+        found = re.findall(r'inet (\d+\.\d+\.\d+\.\d+)/', output)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    if not found:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+                probe.connect(('192.0.2.1', 9))  # no packet is sent for UDP connect
+                found = [probe.getsockname()[0]]
+        except OSError:
+            pass
+    return [a for a in dict.fromkeys(found) if not ipaddress.ip_address(a).is_loopback]
 
 
 class SetupHandler(BaseHTTPRequestHandler):
@@ -143,9 +180,7 @@ class SetupHandler(BaseHTTPRequestHandler):
         if self.path != '/api/start':
             self._json(HTTPStatus.NOT_FOUND, {'error': 'Not found.'})
             return
-        allowed = {f'http://127.0.0.1:{self.server.server_port}'}
-        if self.server.public_origin:
-            allowed.add(self.server.public_origin)
+        allowed = self.server.allowed_origins(self.headers.get('Host'))
         if not self._authorized() or self.headers.get('Origin') not in allowed:
             self._json(HTTPStatus.FORBIDDEN, {'error': 'The setup session or browser origin is invalid.'})
             return
@@ -180,44 +215,75 @@ class SetupHandler(BaseHTTPRequestHandler):
         self._json(HTTPStatus.ACCEPTED, {'started': True, 'summary': choices.public_summary()})
 
 
+def _print_tunnel(server: SetupServer) -> None:
+    print('Open this temporary HTTPS link on your personal computer:', flush=True)
+    print(f'{server.public_origin}/claim?token={server.token}', flush=True)
+    print('Cloudflare proxies this setup connection. The link closes when setup exits.', flush=True)
+
+
+def _keep_tunnel(server: SetupServer, holder: dict, stopping: threading.Event) -> None:
+    """Replace the quick tunnel if cloudflared exits while setup is still open."""
+    while not stopping.wait(10):
+        process = holder.get('process')
+        if process is None or process.poll() is None:
+            continue
+        print('The temporary link stopped working. Creating a new one…', flush=True)
+        try:
+            holder['process'], server.public_origin = quick_tunnel.start_verified(
+                server.server_port, log=lambda line: print(line, flush=True))
+        except (quick_tunnel.TunnelError, OSError) as error:
+            holder['process'] = None
+            server.public_origin = None
+            print(f'Temporary link unavailable: {error}', flush=True)
+            return
+        _print_tunnel(server)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--port', type=int, default=8765)
     parser.add_argument('--local-only', action='store_true', help='skip temporary public HTTPS link')
+    parser.add_argument('--direct', action='store_true',
+                        help='also listen on this machine\'s network addresses (plain HTTP)')
     args = parser.parse_args()
     if os.geteuid() != 0:
         parser.error('Run the visual installer with sudo.')
-    server = SetupServer(args.port)
-    tunnel = None
+    server = SetupServer(args.port, direct=args.direct)
+    holder: dict = {'process': None}
+    stopping = threading.Event()
     try:
-        print(f'Heimdall Nexus setup is listening on this VPS at 127.0.0.1:{args.port}.', flush=True)
-        if not args.local_only:
+        where = 'all network addresses' if args.direct else '127.0.0.1'
+        print(f'Heimdall Nexus setup is listening on {where}, port {args.port}.', flush=True)
+        if args.direct:
+            addresses = local_addresses()
+            print('Direct link (same network, or a public IP with the port open):', flush=True)
+            for address in addresses or ['SERVER-IP']:
+                print(f'  http://{address}:{args.port}/claim?token={server.token}', flush=True)
+            print('This link is plain HTTP: use it on a network you trust. Allow TCP '
+                  f'{args.port} in the firewall if it does not open.', flush=True)
+        if not args.local_only and not args.direct:
             print('Creating a temporary HTTPS link through Cloudflare…', flush=True)
             try:
-                tunnel, server.public_origin = quick_tunnel.start(args.port)
+                holder['process'], server.public_origin = quick_tunnel.start_verified(
+                    args.port, log=lambda line: print(line, flush=True))
             except (quick_tunnel.TunnelError, OSError) as error:
                 print(f'Temporary link unavailable: {error}', flush=True)
         if server.public_origin:
-            print('Open this temporary HTTPS link on your personal computer:', flush=True)
-            print(f'{server.public_origin}/claim?token={server.token}', flush=True)
-            print('The new address may take a few seconds to resolve in DNS.', flush=True)
-            print('Cloudflare proxies this setup connection. The link closes when setup exits.', flush=True)
-        else:
-            print('Use SSH forwarding, then open this local link:', flush=True)
-            print(f'http://127.0.0.1:{args.port}/claim?token={server.token}', flush=True)
-            print(f'ssh -L {args.port}:127.0.0.1:{args.port} user@your-server', flush=True)
+            _print_tunnel(server)
+            threading.Thread(target=_keep_tunnel, args=(server, holder, stopping),
+                             name='heimdall-tunnel-watch', daemon=True).start()
+        if not args.direct:
+            print('SSH forwarding alternative: on your computer run', flush=True)
+            print(f'  ssh -L {args.port}:127.0.0.1:{args.port} user@your-server', flush=True)
+            print(f'then open http://127.0.0.1:{args.port}/claim?token={server.token}', flush=True)
         print('Keep this terminal open until the installation finishes.', flush=True)
         server.serve_forever()
     except KeyboardInterrupt:
         pass
     finally:
+        stopping.set()
         server.server_close()
-        if tunnel is not None and tunnel.poll() is None:
-            tunnel.terminate()
-            try:
-                tunnel.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                tunnel.kill()
+        quick_tunnel.stop(holder.get('process'))
 
 
 if __name__ == '__main__':

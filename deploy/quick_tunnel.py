@@ -15,6 +15,7 @@ import subprocess
 import tempfile
 import threading
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -115,3 +116,57 @@ def start(port: int, *, binary: str | None = None, timeout: int = 60) -> tuple[s
     except subprocess.TimeoutExpired:
         process.kill()
     raise TunnelError('Cloudflare could not create a temporary HTTPS link. Use SSH forwarding instead.')
+
+
+def reachable(url: str, *, timeout: float = 60, pause: float = 2) -> bool:
+    """True once the public link reaches this wizard, not a Cloudflare error page.
+
+    The wizard answers an unauthenticated request with 401 and its own JSON.
+    Printing the link before this succeeds sends users to an address that may
+    not resolve yet, and a failed DNS lookup can then stay cached for minutes.
+    """
+    deadline = time.monotonic() + timeout
+    request = urllib.request.Request(url + '/', headers={'User-Agent': 'Heimdall-Nexus-Installer/1.0'})
+    while time.monotonic() < deadline:
+        try:
+            urllib.request.urlopen(request, timeout=8).close()
+        except urllib.error.HTTPError as error:
+            body = error.read(2048)
+            if error.code == 401 and b'one-time URL' in body:
+                return True
+        except (urllib.error.URLError, OSError):
+            pass
+        time.sleep(pause)
+    return False
+
+
+def stop(process: subprocess.Popen | None) -> None:
+    if process is None or process.poll() is not None:
+        return
+    process.terminate()
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        process.kill()
+
+
+def start_verified(port: int, *, attempts: int = 3, binary: str | None = None,
+                   verify_timeout: float = 60, log=print) -> tuple[subprocess.Popen, str]:
+    """Create a quick tunnel and return it only after the link answers."""
+    executable = binary or ensure_binary()
+    last = 'Cloudflare did not create a link.'
+    for attempt in range(1, attempts + 1):
+        try:
+            process, url = start(port, binary=executable)
+        except TunnelError as error:
+            last = str(error)
+        else:
+            log(f'Checking the temporary link ({attempt}/{attempts})…')
+            if reachable(url, timeout=verify_timeout):
+                return process, url
+            stop(process)
+            last = 'The temporary link was created but did not answer in time.'
+        if attempt < attempts:
+            log(f'{last} Trying again…')
+            time.sleep(3)
+    raise TunnelError(last)

@@ -27,19 +27,19 @@ cd Heimdall-Nexus
 sudo ./deploy/install.sh
 ~~~
 
-O terminal mostra um link HTTPS temporário para abrir no seu navegador pessoal. O instalador usa o Cloudflare Quick Tunnel; o serviço na VPS continua escutando só em 127.0.0.1:8765. O link termina quando o instalador fecha. Guarde o token em privado. Para dispensar esse serviço externo, rode o modo local na VPS:
+O terminal mostra como abrir o assistente no navegador. São três jeitos:
+
+- **Link HTTPS temporário (padrão).** O instalador cria o link com o Cloudflare Quick Tunnel e só o mostra depois de confirmar que ele abre. Se o link parar de funcionar, ele cria outro e mostra o novo. O assistente continua escutando só em 127.0.0.1:8765.
+- **Link direto, `--direct`.** Para uma máquina numa rede de confiança, como uma VM na sua rede local. O assistente escuta no IP da máquina e mostra `http://IP:8765/claim?token=…`. Usa HTTP sem criptografia, então evite em redes públicas. Libere a porta TCP 8765 se o firewall bloquear.
+- **Túnel SSH, `--local-only`.** Sem serviço externo e sem porta aberta.
 
 ~~~bash
-sudo ./deploy/install.sh --local-only
-~~~
-
-Depois crie o túnel SSH no seu computador:
-
-~~~bash
+sudo ./deploy/install.sh --direct       # VM na sua rede
+sudo ./deploy/install.sh --local-only   # depois, no seu computador:
 ssh -L 8765:127.0.0.1:8765 usuario@seu-servidor
 ~~~
 
-Abra no navegador o link mostrado. Escolha domínio ou IP, nome/mundo/porta do jogo, BepInEx opcional, dados ao vivo, o nome da conta Linux do serviço e o login do painel e se o jogo deve ser iniciado. **Iniciar Valheim vem desmarcado.** A tela mostra o progresso de cada etapa.
+Todo link leva um token de uso único; não o compartilhe. Abra no navegador o link mostrado. Escolha domínio ou IP, nome/mundo/porta do jogo, BepInEx opcional, dados ao vivo, o nome da conta Linux do serviço e o login do painel e se o jogo deve ser iniciado. **Iniciar Valheim vem desmarcado.** A tela mostra o progresso de cada etapa.
 
 O assistente baixa SteamCMD da Valve e instala Valheim Dedicated Server (Steam App 896660), o serviço systemd, pastas persistentes do mundo, Nginx, site e painel. O código dos serviços é copiado para `/opt/heimdall-nexus`, então o painel funciona mesmo que o repositório tenha sido clonado numa pasta pessoal fechada. BepInExPack Valheim é opcional. Selecionar um modpack Hexium traz sua **lista para o site** e pode instalar os pacotes compatíveis com servidor e suas dependências em lote. Se versões requeridas conflitarem, ele usa a mais alta. Pacotes marcados só para cliente são pulados. Confira a configuração de cada mod depois.
 

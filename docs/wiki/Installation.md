@@ -46,13 +46,19 @@ cd Heimdall-Nexus
 sudo ./deploy/install.sh
 ~~~
 
-The terminal prints a temporary HTTPS link for your personal browser. Cloudflare Quick Tunnel relays to the wizard on server loopback; no inbound setup port is required. The new address may take a few seconds to resolve. The token URL is private and closes when the installer exits. Cloudflare handles the setup connection. To avoid the external relay, run the installer with --local-only on the server, leave its terminal open, and forward the port from your computer:
+The terminal shows how to open the wizard in your browser. There are three ways:
+
+- **Temporary HTTPS link (default).** The installer creates it with Cloudflare Quick Tunnel and prints it only after checking that it opens. If the link stops working, it creates a new one and prints it. The wizard itself still listens only on 127.0.0.1:8765.
+- **Direct link, `--direct`.** For a machine on a network you trust, such as a VM on your LAN. The wizard listens on the machine's IP and prints `http://IP:8765/claim?token=…`. It uses plain HTTP, so avoid it on public networks. Allow TCP 8765 if the firewall blocks it.
+- **SSH forwarding, `--local-only`.** No external service and no open port.
 
 ~~~bash
+sudo ./deploy/install.sh --direct       # VM on your network
+sudo ./deploy/install.sh --local-only   # then, on your computer:
 ssh -L 8765:127.0.0.1:8765 user@your-server
 ~~~
 
-Open the printed URL, including its token, in that computer's browser. The token is not written to access logs. Keep both terminal and browser open until completion.
+Every link carries a one-time token; keep it private. Open the printed URL, including its token, in that computer's browser. The token is not written to access logs. Keep both terminal and browser open until completion.
 
 ## 4. Fill in the five screens
 
@@ -72,7 +78,7 @@ Paths: /opt/heimdall-nexus for installed service code; /srv/valheim/current for 
 
 ## Common issues
 
-- **Wizard cannot open:** check that the installer is still running and try its printed HTTPS link. If the temporary link could not be created, use --local-only and check the SSH forwarding command. The wizard itself only listens on 127.0.0.1.
+- **Wizard cannot open:** check that the installer is still running. If the Cloudflare link fails, the installer tries again and prints a new one; on a VM in your network, rerun with `--direct`. Otherwise use `--local-only` with SSH forwarding.
 - **Nginx welcome page or `/jarl/entrar` returns 404 after setup:** on the VM, run `sudo nginx -t && sudo systemctl reload nginx`. Nginx may still be using the configuration it loaded before the installer added the site. Confirm the panel with `sudo systemctl status heimdall-panel --no-pager`. New installations reload Nginx and check both routes before reporting success.
 - **`/jarl/entrar` returns 502 and the panel log shows `status=200/CHDIR`:** an older installation may run code from a private home directory that the service cannot traverse. The current installer uses `/opt/heimdall-nexus` and avoids this. To repair an older installation without reinstalling, change into the repository directory and run `sudo apt install -y acl`, `sudo setfacl -m u:painel:--x "$HOME" "$PWD" "$PWD/servicos"`, then `sudo systemctl restart heimdall-panel`. This grants path traversal only, without allowing directory listing.
 - **HTTPS fails:** verify DNS and inbound TCP 80. After correction, retry in the same wizard.

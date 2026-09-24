@@ -188,3 +188,46 @@ class ModpackFieldTests(unittest.TestCase):
         self.assertEqual(data.modpack, 'TaegukGaming/Hearthbound_Valheim_Modpack')
         with self.assertRaises(installer.InstallError):
             choices(bepinex=True, modpack='https://evil.example/mods/A/B')
+
+
+class SetupAccessTests(unittest.TestCase):
+    def test_tunnel_reachable_only_when_wizard_answers(self):
+        import http.server
+        answers = {'body': b'{"error":"Open the one-time URL shown in the server terminal."}', 'code': 401}
+
+        class Fake(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *_):
+                pass
+
+            def do_GET(self):
+                self.send_response(answers['code'])
+                self.end_headers()
+                self.wfile.write(answers['body'])
+
+        fake = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Fake)
+        threading.Thread(target=fake.serve_forever, daemon=True).start()
+        base = f'http://127.0.0.1:{fake.server_port}'
+        try:
+            self.assertTrue(quick_tunnel.reachable(base, timeout=2, pause=0.1))
+            answers.update(code=530, body=b'error 1033 Argo Tunnel error')
+            self.assertFalse(quick_tunnel.reachable(base, timeout=0.5, pause=0.1))
+        finally:
+            fake.shutdown()
+
+    def test_direct_mode_accepts_same_origin_only(self):
+        server = setup_server.SetupServer(0, direct=True)
+        try:
+            allowed = server.allowed_origins('192.168.5.10:8765')
+            self.assertIn('http://192.168.5.10:8765', allowed)
+            self.assertNotIn('http://evil.example', allowed)
+            self.assertEqual(server.server_address[0], '0.0.0.0')
+        finally:
+            server.server_close()
+        local = setup_server.SetupServer(0)
+        try:
+            self.assertNotIn('http://192.168.5.10:8765', local.allowed_origins('192.168.5.10:8765'))
+            self.assertEqual(local.server_address[0], '127.0.0.1')
+        finally:
+            local.server_close()
+        for address in setup_server.local_addresses():
+            self.assertFalse(address.startswith('127.'))
