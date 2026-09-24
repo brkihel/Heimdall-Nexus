@@ -41,6 +41,38 @@ def event(**changes):
 
 
 class SagasContractTests(unittest.TestCase):
+    def test_discovery_keeps_boss_flag_and_ignores_kill_filter(self):
+        packet = sagas.validate(event(kind='discover', target='Eikthyrnir', boss=True))
+        self.assertTrue(packet['boss'])
+        self.assertTrue(sagas.keep_kill(packet, 'bosses'))
+        self.assertFalse(sagas.validate(event(kind='death', boss=True))['boss'])
+
+    def test_atlas_import_and_fog(self):
+        import atlas
+        with tempfile.TemporaryDirectory() as temporary:
+            state = Path(temporary)
+            enable(state)
+            (state / 'inbox').mkdir()
+            grid = bytes([1]) * (sagas.ATLAS_SIZE * sagas.ATLAS_SIZE)
+            (state / 'inbox' / f'atlas-{"a" * 64}.biomes').write_bytes(
+                b'HSB1' + sagas.ATLAS_SIZE.to_bytes(2, 'little') + b'\0\0' + grid)
+            (state / 'inbox' / f'atlas-{"b" * 64}.biomes').write_bytes(b'junk')
+            with sagas.connect(state / 'sagas.sqlite3') as db:
+                sagas.ingest(db, sagas.validate(presence()), now=100)
+                sagas.ingest(db, sagas.validate(event(x=0, z=0)), now=101)
+            sagas.process_inbox(state)
+            self.assertEqual(sorted(p.name for p in (state / 'atlas').iterdir()),
+                             [f'{"a" * 64}.biomes'])
+            self.assertEqual(list((state / 'inbox').glob('*.biomes')), [])
+            info = atlas.summary(state, 'a' * 64)
+            self.assertEqual(info['mode'], 'explored')
+            self.assertEqual(info['points'], [(0, 0)])
+            self.assertTrue(atlas.image(state, 'a' * 64, info).startswith('data:image/png;base64,'))
+            settings = sagas.load_settings(state)
+            settings['map_mode'] = 'off'
+            (state / 'settings.json').write_text(json.dumps(settings))
+            self.assertIsNone(atlas.summary(state, 'a' * 64))
+
     def test_legacy_settings_default_to_all_kills(self):
         with tempfile.TemporaryDirectory() as temporary:
             state = Path(temporary)

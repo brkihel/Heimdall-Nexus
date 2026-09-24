@@ -24,14 +24,16 @@ SETTINGS = STATE / 'settings.json'
 IDENTIFIER = re.compile(r'^[a-f0-9]{24,64}$')
 EVENT_ID = re.compile(r'^[A-Za-z0-9_-]{8,96}$')
 BIOME = re.compile(r'^[A-Za-z][A-Za-z0-9_]{0,39}$')
-KINDS = {'kill', 'death', 'drop', 'collect', 'pickup', 'boss', 'bounty'}
+KINDS = {'kill', 'death', 'drop', 'collect', 'pickup', 'boss', 'bounty', 'discover'}
 MAX_PACKET = 64 * 1024
 MAX_BATCH = 500
 MAX_EVENTS_STORED = 100000
 MAX_STORIES_STORED = 1000
 KILL_MODES = {'all', 'notable', 'bosses'}
+MAP_MODES = {'off', 'explored', 'full'}
 DEFAULT_SETTINGS = {'version': 1, 'enabled': False, 'gear': True,
-                    'events': True, 'clock': True, 'kill_mode': 'all'}
+                    'events': True, 'clock': True, 'kill_mode': 'all',
+                    'map_mode': 'explored'}
 
 
 class InvalidPacket(ValueError):
@@ -43,12 +45,16 @@ def load_settings(state: Path = STATE) -> dict:
         saved = json.loads((state / 'settings.json').read_text(encoding='utf-8'))
     except (OSError, ValueError):
         return DEFAULT_SETTINGS.copy()
-    if not isinstance(saved, dict) or set(saved) not in (
-            set(DEFAULT_SETTINGS), set(DEFAULT_SETTINGS) - {'kill_mode'}) or \
+    required = {'version', 'enabled', 'gear', 'events', 'clock'}
+    # Older installs lack the later optional keys; they get the defaults.
+    if not isinstance(saved, dict) or not required <= set(saved) or \
+            not set(saved) <= set(DEFAULT_SETTINGS) or \
             type(saved.get('version')) is not int or saved['version'] != 1 or any(
                 not isinstance(saved[key], bool) for key in ('enabled', 'gear', 'events', 'clock')) or \
             not isinstance(saved.get('kill_mode', 'all'), str) or \
-            saved.get('kill_mode', 'all') not in KILL_MODES:
+            saved.get('kill_mode', 'all') not in KILL_MODES or \
+            not isinstance(saved.get('map_mode', 'explored'), str) or \
+            saved.get('map_mode', 'explored') not in MAP_MODES:
         return DEFAULT_SETTINGS.copy()
     return {**DEFAULT_SETTINGS, **saved}
 
@@ -138,7 +144,8 @@ def validate(raw: object) -> dict:
     for flag in ('boss', 'elite'):
         if raw.get(flag, False) is not False and raw.get(flag) is not True:
             raise InvalidPacket('invalid event classification')
-        out[flag] = bool(raw.get(flag, False)) if kind == 'kill' else False
+        out[flag] = bool(raw.get(flag, False)) if kind == 'kill' or \
+            kind == 'discover' and flag == 'boss' else False
     out['name'] = _label(raw.get('name'), 120)
     out['target'] = _label(raw.get('target', ''), 120)
     out['stars'] = int(_number(raw.get('stars', 0), 0, 100))
@@ -192,6 +199,7 @@ CREATE TABLE IF NOT EXISTS stories (
   id TEXT PRIMARY KEY, world TEXT NOT NULL, scope TEXT NOT NULL,
   actor TEXT NOT NULL, title TEXT NOT NULL, text TEXT NOT NULL,
   model TEXT NOT NULL, fingerprint TEXT NOT NULL, created_at INTEGER NOT NULL,
+  auto INTEGER NOT NULL DEFAULT 0,
   UNIQUE(world, scope, actor, fingerprint)
 );
 CREATE INDEX IF NOT EXISTS stories_by_world ON stories(world, created_at DESC);
@@ -201,6 +209,10 @@ CREATE TABLE IF NOT EXISTS story_refs (
   PRIMARY KEY(story_id, world, actor, event_id)
 );
 CREATE INDEX IF NOT EXISTS story_refs_by_actor ON story_refs(world, actor);
+CREATE TABLE IF NOT EXISTS story_triggers (
+  world TEXT NOT NULL, actor TEXT NOT NULL, event_id TEXT NOT NULL,
+  created_at INTEGER NOT NULL, PRIMARY KEY(world, actor, event_id)
+);
 CREATE TABLE IF NOT EXISTS story_attempts (
   day TEXT PRIMARY KEY, count INTEGER NOT NULL
 );
@@ -228,6 +240,8 @@ def connect(path: Path = DATABASE) -> sqlite3.Connection:
             db.execute(f'ALTER TABLE events ADD COLUMN {flag} INTEGER NOT NULL DEFAULT 0')
     if 'biome' not in event_columns:
         db.execute("ALTER TABLE events ADD COLUMN biome TEXT NOT NULL DEFAULT ''")
+    if 'auto' not in {row[1] for row in db.execute('PRAGMA table_info(stories)')}:
+        db.execute('ALTER TABLE stories ADD COLUMN auto INTEGER NOT NULL DEFAULT 0')
     return db
 
 
@@ -311,6 +325,34 @@ def maintain(db: sqlite3.Connection, now: int | None = None) -> None:
                       ON CONFLICT(key) DO UPDATE SET value=excluded.value''', (now,))
 
 
+ATLAS_NAME = re.compile(r'^atlas-([a-f0-9]{64})\.biomes$')
+ATLAS_SIZE = 512
+
+
+def import_atlases(state: Path) -> None:
+    """Move complete biome grids written by the bridge into private storage."""
+    target = state / 'atlas'
+    for path in (state / 'inbox').glob('atlas-*.biomes'):
+        match = ATLAS_NAME.fullmatch(path.name)
+        try:
+            descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            with os.fdopen(descriptor, 'rb') as source:
+                if not stat.S_ISREG(os.fstat(source.fileno()).st_mode):
+                    raise ValueError('not a regular file')
+                data = source.read(8 + ATLAS_SIZE * ATLAS_SIZE + 1)
+            if not match or len(data) != 8 + ATLAS_SIZE * ATLAS_SIZE or \
+                    data[:4] != b'HSB1' or int.from_bytes(data[4:6], 'little') != ATLAS_SIZE or \
+                    max(data[8:]) > 9:
+                raise ValueError('invalid atlas')
+            target.mkdir(mode=0o750, exist_ok=True)
+            temporary = target / ('.' + match.group(1) + '.tmp')
+            temporary.write_bytes(data[8:])
+            os.replace(temporary, target / (match.group(1) + '.biomes'))
+        except (OSError, ValueError):
+            pass
+        path.unlink(missing_ok=True)
+
+
 def process_inbox(state: Path = STATE, limit: int = MAX_BATCH) -> dict:
     """Only complete .json files are processed; duplicate delivery is harmless."""
     inbox, rejected = state / 'inbox', state / 'rejected'
@@ -321,6 +363,7 @@ def process_inbox(state: Path = STATE, limit: int = MAX_BATCH) -> dict:
     rejected_count = sum(1 for _ in rejected.glob('*.json'))
     with connect(state / 'sagas.sqlite3') as db:
         maintain(db)
+        import_atlases(state)
         files = sorted(inbox.glob('*.json'))
         accepted_paths = []
         db.execute('BEGIN')

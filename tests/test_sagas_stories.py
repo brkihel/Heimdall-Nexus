@@ -51,13 +51,34 @@ class StoryTests(unittest.TestCase):
     def test_free_is_default_and_paid_requires_opt_in(self):
         self.assertEqual(stories.DEFAULT['model'], 'openrouter/free')
         with self.assertRaises(stories.StoryError):
-            stories.valid_config({'enabled': True, 'model': 'vendor/paid',
-                                  'allow_paid': False, 'daily_limit': 3})
+            stories.valid_config({**stories.DEFAULT, 'model': 'vendor/paid'})
+        stories.valid_config({**stories.DEFAULT, 'provider': 'openrouter', 'model': 'vendor/paid'})
+
+    def test_legacy_config_keeps_working_without_automation(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            state = Path(temporary)
+            state_ready(state)
+            config = stories.load_config(state)
+            self.assertEqual((config['provider'], config['auto']), ('openrouter_free', False))
+
+    def test_enabling_automation_starts_now_and_keeps_its_start(self):
+        form = {'enabled': True, 'provider': 'anthropic', 'model': 'claude-haiku-4-5',
+                'daily_limit': 3, 'auto': True}
+        first = stories.merge_config(stories.DEFAULT, form, 500)
+        self.assertEqual(first['auto_since'], 500)
+        self.assertEqual(stories.merge_config(first, form, 900)['auto_since'], 500)
+        self.assertEqual(stories.merge_config(first, {**form, 'auto': False}, 900)['auto_since'], 0)
+
+    def test_provider_keys_are_distinct(self):
+        self.assertTrue(stories.valid_key('sk-ant-api03-abcdefghijklmnopqrstuv', 'anthropic'))
+        self.assertFalse(stories.valid_key('sk-ant-api03-abcdefghijklmnopqrstuv', 'openai'))
+        self.assertTrue(stories.valid_key('sk-proj-abcdefghijklmnopqrstuvwx', 'openai'))
+        self.assertFalse(stories.valid_key('sk-or-v1-abcdefghijklmnopqrstuvwx', 'openai'))
 
     def test_key_is_redacted_from_executor_audit(self):
         key = 'sk-or-this-is-a-private-test-key'
         self.assertEqual(executor.audit_payload('sagas.story.key', {'key': key}),
-                         {'acao': 'definir'})
+                         {'acao': 'definir', 'provedor': 'None'})
         self.assertNotIn(key, json.dumps(executor.audit_payload(
             'sagas.story.key', {'key': key})))
 
@@ -78,7 +99,7 @@ class StoryTests(unittest.TestCase):
         with patch.object(stories.http.client, 'HTTPSConnection', return_value=connection) as factory:
             result = stories._request('sk-or-test-private-value', 'openrouter/free',
                                       'viking', [{'ref': 'e1', 'kind': 'death'}])
-        factory.assert_called_once_with('openrouter.ai', timeout=30)
+        factory.assert_called_once_with('openrouter.ai', timeout=60)
         self.assertEqual(connection.call[0:2],
                          ('POST', '/api/v1/chat/completions'))
         self.assertEqual(connection.call[3]['Authorization'],
@@ -86,13 +107,81 @@ class StoryTests(unittest.TestCase):
         self.assertNotIn(b'sk-or-test-private-value', connection.call[2])
         self.assertEqual(result['title'], response()['title'])
 
+    def test_anthropic_and_openai_requests_use_their_own_api_shape(self):
+        replies = {
+            'anthropic': {'content': [{'type': 'text', 'text': json.dumps(response())}]},
+            'openai': {'choices': [{'message': {'content': json.dumps(response())}}]},
+        }
+        for provider, host in (('anthropic', 'api.anthropic.com'), ('openai', 'api.openai.com')):
+            class Reply:
+                status = 200
+                def read(self, _maximum, provider=provider):
+                    return json.dumps(replies[provider]).encode()
+            class Connection:
+                def request(self, method, path, body, headers):
+                    self.call = (path, json.loads(body), headers)
+                def getresponse(self):
+                    return Reply()
+                def close(self):
+                    pass
+            connection = Connection()
+            with self.subTest(provider=provider), patch.object(
+                    stories.http.client, 'HTTPSConnection', return_value=connection) as factory:
+                result = stories._request('secret', 'model-x', 'viking',
+                                          [{'ref': 'e1', 'kind': 'kill'}], provider, 'e1')
+                self.assertEqual(factory.call_args[0][0], host)
+                self.assertEqual(result['title'], response()['title'])
+                path, body, headers = connection.call
+                if provider == 'anthropic':
+                    self.assertEqual(path, '/v1/messages')
+                    self.assertEqual(headers['x-api-key'], 'secret')
+                    self.assertIn('e1', body['system'])
+                    self.assertNotIn('Authorization', headers)
+                else:
+                    self.assertEqual(path, '/v1/chat/completions')
+                    self.assertNotIn('temperature', body)
+                    self.assertEqual(body['response_format'], {'type': 'json_object'})
+
+    def test_boss_kill_after_automation_writes_one_focused_chapter(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            state = Path(temporary)
+            state_ready(state)
+            config = {**stories.DEFAULT, 'enabled': True, 'auto': True, 'auto_since': 150}
+            (state / 'story-settings.json').write_text(json.dumps(config))
+            with sagas.connect(state / 'sagas.sqlite3') as db:
+                for event_id, kind, target, boss, at in (
+                        ('oldboss00001', 'kill', 'Eikthyr', 1, 120),
+                        ('newboss00001', 'kill', 'The Elder', 1, 200),
+                        ('altar0000001', 'discover', 'GDKing', 1, 210)):
+                    db.execute('''INSERT INTO events(world,actor,id,kind,name,target,stars,
+                                  quantity,occurred_at,boss,elite) VALUES(?,?,?,?,?,?,?,?,?,?,?)''',
+                               (WORLD, ACTOR, event_id, kind, 'Astrid', target, 0, 1, at, boss, 0))
+            trigger = stories.next_trigger(state)
+            self.assertEqual(trigger['id'], 'newboss00001')
+            captured = []
+            def fake_request(key, model, scope, facts, provider, focus):
+                captured.append((facts, focus))
+                refs = [fact['ref'] for fact in facts if fact['kind'] == 'kill'][:2]
+                return {**response(), 'evidence': refs}
+            with patch.object(stories, '_request', side_effect=fake_request):
+                stories.generate_triggered(state, trigger)
+            facts, focus = captured[0]
+            focused = next(fact for fact in facts if fact.get('focus'))
+            self.assertEqual((focused['ref'], focused['target']), (focus, 'The Elder'))
+            self.assertIn('o altar do Ancião', [fact['target'] for fact in facts])
+            public = stories.public_list(state / 'sagas.sqlite3', WORLD)
+            self.assertTrue(public[0]['auto'])
+            self.assertIn('newboss00001', [item['id'] for item in public[0]['evidence']])
+            # The discovery was not cited, so it still earns its own chapter.
+            self.assertEqual(stories.next_trigger(state)['id'], 'altar0000001')
+
     def test_generates_character_and_server_chapters_with_evidence(self):
         with tempfile.TemporaryDirectory() as temporary:
             state = Path(temporary)
             state_ready(state)
             captured = []
 
-            def fake_request(key, model, scope, facts):
+            def fake_request(key, model, scope, facts, *_):
                 captured.append((key, model, scope, facts))
                 return response()
 

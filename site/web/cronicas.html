@@ -112,6 +112,15 @@ main{padding-bottom:5rem}
 .gear-list strong{display:block;color:var(--osso);font-size:.8rem;overflow-wrap:anywhere}
 .gear-list small{color:var(--fraco);font-size:.72rem}
 .map-panel{grid-column:1/-1}
+.map-tools{display:flex;gap:.35rem}
+.map-wrap.atlas svg{max-height:720px;aspect-ratio:1/1;margin:auto;min-height:0}
+.map-wrap.atlas{background:#05090d}
+.map-pin.discover circle{fill:#7fb6e0}
+.map-pin text{fill:var(--osso);font:600 11px Cinzel,Georgia,serif;paint-order:stroke;stroke:#05090d;stroke-width:3px}
+.timeline li.discover::before{background:#7fb6e0;box-shadow:0 0 0 4px rgba(127,182,224,.12)}
+.timeline .discover .event-type{color:#7fb6e0}
+.badge.discover{border-color:#7fb6e0;color:#bfe0f7;background:rgba(127,182,224,.1)}
+.badge.auto{border-color:var(--borda-viva);color:var(--fraco)}
 .map-intro{color:var(--fraco);font-size:.83rem;margin:-.3rem 0 1rem;max-width:75ch}
 .map-wrap{position:relative;border:1px solid var(--borda-viva);border-radius:10px;overflow:hidden;background:radial-gradient(circle at 50% 50%,rgba(200,164,92,.07),transparent 65%),#070f14}
 .map-wrap svg{display:block;width:100%;height:auto;min-height:230px}
@@ -125,7 +134,7 @@ main{padding-bottom:5rem}
 .map-pin.player circle{fill:var(--ouro-claro);stroke:var(--ouro);stroke-width:7}
 .map-legend{display:flex;gap:1rem;flex-wrap:wrap;color:var(--fraco);font-size:.76rem;margin:.75rem 0}
 .map-legend b{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:.35rem;background:var(--ouro-claro)}
-.map-legend .kill b{background:var(--verde)}.map-legend .death b{background:var(--brasa)}.map-legend .boss b{background:var(--ouro-claro)}
+.map-legend .discover b{background:#7fb6e0}.map-legend .kill b{background:var(--verde)}.map-legend .death b{background:var(--brasa)}.map-legend .boss b{background:var(--ouro-claro)}
 .map-list{display:flex;gap:.5rem;flex-wrap:wrap}
 .map-list li{border:1px solid var(--borda);border-radius:7px;padding:.35rem .55rem;color:var(--texto);font-size:.73rem}
 .empty{color:var(--fraco);font-size:.84rem;padding:.6rem 0}
@@ -141,11 +150,11 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
 <section class="hero"><div class="shell"><div><div class="eyebrow">Heimdall Nexus · Aventuras registradas</div><h1>Crônicas dos Vikings</h1><p>Momentos que os jogadores escolheram compartilhar. Os registros começam quando a extensão é ativada.</p><div class="hero-numbers"><span><strong id="count-vikings">—</strong> Vikings</span><span><strong id="count-online">—</strong> online</span><span><strong id="count-events">—</strong> momentos recentes</span></div></div><div class="clock-card"><div class="clock-ring" id="clock-ring" role="progressbar" aria-label="Progresso do ciclo do dia" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="clock-ring-inner" id="clock-percent">—</div></div><div><strong id="clock-day">Dia —</strong><small id="clock-note">Aguardando relógio</small></div></div></div></section>
 <div class="shell toolbar"><label for="world">Mundo <select id="world"></select></label><span class="toolbar-note">Atualização automática a cada 30 segundos</span></div>
 <main class="shell"><p id="status" role="status">Carregando as Crônicas…</p><div id="dashboard" class="dashboard" hidden>
-  <section class="panel"><div class="section-head"><h2>Momentos recentes</h2><div class="filters" aria-label="Filtrar momentos"><button class="filter" type="button" data-kind="all" aria-pressed="true">Todos</button><button class="filter" type="button" data-kind="kill" aria-pressed="false">Abates</button><button class="filter" type="button" data-kind="boss" aria-pressed="false">Chefes</button><button class="filter" type="button" data-kind="notable" aria-pressed="false">Marcantes</button><button class="filter" type="button" data-kind="death" aria-pressed="false">Mortes</button><button class="filter" type="button" data-kind="other" aria-pressed="false">Outros</button></div></div><ol id="timeline" class="timeline"></ol></section>
+  <section class="panel"><div class="section-head"><h2>Momentos recentes</h2><div class="filters" aria-label="Filtrar momentos"><button class="filter" type="button" data-kind="all" aria-pressed="true">Todos</button><button class="filter" type="button" data-kind="kill" aria-pressed="false">Abates</button><button class="filter" type="button" data-kind="boss" aria-pressed="false">Chefes</button><button class="filter" type="button" data-kind="notable" aria-pressed="false">Marcantes</button><button class="filter" type="button" data-kind="discover" aria-pressed="false">Descobertas</button><button class="filter" type="button" data-kind="death" aria-pressed="false">Mortes</button><button class="filter" type="button" data-kind="other" aria-pressed="false">Outros</button></div></div><ol id="timeline" class="timeline"></ol></section>
   <aside class="panel"><div class="section-head"><h2>Vikings</h2><small>Escolha um perfil</small></div><div id="viking-empty" class="empty" hidden>Nenhum perfil compartilhado neste mundo.</div><ul id="vikings" class="viking-list"></ul><div id="profile" class="profile" hidden></div></aside>
   <section class="panel feats-panel"><div class="section-head"><h2>Feitos recentes</h2><small>Entre os momentos mais recentes deste mundo</small></div><div id="feats-empty" class="empty" hidden>Chefes, elites e criaturas de 3 estrelas ou mais aparecerão aqui após um abate compartilhado.</div><div id="feats" class="feats"></div></section>
   <section class="panel stories-panel" id="stories-panel" hidden><div class="section-head"><h2>Histórias ao redor da fogueira</h2><small>Ficção criada por IA a partir de momentos registrados</small></div><p class="map-intro">Cada capítulo é uma interpretação literária. Os registros citados abaixo mostram os fatos compartilhados que o inspiraram.</p><div id="stories-empty" class="empty" hidden>Nenhuma história escrita neste mundo ainda.</div><div id="stories" class="story-list"></div></section>
-  <section class="panel map-panel"><div class="section-head"><h2>Mapa de registros</h2><small>Pontos compartilhados</small></div><p class="map-intro">Este painel aproxima os locais autorizados pelos jogadores para facilitar a leitura. O terreno e a exploração do mundo ainda não são capturados.</p><div id="map-empty" class="empty" hidden>Nenhum local compartilhado para mostrar.</div><div id="map-content" hidden><div class="map-wrap"><svg id="map" viewBox="0 0 800 360" role="img" aria-labelledby="map-title"><title id="map-title">Posições compartilhadas neste mundo</title><g class="map-grid"><line x1="200" y1="0" x2="200" y2="360"/><line x1="400" y1="0" x2="400" y2="360"/><line x1="600" y1="0" x2="600" y2="360"/><line x1="0" y1="90" x2="800" y2="90"/><line x1="0" y1="180" x2="800" y2="180"/><line x1="0" y1="270" x2="800" y2="270"/></g><text x="400" y="26" text-anchor="middle" class="map-axis">NORTE</text><text x="400" y="347" text-anchor="middle" class="map-axis">SUL</text><g id="map-pins"></g></svg></div><div class="map-legend"><span><b></b>Viking online</span><span class="boss"><b></b>Chefe</span><span class="kill"><b></b>Abate</span><span class="death"><b></b>Morte</span></div><ul id="map-list" class="map-list"></ul></div></section>
+  <section class="panel map-panel"><div class="section-head"><h2>Mapa do mundo</h2><div class="map-tools" id="map-tools" hidden><button class="filter" type="button" data-zoom="world" aria-pressed="true">Mundo</button><button class="filter" type="button" data-zoom="near" aria-pressed="false">Aproximar</button></div></div><p class="map-intro" id="map-intro">Pontos autorizados pelos jogadores.</p><div id="map-empty" class="empty" hidden>Nenhum local compartilhado para mostrar.</div><div id="map-content" hidden><div class="map-wrap" id="map-wrap"><svg id="map" viewBox="0 0 800 360" role="img" aria-labelledby="map-title"><title id="map-title">Mapa do mundo com locais compartilhados</title><image id="map-image" x="0" y="0" width="512" height="512" preserveAspectRatio="none" hidden/><g class="map-grid" id="map-grid"><line x1="200" y1="0" x2="200" y2="360"/><line x1="400" y1="0" x2="400" y2="360"/><line x1="600" y1="0" x2="600" y2="360"/><line x1="0" y1="90" x2="800" y2="90"/><line x1="0" y1="180" x2="800" y2="180"/><line x1="0" y1="270" x2="800" y2="270"/><text x="400" y="26" text-anchor="middle" class="map-axis">NORTE</text><text x="400" y="347" text-anchor="middle" class="map-axis">SUL</text></g><g id="map-pins"></g></svg></div><div class="map-legend"><span><b></b>Viking online</span><span class="boss"><b></b>Chefe</span><span class="discover"><b></b>Descoberta</span><span class="kill"><b></b>Abate</span><span class="death"><b></b>Morte</span></div><ul id="map-list" class="map-list"></ul></div></section>
 </div></main>
 <footer><div class="shell"><span data-identidade="rodape">Servidor comunitário de Valheim. Não somos afiliados à Iron Gate AB nem à Coffee Stain.</span></div></footer>
 <script>
@@ -154,7 +163,25 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
   const $ = id => document.getElementById(id);
   const svgNS = 'http://www.w3.org/2000/svg';
   const labels = {death:'caiu em batalha',kill:'derrotou',boss:'venceu',drop:'encontrou',
-    collect:'coletou',pickup:'recolheu',bounty:'concluiu uma recompensa'};
+    collect:'coletou',pickup:'recolheu',bounty:'concluiu uma recompensa',discover:'descobriu'};
+  const landmarks = {Eikthyrnir:'o altar de Eikthyr',GDKing:'o altar do Ancião',
+    Bonemass:'o altar de Bonemass',Dragonqueen:'o altar de Moder',GoblinKing:'o altar de Yagluth',
+    Mistlands_DvergrBossEntrance1:'a entrada do covil da Rainha',FaderLocation:'o altar de Fader',
+    Vendor_BlackForest:'o acampamento de Haldor',Hildir_camp:'o acampamento de Hildir',
+    BogWitch_Camp:'a cabana da Bruxa do Pântano'};
+  function placeName(target) {
+    if (target.startsWith('vegvisir:'))
+      return 'um Vegvisir que aponta para ' + (landmarks[target.slice(9)] || target.slice(9));
+    return landmarks[target] || target;
+  }
+  function friendly(event) {
+    if (event.kind === 'discover' && event.target && !event.friendly) {
+      event.target = placeName(event.target);
+      event.friendly = true;
+    }
+    return event;
+  }
+  let atlasKey = '', atlasImage = '', zoom = 'world';
   const biomes = {Meadows:'Pradarias',BlackForest:'Floresta Negra',Swamp:'Pântano',
     Mountain:'Montanhas',Plains:'Planícies',Mistlands:'Terras Nebulosas',
     AshLands:'Terras das Cinzas',DeepNorth:'Norte Profundo',Ocean:'Oceano'};
@@ -181,11 +208,13 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
     return event.biome ? (biomes[event.biome] || event.biome) : '';
   }
   function notable(event) {
-    return event.kind === 'kill' && (event.boss || event.elite || event.stars >= 3);
+    return event.kind === 'discover' ||
+      event.kind === 'kill' && (event.boss || event.elite || event.stars >= 3);
   }
   function badges(event) {
     const group = element('span', undefined, 'event-badges');
-    if (event.boss) group.append(element('span', 'Chefe', 'badge boss'));
+    if (event.kind === 'discover') group.append(element('span', 'Descoberta', 'badge discover'));
+    else if (event.boss) group.append(element('span', 'Chefe', 'badge boss'));
     else if (event.elite) group.append(element('span', 'Elite', 'badge elite'));
     if (event.kind === 'kill' && event.stars >= 3)
       group.append(element('span', event.stars + ' estrelas', 'badge stars'));
@@ -222,7 +251,7 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
   function visibleEvents() {
     const events = payload ? payload.events : [];
     return events.filter(event => filter === 'all' || filter === 'other' &&
-      event.kind !== 'kill' && event.kind !== 'death' || filter === 'boss' &&
+      event.kind !== 'kill' && event.kind !== 'death' && event.kind !== 'discover' || filter === 'boss' &&
       event.kind === 'kill' && event.boss || filter === 'notable' && notable(event) ||
       event.kind === filter);
   }
@@ -235,9 +264,10 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
       return;
     }
     for (const event of events) {
-      const row = element('li', undefined, event.boss ? 'boss' :
+      const row = element('li', undefined, event.kind === 'discover' ? 'discover' : event.boss ? 'boss' :
         event.kind === 'kill' || event.kind === 'death' ? event.kind : 'other');
-      row.append(element('span', event.boss ? 'Chefe derrotado' : event.kind === 'kill' ? 'Abate' :
+      row.append(element('span', event.kind === 'discover' ? 'Descoberta' :
+        event.boss ? 'Chefe derrotado' : event.kind === 'kill' ? 'Abate' :
         event.kind === 'death' ? 'Morte' : 'Momento', 'event-type'));
       const title = (event.name || 'Viking') + ' ' + (labels[event.kind] || 'registrou') +
         (event.target ? ' ' + event.target : '');
@@ -348,14 +378,15 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
       head.append(element('span',story.scope==='server'?'Saga do servidor':'Saga de '+
         (story.evidence.find(item=>item.actor===story.actor)?.name||'um Viking'),'eyebrow'));
       head.append(element('h3',story.title));
-      head.append(element('small',when(story.created_at)+' · Ficção criada por IA'));
+      head.append(element('small',when(story.created_at)+' · Ficção criada por IA'+
+        (story.auto?' · escrita após um grande feito':'')));
       card.append(head);
       for(const paragraph of story.text.split(/\n\s*\n/))if(paragraph.trim())
         card.append(element('p',paragraph.trim()));
       const proof=element('div',undefined,'story-evidence');
       proof.append(element('strong','Registros que inspiraram este capítulo'));
       const list=element('ul');
-      for(const item of story.evidence){
+      for(const item of story.evidence.map(friendly)){
         list.append(element('li',(item.name||'Viking')+' '+
           (labels[item.kind]||'registrou')+(item.target?' '+item.target:'')+
           ' · '+when(item.occurred_at)));
@@ -363,14 +394,11 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
       proof.append(list);card.append(proof);box.append(card);
     }
   }
-  function renderMap() {
-    const pins = $('map-pins');
-    const list = $('map-list');
-    pins.replaceChildren();
-    list.replaceChildren();
+  function mapPoints() {
     const points = [];
     for (const event of payload.events) if (hasLocation(event)) {
-      points.push({x:event.x,z:event.z,kind:event.boss ? 'boss' : event.kind,
+      points.push({x:event.x,z:event.z,kind:event.kind === 'discover' ? 'discover' :
+        event.boss ? 'boss' : event.kind,
         label:(event.name || 'Viking') + ' ' + (labels[event.kind] || 'registrou') +
           (event.target ? ' ' + event.target : '') +
           (biomeName(event) ? ' · ' + biomeName(event) : '')});
@@ -378,25 +406,61 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
     for (const player of payload.players) if (player.online && hasLocation(player)) {
       points.push({x:player.x,z:player.z,kind:'player',label:player.name + ' · online'});
     }
-    $('map-empty').hidden = points.length > 0;
-    $('map-content').hidden = points.length === 0;
-    if (!points.length) return;
-    const xs = points.map(point => point.x);
-    const zs = points.map(point => point.z);
-    const centerX = (Math.min(...xs) + Math.max(...xs)) / 2;
-    const centerZ = (Math.min(...zs) + Math.max(...zs)) / 2;
-    const span = Math.max(300, Math.max(...xs) - Math.min(...xs),
-      Math.max(...zs) - Math.min(...zs)) * 1.25;
+    return points;
+  }
+  function renderMap() {
+    const pins = $('map-pins');
+    const list = $('map-list');
+    pins.replaceChildren();
+    list.replaceChildren();
+    const points = mapPoints();
+    const atlas = payload.atlas && atlasImage && atlasKey === payload.atlas.key ? payload.atlas : null;
+    $('map-empty').hidden = points.length > 0 || !!atlas;
+    $('map-content').hidden = points.length === 0 && !atlas;
+    $('map-tools').hidden = !atlas || !points.length;
+    $('map-wrap').classList.toggle('atlas', !!atlas);
+    $('map-grid').style.display = atlas ? 'none' : '';
+    const image = $('map-image');
+    image.hidden = !atlas;
+    $('map-intro').textContent = !atlas ? 'Pontos autorizados pelos jogadores. O mapa de biomas aparece depois que a ponte o gerar ou quando o admin ativá-lo.' :
+      atlas.mode === 'full' ? 'Biomas do mundo inteiro, calculados a partir da semente do servidor.' :
+      'Terras conhecidas: o terreno aparece em volta dos locais que os Vikings compartilharam. O resto segue sob névoa.';
+    let project, radius, view;
+    if (atlas) {
+      if (image.getAttribute('href') !== atlasImage) image.setAttribute('href', atlasImage);
+      const scale = atlas.size / (atlas.edge * 2);
+      project = point => [(point.x + atlas.edge) * scale, (atlas.edge - point.z) * scale];
+      view = [0, 0, atlas.size];
+      if (zoom === 'near' && points.length) {
+        const xy = points.map(project);
+        const xs = xy.map(p => p[0]), ys = xy.map(p => p[1]);
+        const size = Math.max(48, Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) * 1.4;
+        view = [(Math.min(...xs) + Math.max(...xs) - size) / 2, (Math.min(...ys) + Math.max(...ys) - size) / 2, size];
+      }
+      $('map').setAttribute('viewBox', view.join(' ') + ' ' + view[2]);
+      radius = view[2] / 90;
+    } else {
+      $('map').setAttribute('viewBox', '0 0 800 360');
+      if (!points.length) return;
+      const xs = points.map(point => point.x);
+      const zs = points.map(point => point.z);
+      const centerX = (Math.min(...xs) + Math.max(...xs)) / 2;
+      const centerZ = (Math.min(...zs) + Math.max(...zs)) / 2;
+      const span = Math.max(300, Math.max(...xs) - Math.min(...xs),
+        Math.max(...zs) - Math.min(...zs)) * 1.25;
+      project = point => [400 + (point.x - centerX) / span * 650, 180 - (point.z - centerZ) / span * 270];
+      radius = 6;
+    }
     for (const point of points) {
-      const x = 400 + (point.x - centerX) / span * 650;
-      const y = 180 - (point.z - centerZ) / span * 270;
+      const [x, y] = project(point);
       const group = document.createElementNS(svgNS, 'g');
-      group.setAttribute('class', 'map-pin ' + (point.kind === 'boss' || point.kind === 'kill' ||
-        point.kind === 'death' ? point.kind : point.kind === 'player' ? 'player' : 'other'));
+      group.setAttribute('class', 'map-pin ' + (['boss', 'kill', 'death', 'discover', 'player']
+        .includes(point.kind) ? point.kind : 'other'));
       const circle = document.createElementNS(svgNS, 'circle');
       circle.setAttribute('cx', String(x));
       circle.setAttribute('cy', String(y));
-      circle.setAttribute('r', point.kind === 'player' ? '8' : '6');
+      circle.setAttribute('r', String(point.kind === 'player' ? radius * 1.35 : radius));
+      if (atlas) circle.setAttribute('stroke-width', String(radius / 3));
       const title = document.createElementNS(svgNS, 'title');
       title.textContent = point.label + ' · ' + coords(point);
       group.append(circle, title);
@@ -406,6 +470,7 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
       list.append(element('li', point.label + ' · ' + coords(point)));
   }
   function render(data) {
+    data.events.forEach(friendly);
     payload = data;
     world = data.world || '';
     $('count-vikings').textContent = data.players.length;
@@ -430,6 +495,17 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
       if (!response.ok) throw Error('HTTP ' + response.status);
       const data = await response.json();
       if (current !== requestId) return;
+      if (data.atlas && data.atlas.key !== atlasKey) {
+        // The biome image is large; fetch it only when its content changes.
+        const second = await fetch(url + '&atlas_image=' + encodeURIComponent(data.atlas.key),
+          {cache:'no-store'});
+        const withImage = second.ok ? await second.json() : null;
+        if (current !== requestId) return;
+        if (withImage && withImage.atlas && withImage.atlas.image) {
+          atlasKey = withImage.atlas.key;
+          atlasImage = withImage.atlas.image;
+        }
+      }
       if (!data.available) {
         $('status').textContent = 'As Crônicas ainda não estão ativas neste servidor.';
         $('status').hidden = false;
@@ -451,10 +527,18 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
     chosen = '';
     load();
   });
-  for (const button of document.querySelectorAll('.filter')) {
+  for (const button of document.querySelectorAll('[data-zoom]')) {
+    button.addEventListener('click', () => {
+      zoom = button.dataset.zoom;
+      for (const other of document.querySelectorAll('[data-zoom]'))
+        other.setAttribute('aria-pressed', String(other === button));
+      if (payload) renderMap();
+    });
+  }
+  for (const button of document.querySelectorAll('.filter[data-kind]')) {
     button.addEventListener('click', () => {
       filter = button.dataset.kind;
-      for (const other of document.querySelectorAll('.filter'))
+      for (const other of document.querySelectorAll('.filter[data-kind]'))
         other.setAttribute('aria-pressed', String(other === button));
       renderTimeline();
     });

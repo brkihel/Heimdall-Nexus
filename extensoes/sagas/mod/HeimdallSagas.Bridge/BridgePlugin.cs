@@ -14,7 +14,7 @@ using UnityEngine;
 
 namespace Heimdall.Sagas.Mod
 {
-    [BepInPlugin("gg.heimdall.sagas.bridge", "Heimdall Sagas Bridge", "0.1.4")]
+    [BepInPlugin("gg.heimdall.sagas.bridge", "Heimdall Sagas Bridge", "0.1.5")]
     public sealed class BridgePlugin : BaseUnityPlugin
     {
         private const string Rpc = "Heimdall.Sagas.V1";
@@ -56,6 +56,20 @@ namespace Heimdall.Sagas.Mod
         private float nextSettingsRefresh;
         private long lastSpoolTick;
         private float nextIdentityWarning;
+        private float nextLandmarkScan;
+        private string atlasWorld = "";
+        private bool landmarksLogged;
+        private readonly HashSet<string> landmarkSeen = new HashSet<string>();
+        private const int AtlasSize = 512;
+        private const float WorldEdge = 10500f;
+        // Location prefab names; true marks a boss altar. Vegvisir boss hints
+        // add their target names at runtime, so modded bosses are learned too.
+        private static readonly Dictionary<string, bool> Landmarks = new Dictionary<string, bool> {
+            { "Eikthyrnir", true }, { "GDKing", true }, { "Bonemass", true },
+            { "Dragonqueen", true }, { "GoblinKing", true },
+            { "Mistlands_DvergrBossEntrance1", true }, { "FaderLocation", true },
+            { "Vendor_BlackForest", false }, { "Hildir_camp", false }, { "BogWitch_Camp", false }
+        };
 
         private void Awake()
         {
@@ -127,6 +141,15 @@ namespace Heimdall.Sagas.Mod
                 Enqueue(new WirePacket { type = "clock", world = WorldId(),
                     world_name = SafeName(ZNet.instance.GetWorldName()),
                     day = EnvMan.instance.GetDay(), fraction = EnvMan.instance.GetDayFraction() });
+            }
+            if (settings.enabled && settings.events && Time.unscaledTime >= nextLandmarkScan) {
+                nextLandmarkScan = Time.unscaledTime + 5f;
+                ScanLandmarks(peers);
+            }
+            if (settings.enabled && atlasWorld != WorldId() && WorldGenerator.instance != null &&
+                WorldId() != "") {
+                atlasWorld = WorldId();
+                StartCoroutine(BuildAtlas(atlasWorld));
             }
             var failures = Interlocked.Exchange(ref writeFailures, 0);
             if (failures > 0) Logger.LogWarning("Heimdall Sagas could not store " + failures + " packet(s).");
@@ -273,6 +296,140 @@ namespace Heimdall.Sagas.Mod
                 biome = consent.share_map ? BiomeTag.At(location) : "",
                 x = consent.share_map ? location.x : 0,
                 z = consent.share_map ? location.z : 0 });
+        }
+
+        private void ScanLandmarks(ZNetPeer[] peers)
+        {
+            if (ZoneSystem.instance == null || ZDOMan.instance == null) return;
+            var world = WorldId();
+            if (world == "") return;
+            if (!landmarksLogged) {
+                landmarksLogged = true;
+                var known = new HashSet<string>(ZoneSystem.instance.m_locations
+                    .Where(l => l != null).Select(l => l.m_prefabName));
+                var missing = Landmarks.Keys.Where(k => !known.Contains(k)).ToArray();
+                Logger.LogInfo("Heimdall Sagas landmarks: " + (Landmarks.Count - missing.Length) + "/" +
+                               Landmarks.Count + " found" +
+                               (missing.Length > 0 ? " (missing: " + string.Join(", ", missing) + ")" : "") + ".");
+            }
+            foreach (var peer in peers) {
+                if (!latest.TryGetValue(peer.m_rpc, out var consent) || !consent.share_profile) continue;
+                if (!TryPlayerId(peer, out var playerId)) continue;
+                var body = ZDOMan.instance.GetZDO(peer.m_characterID);
+                if (body == null) continue;
+                var position = body.GetPosition();
+                var zone = ZoneSystem.GetZone(position);
+                for (var dx = -1; dx <= 1; dx++)
+                for (var dy = -1; dy <= 1; dy++) {
+                    if (!ZoneSystem.instance.m_locationInstances.TryGetValue(
+                            new Vector2s(zone.x + dx, zone.y + dy), out var place)) continue;
+                    var name = place.m_location?.m_prefabName;
+                    if (name == null || !Landmarks.TryGetValue(name, out var boss)) continue;
+                    var reach = Math.Max(40f, place.m_location.m_exteriorRadius + 10f);
+                    var offset = new Vector2(position.x - place.m_position.x, position.z - place.m_position.z);
+                    if (offset.magnitude > reach) continue;
+                    var actor = Digest(world + ":" + playerId);
+                    var key = actor + ":" + name + ":" + Mathf.RoundToInt(place.m_position.x) + ":" +
+                              Mathf.RoundToInt(place.m_position.z);
+                    if (!landmarkSeen.Add(key)) continue;
+                    RecordDiscovery(world, actor, SafeName(peer.m_playerName), consent,
+                                    "landmark:" + world + ":" + key, name, boss, place.m_position);
+                }
+            }
+        }
+
+        private void RecordDiscovery(string world, string actor, string name, WirePacket consent,
+                                     string identity, string target, bool boss, Vector3 location)
+        {
+            Enqueue(new WirePacket { type = "event", kind = "discover", id = Digest(identity),
+                world = world, actor = actor, name = name, target = SafeText(target, 120),
+                boss = boss, utc = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                has_location = consent.share_map,
+                biome = consent.share_map ? BiomeTag.At(location) : "",
+                x = consent.share_map ? location.x : 0,
+                z = consent.share_map ? location.z : 0 });
+        }
+
+        private void RecordVegvisir(long sender, string location, Vector3 point, int pinType)
+        {
+            var boss = pinType == (int)Minimap.PinType.Boss;
+            if (string.IsNullOrEmpty(location) || location.Length > 80) return;
+            if (boss && !Landmarks.ContainsKey(location)) Landmarks[location] = true;
+            if (!settings.enabled || !settings.events || ZNet.instance == null) return;
+            var peer = ZNet.instance.GetPeer(sender);
+            if (peer == null || !latest.TryGetValue(peer.m_rpc, out var consent) ||
+                !consent.share_profile || !TryPlayerId(peer, out var playerId)) return;
+            var body = ZDOMan.instance.GetZDO(peer.m_characterID);
+            // The request carries the stone position; accept it only next to the player.
+            if (body == null || Vector3.Distance(body.GetPosition(), point) > 30f) return;
+            var world = WorldId();
+            if (world == "") return;
+            var actor = Digest(world + ":" + playerId);
+            RecordDiscovery(world, actor, SafeName(peer.m_playerName), consent,
+                            "vegvisir:" + world + ":" + actor + ":" + location,
+                            "vegvisir:" + location, boss, point);
+        }
+
+        private System.Collections.IEnumerator BuildAtlas(string world)
+        {
+            // Biomes come from the world seed, so no client map data is needed.
+            var grid = new byte[AtlasSize * AtlasSize];
+            var step = WorldEdge * 2f / AtlasSize;
+            for (var row = 0; row < AtlasSize; row++) {
+                var wz = WorldEdge - (row + .5f) * step;
+                for (var column = 0; column < AtlasSize; column++) {
+                    var wx = -WorldEdge + (column + .5f) * step;
+                    var generator = WorldGenerator.instance;
+                    if (generator == null || WorldId() != world) yield break;
+                    grid[row * AtlasSize + column] = wx * wx + wz * wz > WorldEdge * WorldEdge
+                        ? (byte)0 : BiomeCode(generator.GetBiome(wx, wz));
+                }
+                if (row % 4 == 3) yield return null;
+            }
+            var data = new byte[8 + grid.Length];
+            data[0] = (byte)'H'; data[1] = (byte)'S'; data[2] = (byte)'B'; data[3] = (byte)'1';
+            data[4] = AtlasSize & 0xff; data[5] = AtlasSize >> 8;
+            Buffer.BlockCopy(grid, 0, data, 8, grid.Length);
+            var path = Path.Combine(inbox, "atlas-" + world + ".biomes");
+            var temporary = Path.Combine(inbox, ".atlas-" + Guid.NewGuid().ToString("N") + ".tmp");
+            try {
+                File.WriteAllBytes(temporary, data);
+                if (File.Exists(path)) File.Delete(path);
+                File.Move(temporary, path);
+                Logger.LogInfo("Heimdall Sagas wrote the world biome atlas.");
+            } catch (Exception error) {
+                try { File.Delete(temporary); } catch { }
+                Logger.LogWarning("Heimdall Sagas could not write the biome atlas: " + error.Message);
+            }
+        }
+
+        private static byte BiomeCode(Heightmap.Biome biome)
+        {
+            switch (biome) {
+                case Heightmap.Biome.Meadows: return 1;
+                case Heightmap.Biome.BlackForest: return 2;
+                case Heightmap.Biome.Swamp: return 3;
+                case Heightmap.Biome.Mountain: return 4;
+                case Heightmap.Biome.Plains: return 5;
+                case Heightmap.Biome.Mistlands: return 6;
+                case Heightmap.Biome.AshLands: return 7;
+                case Heightmap.Biome.DeepNorth: return 8;
+                case Heightmap.Biome.Ocean: return 9;
+                default: return 0;
+            }
+        }
+
+        [HarmonyPatch(typeof(Game), "RPC_DiscoverClosestLocation")]
+        private static class VegvisirPatch
+        {
+            private static void Postfix(long sender, string name, Vector3 point, int pinType)
+            {
+                try {
+                    if (ZNet.instance != null && ZNet.instance.IsServer())
+                        current?.RecordVegvisir(sender, name, point, pinType);
+                }
+                catch (Exception error) { current?.Logger.LogWarning("Heimdall Sagas could not record a Vegvisir: " + error.Message); }
+            }
         }
 
         [HarmonyPatch(typeof(Character), "OnDeath")]

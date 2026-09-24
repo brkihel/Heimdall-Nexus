@@ -1,6 +1,6 @@
 # Heimdall Sagas extension
 
-Status: **0.1.4 development preview**. The extension is opt-in and separate
+Status: **0.1.5 development preview** (bridge 0.1.5, client 0.1.4). The extension is opt-in and separate
 from the existing `saga.json` skill ranking. It has not been installed on a live
 server or published to Hexium.
 
@@ -67,6 +67,35 @@ model requires an explicit admin opt-in. Stories are labeled as AI fiction and
 retain visible event references. Opting out of `ShareStories` deletes chapters
 that reference that Viking while keeping ordinary shared events.
 
+## Discoveries and world map
+
+The bridge records a `discover` event, server-side, when a consenting Viking
+comes within reach of a boss altar, Haldor, Hildir or the Bog Witch, or reads a
+Vegvisir (the game's own discovery request, checked against the player's
+position). Vegvisir boss targets are learned at runtime, so modded boss
+locations are included. At startup the bridge logs which built-in landmark
+names exist in the loaded world.
+
+After each server start the bridge derives a 512x512 biome grid from the world
+seed (`WorldGenerator.GetBiome`, a few rows per frame) and drops it in the
+inbox. The importer keeps it in `atlas/`. The admin picks the public map mode:
+no map, known lands (terrain revealed 700 m around consented shared locations;
+default) or the whole world. The overview API returns the image only when its
+content key changes. Player exploration fog from the client is not captured.
+
+## Story providers and automatic chapters
+
+Stories can use OpenRouter free models, paid OpenRouter models, the OpenAI API
+or the Anthropic API. ChatGPT and Claude subscriptions do not include API
+access; each provider needs its own API key and billing. Keys are stored per
+provider (`openrouter.key`, `openai.key`, `anthropic.key`, mode 0600).
+
+With automatic chapters on, the story worker (every 30 s) writes one chapter
+around each boss kill or discovery that happens after automation was enabled,
+within the daily limit. Nearby moments of the same Viking are context. Triggers
+cited in a chapter do not start their own. Automatic chapters are labeled on
+the public page.
+
 ## Feature inventory
 
 | Capability | State | Completion requirement |
@@ -75,12 +104,13 @@ that reference that Viking while keeping ordinary shared events.
 | Last equipped items | Implemented in preview | Verify modded inventory slots and item localization |
 | Kill and death events with local retry, admin kill filter, biome, and recent feats | Implemented in preview | One-client combat/reconnect and consent-revocation playtest |
 | Advanced boss credit, drops, rarity, bounty | Planned | Server-authoritative provenance and deduplication tests |
-| Atlas terrain, fog, pins, activity layers | Planned | Consent-preserving capture, bounded transport, large-map tests |
+| Seed biome map with known-lands fog and discovery pins | Implemented in preview | Real-world orientation check |
+| Client exploration fog, custom pins, activity layers | Planned | Consent-preserving capture, bounded transport, large-map tests |
 | Portraits, icons, effects, resistances | Planned | Frame-budgeted capture and media validation |
 | Rankings, comparisons, trophy hall | Planned | Credited fact ledger and time-window rules |
 | SLS, Epic Loot, Jewelcrafting | Planned | Independent soft adapters and absent-mod tests |
 | Personal login and player settings | Planned | One-time challenge, owner verification, revocation |
-| On-demand Viking/server stories via OpenRouter | Implemented in preview | One-client consent and live provider playtest |
+| Viking/server stories: on demand and automatic on boss kills and discoveries; OpenRouter, OpenAI or Anthropic | Implemented in preview | One-client consent and live provider playtest |
 | Multi-scene journey replay and automatic milestones | Planned | Fact-ledger sequencing, budgets, provider key custody |
 | Installer toggle and modpack link | Planned | Versioned release artifacts and staged upgrade flow |
 

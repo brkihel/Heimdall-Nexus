@@ -12,11 +12,9 @@ import stories
 
 def main(state: Path = sagas.STATE) -> dict | None:
     queue = state / 'story-jobs'
-    if not queue.is_dir():
-        return None
-    files = sorted(queue.glob('*.json'))
+    files = sorted(queue.glob('*.json')) if queue.is_dir() else []
     if not files:
-        return None
+        return automatic(state)
     path = files[0]
     try:
         fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
@@ -33,6 +31,28 @@ def main(state: Path = sagas.STATE) -> dict | None:
     except (OSError, ValueError, sqlite3.Error) as error:
         status = {'ok': False, 'message': str(error) if isinstance(error, stories.StoryError)
                   else 'não foi possível gerar a história'}
+    record(state, status)
+    path.unlink(missing_ok=True)
+    return status
+
+
+def automatic(state: Path) -> dict | None:
+    """Admin requests go first; otherwise tell one boss kill or discovery."""
+    try:
+        trigger = stories.next_trigger(state)
+        if trigger is None:
+            return None
+        result = stories.generate_triggered(state, trigger)
+        status = {'ok': True, 'scope': result['scope'], 'auto': True}
+    except (OSError, ValueError, sqlite3.Error) as error:
+        status = {'ok': False, 'auto': True,
+                  'message': str(error) if isinstance(error, stories.StoryError)
+                  else 'não foi possível gerar a história'}
+    record(state, status)
+    return status
+
+
+def record(state: Path, status: dict) -> None:
     status['at'] = int(time.time())
     temp = state / '.story-last.tmp'
     with temp.open('w', encoding='utf-8') as file:
@@ -40,8 +60,6 @@ def main(state: Path = sagas.STATE) -> dict | None:
         file.flush()
         os.fsync(file.fileno())
     os.replace(temp, state / 'story-last.json')
-    path.unlink(missing_ok=True)
-    return status
 
 
 if __name__ == '__main__':

@@ -22,6 +22,7 @@ from itsdangerous import BadSignature, URLSafeTimedSerializer
 import nucleo
 import sagas
 import stories
+import atlas
 
 BASE = Path(__file__).parent
 RAIZ_URL = os.environ.get('PAINEL_RAIZ', '/jarl')
@@ -46,12 +47,23 @@ portaria = nucleo.Portaria()
 
 
 @app.get('/api/sagas/v1/overview')
-async def sagas_public_overview(world: str = '', limit: int = 50):
+async def sagas_public_overview(world: str = '', limit: int = 50, atlas_image: str = ''):
     """Public data is filtered again from the latest sharing choices on read."""
     try:
         data = sagas.public_view(world=world, limit=limit)
     except (OSError, ValueError, sagas.sqlite3.Error):
         data = {'available': False, 'worlds': [], 'players': [], 'events': []}
+    data['atlas'] = None
+    try:
+        if data.get('available') and data.get('world'):
+            info = atlas.summary(sagas.STATE, data['world'])
+            if info is not None:
+                if atlas_image == info['key']:
+                    info['image'] = atlas.image(sagas.STATE, data['world'], info)
+                info.pop('points')
+                data['atlas'] = info
+    except (OSError, ValueError, sagas.sqlite3.Error):
+        data['atlas'] = None
     try:
         data['stories'] = stories.public_list(sagas.DATABASE, data.get('world', '')) \
             if data.get('available') else []

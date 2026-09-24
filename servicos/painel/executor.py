@@ -2016,14 +2016,19 @@ def v_sagas_settings_gravar(dados):
     if not state.is_dir() or not (state / 'settings.json').is_file():
         raise Recusa('instale a extensão antes de alterar suas opções')
     names = ('enabled', 'gear', 'events', 'clock')
-    if not isinstance(dados, dict) or set(dados) not in (set(names), set(names) | {'kill_mode'}) or any(
+    if not isinstance(dados, dict) or not set(names) <= set(dados) or \
+            not set(dados) <= set(names) | {'kill_mode', 'map_mode'} or any(
             not isinstance(dados[name], bool) for name in names):
         raise Recusa('opções da extensão inválidas')
-    kill_mode = dados.get('kill_mode', sagas.load_settings(state)['kill_mode'])
+    saved = sagas.load_settings(state)
+    kill_mode = dados.get('kill_mode', saved['kill_mode'])
     if not isinstance(kill_mode, str) or kill_mode not in sagas.KILL_MODES:
         raise Recusa('filtro de abates inválido')
+    map_mode = dados.get('map_mode', saved['map_mode'])
+    if not isinstance(map_mode, str) or map_mode not in sagas.MAP_MODES:
+        raise Recusa('modo do mapa inválido')
     settings = {'version': 1, **{name: dados[name] for name in names},
-                'kill_mode': kill_mode}
+                'kill_mode': kill_mode, 'map_mode': map_mode}
     target = state / 'settings.json'
     temporary = state / ('.settings-' + uuid.uuid4().hex + '.tmp')
     descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o640)
@@ -2079,7 +2084,7 @@ def v_sagas_story_config(dados):
     if not (state / 'settings.json').is_file():
         raise Recusa('instale Sagas antes de configurar histórias')
     try:
-        config = stories.valid_config(dados)
+        config = stories.merge_config(stories.load_config(state), dados, int(time.time()))
     except stories.StoryError as error:
         raise Recusa(str(error)) from error
     _sagas_story_write(state, 'story-settings.json',
@@ -2090,15 +2095,16 @@ def v_sagas_story_config(dados):
 def v_sagas_story_key(dados):
     state = HEIMDALL_STATE_ROOT / 'sagas'
     if not (state / 'settings.json').is_file() or not isinstance(dados, dict) or \
-            set(dados) not in ({'key'}, {'clear'}):
+            set(dados) not in ({'kind', 'key'}, {'kind', 'clear'}) or \
+            dados['kind'] not in stories.KEYS:
         raise Recusa('solicitação de chave inválida')
+    name = dados['kind'] + '.key'
     if dados.get('clear') is True:
-        (state / 'openrouter.key').unlink(missing_ok=True)
+        (state / name).unlink(missing_ok=True)
         return {'has_key': False}
-    key = dados.get('key')
-    if not stories.valid_key(key):
-        raise Recusa('chave do OpenRouter inválida')
-    _sagas_story_write(state, 'openrouter.key', key + '\n')
+    if not stories.valid_key(dados.get('key'), dados['kind']):
+        raise Recusa('chave inválida para este provedor')
+    _sagas_story_write(state, name, dados['key'] + '\n')
     return {'has_key': True}
 
 
@@ -2112,7 +2118,7 @@ def v_sagas_story_request(dados):
         raise Recusa('mundo ou Viking inválido')
     status = stories.admin_status(state)
     if not status['config']['enabled'] or not status['has_key']:
-        raise Recusa('ative histórias e configure a chave do OpenRouter')
+        raise Recusa('ative histórias e configure a chave do provedor escolhido')
     world = next((item for item in status['worlds'] if item['id'] == dados['world']), None)
     if world is None or dados['actor'] and not any(
             player['id'] == dados['actor'] for player in world['players']):
@@ -2206,7 +2212,8 @@ def audit_payload(verbo, dados):
     """Keep credentials and edited page bodies out of the privileged audit log."""
     if verbo == 'sagas.story.key':
         return {'acao': 'remover' if isinstance(dados, dict) and dados.get('clear') is True
-                else 'definir'}
+                else 'definir',
+                'provedor': str(dados.get('kind'))[:20] if isinstance(dados, dict) else ''}
     if verbo in ('server.config', 'server.reinstall'):
         return {'acao': 'gravar' if dados.get('gravar') else 'ler'}
     if verbo == 'site.gravar' and isinstance(dados.get('alteracoes'), list):
