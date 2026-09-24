@@ -35,6 +35,16 @@ def event(**changes):
 
 
 class SagasContractTests(unittest.TestCase):
+    def test_admin_status_keeps_saved_options_visible_when_database_is_unreadable(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            state = Path(temporary)
+            enable(state)
+            (state / 'sagas.sqlite3').write_text('incomplete database')
+            result = sagas.admin_status(state)
+            self.assertTrue(result['settings']['enabled'])
+            self.assertTrue(result['storage_error'])
+            self.assertEqual(result['worlds'], 0)
+
     def test_validation_rejects_wrong_identity_nonfinite_and_unknown_kind(self):
         for packet in (presence(actor='someone'), presence(x=float('nan')),
                        event(kind='admin'), event(id='../escape')):

@@ -194,11 +194,11 @@ async def sagas_admin(pedido: Request):
 
 @app.get(f'{RAIZ_URL}/api/sagas/estado')
 async def sagas_admin_estado(pedido: Request):
-    exige(pedido)
+    usuario = exige(pedido)
     try:
-        return {'ok': True, **sagas.admin_status(game=VALHEIM_DIR)}
-    except (OSError, sagas.sqlite3.Error):
-        return JSONResponse({'ok': False, 'erro': 'estado indisponível'}, status_code=503)
+        return {'ok': True, **await nucleo.pede_async('sagas.status', {}, usuario)}
+    except nucleo.Erro as erro:
+        return JSONResponse({'ok': False, 'erro': str(erro)}, status_code=503)
 
 
 @app.post(f'{RAIZ_URL}/api/sagas/opcoes')

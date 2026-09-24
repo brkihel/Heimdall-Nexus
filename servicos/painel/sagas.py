@@ -333,7 +333,7 @@ def admin_status(state: Path = STATE, game: Path | None = None) -> dict:
     database = state / 'sagas.sqlite3'
     result = {'installed': database.is_file(), 'queued': 0, 'rejected': 0,
               'worlds': 0, 'players': 0, 'events': 0, 'bridge': False,
-              'settings': load_settings(state)}
+              'storage_error': False, 'settings': load_settings(state)}
     for key, folder in (('queued', 'inbox'), ('rejected', 'rejected')):
         path = state / folder
         if path.is_dir():
@@ -341,7 +341,10 @@ def admin_status(state: Path = STATE, game: Path | None = None) -> dict:
     if game is not None:
         result['bridge'] = (game / 'current/BepInEx/plugins/HeimdallSagas/HeimdallSagas.Bridge.dll').is_file()
     if database.is_file():
-        with sqlite3.connect(f'file:{database}?mode=ro', uri=True, timeout=3) as db:
-            for name in ('worlds', 'players', 'events'):
-                result[name] = db.execute(f'SELECT count(*) FROM {name}').fetchone()[0]
+        try:
+            with sqlite3.connect(f'file:{database}?mode=ro', uri=True, timeout=3) as db:
+                for name in ('worlds', 'players', 'events'):
+                    result[name] = db.execute(f'SELECT count(*) FROM {name}').fetchone()[0]
+        except sqlite3.Error:
+            result.update(storage_error=True, worlds=0, players=0, events=0)
     return result

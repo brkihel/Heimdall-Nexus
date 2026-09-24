@@ -1999,6 +1999,17 @@ def v_sagas_settings(_):
     return {'settings': sagas.load_settings(HEIMDALL_STATE_ROOT / 'sagas')}
 
 
+def v_sagas_status(_):
+    status = sagas.admin_status(HEIMDALL_STATE_ROOT / 'sagas', VALHEIM_ROOT)
+    try:
+        status['importer_timer_active'] = subprocess.run(
+            ['systemctl', 'is-active', '--quiet', 'heimdall-sagas-ingest.timer'],
+            timeout=3, check=False).returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        status['importer_timer_active'] = False
+    return status
+
+
 def v_sagas_settings_gravar(dados):
     state = HEIMDALL_STATE_ROOT / 'sagas'
     if not state.is_dir() or not (state / 'settings.json').is_file():
@@ -2030,6 +2041,7 @@ def v_sagas_settings_gravar(dados):
 
 VERBOS = {
     'sagas.settings': v_sagas_settings,
+    'sagas.status': v_sagas_status,
     'sagas.settings.gravar': v_sagas_settings_gravar,
     'server.config': v_server_config,
     'server.reinstall': v_server_reinstall,
@@ -2127,7 +2139,7 @@ class Atendente(socketserver.StreamRequestHandler):
                            'cronica.sessoes', 'cronica.ler', 'mundo.estado', 'mundo.seed', 'config.listar',
                            'arquivo.preparar_download', 'site.paginas', 'site.campos',
                            'site.versoes', 'site.versao.ver', 'site.previa.ler', 'site.identidade')
-            silenciosos += ('sagas.settings',)
+            silenciosos += ('sagas.settings', 'sagas.status')
             if verbo not in silenciosos and not (
                 verbo == 'server.config' and not dados.get('gravar') or
                 verbo in ('schedules', 'backups') and dados.get('acao', 'listar') == 'listar'):

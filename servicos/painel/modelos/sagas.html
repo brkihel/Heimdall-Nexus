@@ -1,45 +1,110 @@
 {% extends "base.html" %}
 {% block titulo %}Sagas{% endblock %}
+{% block cabeca %}
+<style>
+.sagas-opcoes{display:grid;gap:.65rem;margin:1rem 0 1.25rem}
+.sagas-opcao{display:flex;align-items:center;justify-content:space-between;gap:1.2rem;
+  padding:.9rem 1rem;border:1px solid var(--borda);border-radius:10px;
+  background:rgba(5,9,13,.38);cursor:pointer}
+.sagas-opcao:hover{border-color:var(--borda-viva)}
+.sagas-opcao.principal{border-color:rgba(200,164,92,.35);background:rgba(200,164,92,.05)}
+.sagas-opcao strong{display:block;color:var(--osso);font-family:'Cinzel',serif;font-size:.78rem}
+.sagas-opcao small{display:block;color:var(--fraco);font-size:.84rem;line-height:1.4;margin-top:.2rem}
+.sagas-opcao input{position:absolute;opacity:0;width:1px;height:1px}
+.sagas-trilho{position:relative;flex:none;width:46px;height:26px;border-radius:99px;
+  border:1px solid var(--borda-viva);background:var(--ardosia);transition:background .18s,border-color .18s}
+.sagas-trilho::after{content:'';position:absolute;left:3px;top:3px;width:18px;height:18px;
+  border-radius:50%;background:var(--fraco);transition:transform .18s,background .18s}
+.sagas-opcao input:checked+.sagas-trilho{background:rgba(200,164,92,.22);border-color:var(--ouro)}
+.sagas-opcao input:checked+.sagas-trilho::after{transform:translateX(20px);background:var(--ouro-claro)}
+.sagas-opcao input:focus-visible+.sagas-trilho{outline:2px solid var(--ouro-claro);outline-offset:3px}
+.sagas-opcao input:disabled+.sagas-trilho{opacity:.5}
+.sagas-estado{color:var(--fraco);font-size:.86rem}
+.sagas-estado.erro{color:var(--ruim)}
+#feedback{margin-left:.7rem;font-size:.86rem}
+@media(max-width:520px){.sagas-opcao{gap:.7rem;padding:.8rem}}
+</style>
+{% endblock %}
 {% block corpo %}
 <div class="topo"><h1>Heimdall Sagas</h1><span class="pastilha meio" id="state">verificando…</span>
   <div class="acoes"><a class="btn" href="/cronicas/" target="_blank" rel="noopener">Abrir página pública ↗</a></div>
 </div>
-<p class="dica">Extensão opcional. O mod cliente coleta apenas os dados autorizados pelo jogador; a ponte no servidor entrega os registros ao Nexus sem abrir um website próprio.</p>
+<p class="dica">Extensão opcional. O cliente envia apenas os dados que o jogador autorizou. A ponte entrega os registros ao Nexus sem abrir um serviço web no servidor do jogo.</p>
 <div class="medidores">
   <div class="medidor"><b id="worlds">—</b><small>mundos</small></div>
   <div class="medidor"><b id="players">—</b><small>Vikings</small></div>
   <div class="medidor"><b id="events-count">—</b><small>eventos</small></div>
   <div class="medidor"><b id="queued">—</b><small>aguardando importação</small></div>
 </div>
-<div class="cartao"><h2>Componentes</h2><p id="bridge">Ponte: verificando…</p><p id="ingest">Importação: verificando…</p>
-  <p>Os jogadores precisam do Heimdall Sagas Client no modpack e ativam seu próprio compartilhamento no BepInEx. O mod e a ponte devem usar a mesma versão do protocolo.</p>
+<div class="cartao"><h2>Componentes</h2>
+  <p class="sagas-estado" id="bridge">Ponte: verificando…</p>
+  <p class="sagas-estado" id="ingest">Importação: verificando…</p>
+  <p>O jogador precisa do Heimdall Sagas Client no modpack e deve ativar o compartilhamento no BepInEx. Cliente e ponte devem usar a mesma versão do protocolo.</p>
 </div>
 <div class="cartao"><h2>Módulos</h2>
-  <p>As opções interrompem novos registros e ocultam os dados já guardados até que sejam reativadas. A ponte recebe alterações em até 30 segundos.</p>
-  <label><input type="checkbox" id="enabled"> Extensão ativa</label><br>
-  <label><input type="checkbox" id="gear"> Equipamento nos perfis</label><br>
-  <label><input type="checkbox" id="events"> Eventos e mortes</label><br>
-  <label><input type="checkbox" id="clock"> Dia do mundo</label><br><br>
-  <button class="btn" id="save" type="button">Salvar opções</button>
+  <p>Desativar um módulo interrompe novos registros e oculta os dados já guardados até ele ser reativado. A ponte lê mudanças em até 30 segundos.</p>
+  <div class="sagas-opcoes">
+    <label class="sagas-opcao principal"><span><strong>Extensão ativa</strong><small>Permite receber dados autorizados e exibir as Crônicas no site.</small></span><input type="checkbox" id="enabled"><span class="sagas-trilho" aria-hidden="true"></span></label>
+    <label class="sagas-opcao"><span><strong>Equipamento nos perfis</strong><small>Mostra os itens equipados dos Vikings que compartilham o perfil.</small></span><input type="checkbox" id="gear"><span class="sagas-trilho" aria-hidden="true"></span></label>
+    <label class="sagas-opcao"><span><strong>Eventos e mortes</strong><small>Registra mortes compartilhadas e mostra o histórico nas Crônicas.</small></span><input type="checkbox" id="events"><span class="sagas-trilho" aria-hidden="true"></span></label>
+    <label class="sagas-opcao"><span><strong>Dia do mundo</strong><small>Mostra o dia e o horário do mundo informado pela ponte.</small></span><input type="checkbox" id="clock"><span class="sagas-trilho" aria-hidden="true"></span></label>
+  </div>
+  <button class="btn" id="save" type="button" disabled>Salvar opções</button>
   <span id="feedback" role="status"></span>
 </div>
 <div class="cartao"><h2>Privacidade</h2><p>Perfil, mapa e posição têm permissões separadas. Retirar o perfil apaga os eventos guardados desse Viking; retirar o mapa apaga coordenadas antigas. Posição também depende da visibilidade do mapa dentro do Valheim.</p></div>
 {% endblock %}
 {% block script %}
 <script>
-(async()=>{try{const response=await fetch({{ (raiz ~ '/api/sagas/estado')|tojson }},{cache:'no-store'});if(!response.ok)throw Error();const d=await response.json();if(!d.ok)throw Error();
-for(const k of ['worlds','players','events','queued'])document.getElementById(k==='events'?'events-count':k).textContent=d[k];
-const state=document.getElementById('state');state.textContent=!d.installed?'Ainda sem dados':d.settings.enabled?'Extensão ativa':'Extensão pausada';state.className='pastilha '+(d.installed&&d.settings.enabled?'viva':'meio');
-document.getElementById('bridge').textContent='Ponte no servidor: '+(d.bridge?'instalada':'não encontrada');
-document.getElementById('ingest').textContent='Fila local: '+d.queued+' pendente(s), '+d.rejected+' rejeitado(s).';
-for(const k of ['enabled','gear','events','clock'])document.getElementById(k).checked=!!d.settings[k];
-}catch{document.getElementById('state').textContent='Estado indisponível'}})();
+const sagasKeys=['enabled','gear','events','clock'];
+const sagasGet={{ (raiz ~ '/api/sagas/estado')|tojson }};
+const sagasPost={{ (raiz ~ '/api/sagas/opcoes')|tojson }};
+function sagasShow(d){
+  for(const k of ['worlds','players','events','queued'])
+    document.getElementById(k==='events'?'events-count':k).textContent=d.storage_error&&k!=='queued'?'—':d[k];
+  for(const k of sagasKeys)document.getElementById(k).checked=d.settings[k];
+  const state=document.getElementById('state');
+  state.textContent=!d.settings.enabled?'Extensão pausada':!d.bridge?'Ponte não encontrada':
+    !d.importer_timer_active?'Importação parada':d.storage_error?'Banco indisponível':
+    d.installed?'Extensão ativa':'Aguardando dados';
+  state.className='pastilha '+(d.settings.enabled&&d.bridge&&d.importer_timer_active&&!d.storage_error?'viva':'meio');
+  document.getElementById('bridge').textContent='Ponte: '+(d.bridge?'arquivo instalado no servidor':'arquivo não encontrado no servidor');
+  const ingest=document.getElementById('ingest');
+  ingest.textContent='Importação: '+(d.importer_timer_active?'timer ativo':'timer parado')+
+    (d.storage_error?' · banco de dados indisponível':d.installed?' · banco disponível':' · aguardando primeiro ciclo')+
+    ' · '+d.queued+' pendente(s), '+d.rejected+' rejeitado(s).';
+  ingest.classList.toggle('erro',d.storage_error||!d.importer_timer_active);
+  document.getElementById('save').disabled=false;
+}
+async function sagasLoad(){
+  try{
+    const response=await fetch(sagasGet,{cache:'no-store',credentials:'same-origin'});
+    const d=await response.json();
+    if(!response.ok||!d.ok)throw Error(d.erro||'HTTP '+response.status);
+    sagasShow(d);
+    return true;
+  }catch(error){
+    document.getElementById('state').textContent='Estado indisponível';
+    document.getElementById('bridge').textContent='Ponte: não foi possível verificar ('+error.message+').';
+    document.getElementById('ingest').textContent='Importação: não foi possível verificar.';
+    document.getElementById('ingest').classList.add('erro');
+    return false;
+  }
+}
+sagasLoad();
 document.getElementById('save').addEventListener('click',async()=>{
-const data={};for(const k of ['enabled','gear','events','clock'])data[k]=document.getElementById(k).checked;
-const feedback=document.getElementById('feedback');feedback.textContent='Salvando…';
-try{const response=await fetch({{ (raiz ~ '/api/sagas/opcoes')|tojson }},{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(data)});
-const result=await response.json();if(!response.ok||!result.ok)throw Error(result.erro||'Falha ao salvar');feedback.textContent='Opções salvas.';
-}catch(error){feedback.textContent=error.message||'Falha ao salvar';}
+  const data={};for(const k of sagasKeys)data[k]=document.getElementById(k).checked;
+  const feedback=document.getElementById('feedback');feedback.textContent='Salvando…';
+  const button=document.getElementById('save');button.disabled=true;
+  try{
+    const response=await fetch(sagasPost,{method:'POST',headers:{'Content-Type':'application/json'},
+      credentials:'same-origin',body:JSON.stringify(data)});
+    const result=await response.json();
+    if(!response.ok||!result.ok)throw Error(result.erro||'Falha ao salvar');
+    for(const k of sagasKeys)document.getElementById(k).checked=result.settings[k];
+    feedback.textContent=await sagasLoad()?'Opções salvas.':'Opções salvas; não foi possível atualizar o estado.';
+  }catch(error){feedback.textContent=error.message||'Falha ao salvar';}
+  finally{button.disabled=false;}
 });
 </script>
 {% endblock %}
