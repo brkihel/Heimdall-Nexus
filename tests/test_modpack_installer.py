@@ -173,3 +173,23 @@ class ZipPathTests(unittest.TestCase):
         for bad in ('..\\evil.dll', 'plugins\\..\\..\\evil.dll', '/etc/passwd', 'C:\\x.dll'):
             with self.subTest(bad=bad), self.assertRaises(modpack.ModpackError):
                 modpack._safe_zip_path(bad)
+
+
+class PackageNameTests(unittest.TestCase):
+    def test_links_and_names_become_author_package(self):
+        expected = 'TaegukGaming/Hearthbound_Valheim_Modpack'
+        for raw in ('https://thunderstore.io/c/valheim/p/TaegukGaming/Hearthbound_Valheim_Modpack/',
+                    'https://thunderstore.io/c/valheim/p/TaegukGaming/Hearthbound_Valheim_Modpack/versions/',
+                    'https://thunderstore.io/package/TaegukGaming/Hearthbound_Valheim_Modpack/',
+                    'https://valheim.hexium.gg/mods/TaegukGaming/Hearthbound_Valheim_Modpack',
+                    'TaegukGaming-Hearthbound_Valheim_Modpack-6.0.0',
+                    'TaegukGaming-Hearthbound_Valheim_Modpack',
+                    '  TaegukGaming/Hearthbound_Valheim_Modpack  '):
+            with self.subTest(raw=raw):
+                self.assertEqual(modpack.normalize_package(raw), expected)
+
+    def test_other_sites_are_not_rewritten(self):
+        for raw in ('https://evil.example/mods/A/B', 'https://thunderstore.io.evil.test/p/A/B',
+                    'https://thunderstore.io/c/valheim/', 'not a pack'):
+            with self.subTest(raw=raw):
+                self.assertEqual(modpack.normalize_package(raw), raw.strip())

@@ -72,6 +72,43 @@ def _version_key(value: str) -> tuple[tuple[int, ...], int, str]:
     return numbers, 0 if suffix else 1, suffix
 
 
+PACKAGE_HOSTS = ('thunderstore.io', 'hexium.gg')
+
+
+def normalize_package(value: str) -> str:
+    """Turn what a user pastes into Author/Package.
+
+    Accepts Author/Package, Author-Package or Author-Package-1.2.3, and store
+    page links such as https://thunderstore.io/c/valheim/p/Author/Package/,
+    https://thunderstore.io/package/Author/Package/ and
+    https://valheim.hexium.gg/mods/Author/Package. Anything else is returned
+    unchanged so the caller reports it as invalid.
+    """
+    text = value.strip()
+    if text.lower().startswith(('http://', 'https://')):
+        parsed = urllib.parse.urlparse(text)
+        host = (parsed.hostname or '').lower()
+        if not any(host == h or host.endswith('.' + h) for h in PACKAGE_HOSTS):
+            return text
+        parts = [urllib.parse.unquote(p) for p in parsed.path.split('/') if p]
+        for marker in ('p', 'mods', 'package', 'packages'):
+            if marker in parts:
+                rest = parts[parts.index(marker) + 1:]
+                if rest[:1] == ['download']:
+                    rest = rest[1:]
+                if len(rest) >= 2 and PART.fullmatch(rest[0]) and PART.fullmatch(rest[1]):
+                    return f'{rest[0]}/{rest[1]}'
+        return text
+    if '/' not in text and text.count('-') >= 1:
+        owner, _, name = text.partition('-')
+        before, dash, version = name.rpartition('-')
+        if dash and VERSION.fullmatch(version):
+            name = before
+        if PART.fullmatch(owner) and PART.fullmatch(name) and '-' not in name:
+            return f'{owner}/{name}'
+    return text
+
+
 def is_local_pack(package: str) -> bool:
     return package.startswith('/') and package.lower().endswith('.zip')
 

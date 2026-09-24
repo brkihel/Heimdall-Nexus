@@ -12,13 +12,13 @@
     stepSite:'Site', stepSiteHint:'Address and HTTPS', stepGame:'Server', stepGameHint:'World and access', stepOptions:'Features', stepOptionsHint:'Mods and live data', stepAdmin:'Administrator', stepAdminHint:'Linux account and panel login', stepReview:'Review', stepReviewHint:'Install and monitor', localOnly:'Temporary wizard · private HTTPS link',
     siteTitle:'Where will the site live?', siteIntro:'Enter the domain pointing to this machine. You may also use an IP address and configure HTTPS later.', domain:'Site domain or IP', domainHint:'The wizard configures Nginx for this address.', gameAddress:'Game connection address', gameAddressHint:'Leave blank to use the site domain.', https:'Configure HTTPS automatically', httpsHint:'DNS must point to this server and TCP port 80 must be reachable. Certbot will request a Let’s Encrypt certificate.', email:'Certificate email', emailHint:'Used by Let’s Encrypt for renewal notices.', siteNoteTitle:'Before continuing', siteNote:'The temporary link uses Cloudflare and closes with the installer. Keep the token URL private. To avoid this external service, run install.sh with --local-only and use SSH.',
     gameTitle:'Your Valheim world', gameIntro:'SteamCMD downloads the official dedicated server. Your world is saved in /srv/valheim/saves, separate from game files.', serverName:'Server name', world:'World name', gamePort:'UDP port', portHint:'Valheim uses this port and the next.', gamePassword:'Game password', passwordHint:'Leave empty for a server without a password.', public:'Appear in server listings', publicHint:'Players can also join through the direct address.', crossplay:'Enable crossplay', crossplayHint:'Allows players from other platforms; uses the PlayFab backend.', portsTitle:'Network', portsNote:'With the Steam backend, forward the selected UDP port and the next through your firewall and router. With crossplay, Valheim uses a relay.',
-    optionsTitle:'Choose the features', optionsIntro:'Install what makes sense for your server. Edit pages and layouts later in the panel.', bepinexHint:'Installs the Valheim pack for server mods. Unchecked means a vanilla server.', modpack:'Modpack', modpackHint:'Optional. A Hexium/Thunderstore package name, or the full path of a .zip uploaded to the server (private mods included). A published package also fills the site mod list.', installModpack:'Install the modpack on the server', installModpackHint:'Downloads dependencies in one batch. If required versions conflict, uses the highest. Explicit client-only packages are skipped.', liveTitle:'Live data in the editor', liveHint:'These groups appear as draggable elements. Mod-dependent features require their matching configuration.', featureServer:'Server status', featurePlayers:'Online players', featureWorld:'World and day', featureSeasons:'Seasons (mod)', featureResources:'Resource rate', featureSaga:'Character saga (mod)',
+    optionsTitle:'Choose the features', optionsIntro:'Install what makes sense for your server. Edit pages and layouts later in the panel.', bepinexHint:'Installs the Valheim pack for server mods. Unchecked means a vanilla server.', modpack:'Modpack', modpackHint:'Optional. Paste the modpack page link from Thunderstore or Hexium. Author/Modpack or the full path of a .zip uploaded to the server (with private mods) also work. A published modpack also fills the site mod list.', installModpack:'Install the modpack on the server', installModpackHint:'Downloads dependencies in one batch. If required versions conflict, uses the highest. Explicit client-only packages are skipped.', liveTitle:'Live data in the editor', liveHint:'These groups appear as draggable elements. Mod-dependent features require their matching configuration.', featureServer:'Server status', featurePlayers:'Online players', featureWorld:'World and day', featureSeasons:'Seasons (mod)', featureResources:'Resource rate', featureSaga:'Character saga (mod)',
     adminTitle:'Secure the panel', adminIntro:'Choose a Linux account for the panel service and a separate login for its website. The panel password is stored as a hash.', systemUser:'Linux service account', systemUserHint:'Created on the VM to run the panel; separate from the browser login below. The game uses another account.', adminUser:'Administrator username', adminPassword:'Panel password', adminPasswordAgain:'Repeat password', adminNoteTitle:'Access', adminNote:'After installation, open /jarl/entrar. The visual page editor is available after sign-in.',
     reviewTitle:'Ready to install', reviewIntro:'Review your choices. Downloading Valheim may take several minutes; follow each step here.', startGame:'Start Valheim after installation and at boot', startGameHint:'Leave unchecked to start it manually from the panel.', reviewNoteTitle:'What will be installed', reviewNote:'SteamCMD, Valheim Dedicated Server, a systemd service, Nginx, the site and panel. BepInEx is included if selected.', back:'Back', next:'Continue', install:'Install everything', progressNumber:'INSTALLATION', progressTitle:'Preparing your server…', progressHint:'Keep the terminal and this page open. Follow the steps below.', successTitle:'Heimdall Nexus is ready', successHint:'Use the panel to edit the site and control the server.', footer:'Heimdall Nexus · created by BRKiHeL', officialGuide:'Official Valheim guide ↗'
   };
   const words = {
-    pt: {systemAccount:'Conta Linux', panelLogin:'Login do painel', yes:'Sim', no:'Não', vanilla:'Vanilla', site:'Site', address:'Jogo', server:'Servidor', world:'Mundo', port:'Porta UDP', mods:'Mods', serverMods:'mods no servidor', siteOnly:'lista no site', live:'Dados ao vivo', https:'HTTPS', gameStart:'Iniciar jogo', passwordMismatch:'As senhas do painel não conferem.', ipHttps:'HTTPS automático exige um domínio público, não um IP. Desmarque HTTPS para usar IP.', started:'Instalação em andamento…', failed:'A instalação parou. Corrija o problema e execute novamente no mesmo assistente.', panel:'Abrir painel', openSite:'Abrir site', retry:'Tentar novamente', installFailed:'Falha na instalação'},
-    en: {systemAccount:'Linux account', panelLogin:'Panel login', yes:'Yes', no:'No', vanilla:'Vanilla', site:'Site', address:'Game address', server:'Server', world:'World', port:'UDP port', mods:'Mods', serverMods:'server mods', siteOnly:'site list only', live:'Live data', https:'HTTPS', gameStart:'Start game', passwordMismatch:'The panel passwords do not match.', ipHttps:'Automatic HTTPS requires a public domain, not an IP. Disable HTTPS to use an IP.', started:'Installation is in progress…', failed:'Installation stopped. Fix the problem and retry in this wizard.', panel:'Open panel', openSite:'Open site', retry:'Retry', installFailed:'Installation failed'}
+    pt: {systemAccount:'Conta Linux', panelLogin:'Login do painel', yes:'Sim', no:'Não', vanilla:'Vanilla', site:'Site', address:'Jogo', server:'Servidor', world:'Mundo', port:'Porta UDP', mods:'Mods', serverMods:'mods no servidor', siteOnly:'lista no site', live:'Dados ao vivo', https:'HTTPS', gameStart:'Iniciar jogo', passwordMismatch:'As senhas do painel não conferem.', ipHttps:'HTTPS automático exige um domínio público, não um IP. Desmarque HTTPS para usar IP.', started:'Instalação em andamento…', failed:'A instalação parou. Corrija o problema e execute novamente no mesmo assistente.', panel:'Abrir painel', openSite:'Abrir site', retry:'Tentar novamente', installFailed:'Falha na instalação', modpackRead:'Modpack identificado:', modpackUnknown:'Não reconheci esse link. Cole o endereço da página do modpack na Thunderstore ou no Hexium.'},
+    en: {systemAccount:'Linux account', panelLogin:'Panel login', yes:'Yes', no:'No', vanilla:'Vanilla', site:'Site', address:'Game address', server:'Server', world:'World', port:'UDP port', mods:'Mods', serverMods:'server mods', siteOnly:'site list only', live:'Live data', https:'HTTPS', gameStart:'Start game', passwordMismatch:'The panel passwords do not match.', ipHttps:'Automatic HTTPS requires a public domain, not an IP. Disable HTTPS to use an IP.', started:'Installation is in progress…', failed:'Installation stopped. Fix the problem and retry in this wizard.', panel:'Open panel', openSite:'Open site', retry:'Retry', installFailed:'Installation failed', modpackRead:'Modpack found:', modpackUnknown:'This link was not recognized. Paste the modpack page address from Thunderstore or Hexium.'}
   };
   const t = key => words[language][key] || key;
 
@@ -76,6 +76,42 @@
     $('email-field').hidden = !$('tls').checked;
     $('email').required = $('tls').checked;
   });
+  // Mirrors deploy/modpack.py normalize_package; the server re-validates.
+  function modpackName(raw) {
+    const text = raw.trim(), part = /^[A-Za-z0-9_.-]{1,80}$/;
+    if (!text || text.startsWith('/')) return text;
+    if (/^https?:\/\//i.test(text)) {
+      let url; try { url = new URL(text); } catch { return text; }
+      const host = url.hostname.toLowerCase();
+      if (!['thunderstore.io', 'hexium.gg'].some(h => host === h || host.endsWith('.' + h))) return text;
+      const parts = url.pathname.split('/').filter(Boolean).map(decodeURIComponent);
+      for (const marker of ['p', 'mods', 'package', 'packages']) {
+        const i = parts.indexOf(marker); if (i < 0) continue;
+        let rest = parts.slice(i + 1); if (rest[0] === 'download') rest = rest.slice(1);
+        if (rest.length >= 2 && part.test(rest[0]) && part.test(rest[1])) return `${rest[0]}/${rest[1]}`;
+      }
+      return text;
+    }
+    if (!text.includes('/') && text.includes('-')) {
+      const [owner, ...restParts] = text.split('-');
+      let rest = restParts;
+      if (rest.length > 1 && /^\d+(\.\d+){1,3}$/.test(rest[rest.length - 1])) rest = rest.slice(0, -1);
+      if (rest.length === 1 && part.test(owner) && part.test(rest[0])) return `${owner}/${rest[0]}`;
+    }
+    return text;
+  }
+  function showModpackName() {
+    const raw = $('modpack').value.trim(), name = modpackName(raw), note = $('modpack-lido');
+    if (!raw || raw.startsWith('/') || name === raw) {
+      note.hidden = !/^https?:\/\//i.test(raw);
+      note.textContent = t('modpackUnknown');
+      note.classList.add('erro');
+      return;
+    }
+    note.hidden = false; note.classList.remove('erro');
+    note.textContent = `${t('modpackRead')} ${name}`;
+  }
+  $('modpack').addEventListener('input', showModpackName);
   $('bepinex').addEventListener('change', () => {
     $('modpack-field').hidden = !$('bepinex').checked;
     if (!$('bepinex').checked) $('modpack').value = '';
@@ -87,7 +123,7 @@
     return {domain:value('domain'), server_address:value('server_address'), server_name:value('server_name'),
       world:value('world'), port:Number(value('port')), game_password:$('game_password').value,
       public:$('public').checked, crossplay:$('crossplay').checked, bepinex:$('bepinex').checked,
-      modpack:value('modpack'), install_modpack:$('bepinex').checked && !!value('modpack') && $('install_modpack').checked,
+      modpack:modpackName(value('modpack')), install_modpack:$('bepinex').checked && !!value('modpack') && $('install_modpack').checked,
       features:[...document.querySelectorAll('[name=features]:checked')].map(el => el.value),
       system_user:value('system_user'), panel_user:value('panel_user'), panel_password:$('panel_password').value,
       tls:$('tls').checked, email:value('email'), start_game:$('start_game').checked};

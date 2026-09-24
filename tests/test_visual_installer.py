@@ -179,3 +179,12 @@ mkdir -p "{root}/current" && touch "{root}/current/valheim_server.x86_64"
             self.assertEqual(len(retries), 2)
             self.assertIn("ERROR! Failed to install app '896660' (Missing configuration)", retries[0])
             self.assertFalse(any('\x1b' in l for l in lines))
+
+
+class ModpackFieldTests(unittest.TestCase):
+    def test_wizard_accepts_store_link(self):
+        data = choices(bepinex=True, install_modpack=True,
+                       modpack='https://thunderstore.io/c/valheim/p/TaegukGaming/Hearthbound_Valheim_Modpack/')
+        self.assertEqual(data.modpack, 'TaegukGaming/Hearthbound_Valheim_Modpack')
+        with self.assertRaises(installer.InstallError):
+            choices(bepinex=True, modpack='https://evil.example/mods/A/B')

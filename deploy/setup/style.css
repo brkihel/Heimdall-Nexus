@@ -54,3 +54,6 @@ footer{display:flex;justify-content:space-between;gap:20px;padding:18px clamp(24
 [hidden]{display:none!important}
 @media(max-width:1000px){.shell{grid-template-columns:260px 1fr}.intro{padding:30px 25px}.intro-copy h1{font-size:31px}.content{padding:38px 32px 48px}.topbar,footer{padding-left:32px;padding-right:32px}}
 @media(max-width:730px){.shell{display:block}.intro{gap:20px;padding:20px 22px;border-right:0;border-bottom:1px solid var(--line)}.intro-copy{display:none}.steps{display:flex;justify-content:space-between}.steps::before,.steps li div{display:none}.steps li{min-height:auto}.steps li>span{width:32px;height:32px}.credits{display:none}.topbar{padding:16px 22px}.content{padding:28px 22px 42px}.grid,.feature-grid{grid-template-columns:1fr}.page h2,#progress h2{font-size:30px}footer{padding:18px 22px;flex-wrap:wrap}}
+
+.field small.modpack-lido{display:block;margin-top:.35rem;color:#7fd9a2}
+.field small.modpack-lido.erro{color:#ef8e7c}

@@ -90,6 +90,8 @@ class Choices:
         panel_password = str(data.get('panel_password') or '')
         email = str(data.get('email') or '').strip()
         modpack = str(data.get('modpack') or '').strip()
+        if modpack and not server_modpack.is_local_pack(modpack):
+            modpack = server_modpack.normalize_package(modpack)
         try:
             port = int(data.get('port', 2456))
         except (TypeError, ValueError) as exc:
@@ -129,7 +131,8 @@ class Choices:
             except server_modpack.ModpackError as exc:
                 raise InstallError(str(exc)) from exc
         elif modpack and not PACK.fullmatch(modpack):
-            raise InstallError('A modpack is an Author/Package name or the full path of a .zip on this server.')
+            raise InstallError('Modpack not recognized. Paste the package page link from Thunderstore or Hexium, '
+                               'type Author/Package, or give the full path of a .zip on this server.')
         install_modpack = data.get('install_modpack') is True
         if install_modpack and not modpack:
             raise InstallError('Choose a Hexium modpack before installing server mods.')
