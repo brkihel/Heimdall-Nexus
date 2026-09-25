@@ -34,6 +34,9 @@
   cursor: text;
 }
 .jarl-editing .jarl-ed.jarl-active:focus { outline: 2px solid var(--jarl-gold); }
+/* The shared site menu opens the menu editor in the sidebar. */
+.jarl-editing .heimdall-nav { cursor: pointer; }
+.jarl-editing .heimdall-nav:hover { outline: 2px dashed var(--jarl-gold); outline-offset: -3px; }
 /* Layers the site puts over text (fog, embers) must not steal the hover. */
 .jarl-editing .brasa, .jarl-editing .nevoa { pointer-events: none; }
 

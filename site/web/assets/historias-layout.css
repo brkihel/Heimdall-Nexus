@@ -57,3 +57,6 @@
   .controls {padding-top: .4rem}
   .stage-art {height: calc(100dvh - var(--heimdall-nav-height, 58px))}
 }
+
+/* One world per server: pages installed before 0.2.6 still carry a world picker. */
+.controls label[for="world"]{display:none}

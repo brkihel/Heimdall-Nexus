@@ -13,7 +13,7 @@
   }
   // Admin shortcuts at the start of the menu. The "jarl" cookie is only a hint
   // set by the panel; the session itself is confirmed before anything shows.
-  const adminShortcuts = async inner => {
+  const adminShortcuts = async nav => {
     if (framed || !/(^|;\s*)jarl=1/.test(document.cookie)) return;
     try {
       const response = await fetch(`${PANEL}/api/site/eu`, {credentials:'same-origin', cache:'no-store'});
@@ -33,21 +33,15 @@
     shortcut('ᛃ Jarl', `${PANEL}/`, 'Painel do servidor').classList.add('heimdall-nav-jarl');
     shortcut('Layout Editor', `${PANEL}/editor?url=${encodeURIComponent(location.pathname)}`,
              'Editar esta página');
-    inner.prepend(box);
+    nav.prepend(box);
+    nav.classList.add('has-admin');
   };
   const fallback = {style:'discreto',links:[
     {label:'Início',url:'/'},{label:'Wiki',url:'/wiki/'},
     {label:'Mapa',url:'/mapa/'},{label:'Histórias',url:'/historias/'},
     {label:'Armaria',url:'/armaria/'},{label:'Rankings',url:'/rankings/'}]};
-  const start = async () => {
-    let config = fallback;
-    try {
-      const response = await fetch('/assets/navegacao.json', {cache:'no-store'});
-      if (response.ok) {
-        const value = await response.json();
-        if (Array.isArray(value.links) && value.links.length <= 50) config = value;
-      }
-    } catch (_) { /* The fallback keeps navigation usable during installation. */ }
+  let current = null;
+  const render = config => {
     const nav = document.createElement('nav');
     nav.className = 'heimdall-nav';
     nav.setAttribute('aria-label','Navegação principal');
@@ -115,15 +109,9 @@
       }
       links.append(item);
     }
-    inner.append(brand, links);nav.append(inner);document.body.prepend(nav);
-    adminShortcuts(inner);
-    document.addEventListener('click', event => {
-      if (nav.contains(event.target)) return;
-      links.querySelectorAll('.heimdall-nav-item.is-open').forEach(item => {
-        item.classList.remove('is-open');
-        item.querySelector('.heimdall-nav-toggle')?.setAttribute('aria-expanded','false');
-      });
-    });
+    inner.append(brand, links);nav.append(inner);
+    if (current) current.replaceWith(nav); else document.body.prepend(nav);
+    current = nav;
     nav.addEventListener('keydown', event => {
       if (event.key !== 'Escape') return;
       const open = links.querySelector('.heimdall-nav-item.is-open');
@@ -135,7 +123,28 @@
     const height = () => document.documentElement.style.setProperty('--heimdall-nav-height',nav.offsetHeight+'px');
     height();
     if (window.ResizeObserver) new ResizeObserver(height).observe(nav);
+    return nav;
   };
+  document.addEventListener('click', event => {
+    if (!current || current.contains(event.target)) return;
+    current.querySelectorAll('.heimdall-nav-item.is-open').forEach(item => {
+      item.classList.remove('is-open');
+      item.querySelector('.heimdall-nav-toggle')?.setAttribute('aria-expanded','false');
+    });
+  });
+  const start = async () => {
+    let config = fallback;
+    try {
+      const response = await fetch('/assets/navegacao.json', {cache:'no-store'});
+      if (response.ok) {
+        const value = await response.json();
+        if (Array.isArray(value.links) && value.links.length <= 50) config = value;
+      }
+    } catch (_) { /* The fallback keeps navigation usable during installation. */ }
+    adminShortcuts(render(config));
+  };
+  // The Layout Editor redraws the menu while it is being edited, before saving.
+  if (framed && editing) window.heimdallNav = {preview: config => { render(config); }};
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once:true});
   else start();
 })();

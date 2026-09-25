@@ -184,6 +184,10 @@
     // The sidebar holds the toolbar and the notices; only menus live in the page.
     ui.toasts = SHELL.toasts;
     ui.toolbar = SHELL.toolbarHost;
+    // Clicking the panel must not take the text selection away from the page.
+    ui.toolbar.addEventListener('mousedown', e => {
+      if (!e.target.closest('input,label,select,textarea')) e.preventDefault();
+    });
     ui.menu = $('div', {class: 'jarl-menu', 'data-jarl-ui': '', hidden: true});
     document.body.append(ui.menu);
   }
@@ -316,15 +320,30 @@
     return btn;
   }
 
+  // The element panel, as in page builders: what was clicked, then its tools in
+  // three tabs. Choices open inside the panel instead of floating menus.
+  const TABS = [['conteudo', 'Conteúdo'], ['estilo', 'Estilo'], ['bloco', 'Bloco']];
+  let lastTab = 'conteudo';
+
+  function control(action) {
+    if (action.run) return toolButton(action);
+    const box = $('details', {class: 'jarl-control'},
+      $('summary', {title: action.key ? `${action.label} (${action.key})` : action.label},
+        $('span', {class: 'jarl-ico'}, action.icon), $('span', {class: 'jarl-lbl'}, action.label)));
+    box.addEventListener('toggle', () => {
+      if (!box.open) { box.querySelector('.jarl-control-body')?.remove(); return; }
+      // Only one open at a time, built fresh so it reflects the current selection.
+      for (const other of ui.toolbar.querySelectorAll('.jarl-control[open]')) if (other !== box) other.open = false;
+      rememberSelection();
+      box.append($('div', {class: 'jarl-control-body'}, popoverBody(action, () => { box.open = false; })));
+    });
+    return box;
+  }
+
   function fillToolbar() {
     const bar = ui.toolbar;
     bar.replaceChildren();
-    if (!S.active) {
-      // The sidebar lists this page's sections, from the state it just received.
-      SHELL.update(state());
-      SHELL.empty(bar);
-      return;
-    }
+    if (!S.active) { SHELL.update(state()); return; }
     const path = $('div', {class: 'jarl-crumbs'});
     const list = crumbs();
     list.slice().reverse().forEach((el, i) => {
@@ -333,22 +352,35 @@
                                title: 'Selecionar este nível', on: {click: () => selectBlock(el)}},
                     blockLabel(el)));
     });
-    const group = (title, ...kids) => $('section', {class: 'jarl-group'},
-                                        $('h3', {class: 'jarl-group-title'}, title), ...kids);
-    const block = blockActions();
     const format = formatActions();
+    const isContent = a => a.link || a.values;
     const letters = format.filter(a => ['jarl-b', 'jarl-i', 'jarl-u'].includes(a.cls));
-    const styles = format.filter(a => !letters.includes(a));
-    bar.append(
-      group('Selecionado', path),
-      block.length ? group('Bloco', $('div', {class: 'jarl-grid'}, ...block.map(toolButton))) : null,
-      group('Texto', ...(format.length
-        ? [$('div', {class: 'jarl-seg'}, ...letters.map(toolButton)),
-           $('div', {class: 'jarl-grid'}, ...styles.map(toolButton))]
-        : [$('p', {class: 'jarl-hint'}, 'Este campo aceita só texto, sem formatação.')])),
-      $('button', {class: 'jarl-btn jarl-concluir', title: 'Concluir (Esc)', on: {click: () => deactivate()}},
-        '✓ Concluir'));
-    bar.hidden = false;
+    const styles = format.filter(a => !letters.includes(a) && !isContent(a));
+    const block = blockActions();
+    const panes = {
+      conteudo: [
+        $('p', {class: 'jarl-hint'}, targetIsField() ? 'O texto se escreve direto na página.'
+          : 'Escolha um texto dentro deste bloco para mudar o que está escrito.'),
+        ...format.filter(isContent).map(control),
+        ...block.filter(a => a.blockLink).map(control)],
+      estilo: format.length ? [
+        $('div', {class: 'jarl-seg'}, ...letters.map(toolButton)), ...styles.map(control)] : [],
+      bloco: block.filter(a => !a.blockLink).map(control),
+    };
+    const tabs = TABS.filter(([key]) => panes[key].length);
+    if (!tabs.some(([key]) => key === lastTab)) lastTab = tabs[0][0];
+    const body = $('div', {class: 'jarl-pane'});
+    const bar2 = $('div', {class: 'jarl-tabs', role: 'tablist'});
+    const show = key => {
+      lastTab = key;
+      for (const b of bar2.children) b.classList.toggle('on', b.dataset.tab === key);
+      body.replaceChildren(...panes[key]);
+    };
+    for (const [key, label] of tabs) {
+      bar2.append($('button', {'data-tab': key, role: 'tab', on: {click: () => show(key)}}, label));
+    }
+    bar.append($('div', {class: 'jarl-crumbs-box'}, path), bar2, body);
+    show(lastTab);
     SHELL.update(state());
   }
 
@@ -1325,7 +1357,7 @@
     S.savedRange = null;
     if (S.block) S.block.classList.remove('jarl-sel');
     S.block = null;
-    ui.toolbar.hidden = true;
+    ui.toolbar.replaceChildren();
     closeMenus();
     // Untouched fields go back to the published text (markers filled in again).
     if (!S.created.has(token) && !fieldChanged(token) &&
@@ -1353,6 +1385,13 @@
   }
 
   // ------------------------------------------------------------ edit mode
+  // A nav made only of in-page anchors (the dots beside a long page) follows the
+  // sections by itself; its labels are not content to edit.
+  const inSectionNav = el => {
+    const nav = el.closest('nav');
+    return !!nav && [...nav.querySelectorAll('a')].every(a => (a.getAttribute('href') || '').startsWith('#'));
+  };
+
   async function loadFields() {
     const d = await api(`/api/site/campos?url=${encodeURIComponent(location.pathname)}`);
     S.page = d.pagina;
@@ -1370,7 +1409,7 @@
         const el = field.tag === 'mod'
           ? document.querySelector(`[data-mod="${CSS.escape(field.token.slice(4))}"]`)
           : document.querySelector(`[data-campo="${CSS.escape(field.token)}"]`);
-        if (!el) continue;
+        if (!el || inSectionNav(el)) continue;
         S.fields.set(field.token, field);
         S.elements.set(field.token, el);
         tokenOf.set(el, field.token);
@@ -1436,8 +1475,8 @@
     refreshDock();
     fillToolbar();
     if (S.elements.size)
-      toast(`${S.elements.size} trechos editáveis. Clique num texto da página para editar; em Selecionado, ` +
-            'escolha o bloco inteiro (seção, caixa, item) para mover, duplicar, adicionar ou remover.');
+      toast(`${S.elements.size} trechos editáveis. Clique em um deles e as ferramentas dele aparecem na barra ` +
+            'ao lado; ← Voltar retorna à lista de seções.');
   }
 
   function discardAll() {
@@ -1689,6 +1728,14 @@
   // ------------------------------------------------------------ events
   document.addEventListener('click', e => {
     if (!S.editing || e.target.closest('[data-jarl-ui]')) return;
+    if (e.target.closest('.heimdall-nav')) {
+      // The site menu is shared by every page: it has its own editor in the sidebar.
+      e.preventDefault();
+      e.stopPropagation();
+      deactivate();
+      SHELL.openMenu();
+      return;
+    }
     if (!e.target.closest('.jarl-menu')) closeMenus();
     const el = e.target.closest('.jarl-ed');
     if (el) {

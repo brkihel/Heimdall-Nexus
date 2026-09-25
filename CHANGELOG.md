@@ -3,15 +3,20 @@
 ## Em desenvolvimento
 
 - No site, quem está logado no Jarl vê os atalhos **Jarl** e **Layout Editor**
-  no canto superior esquerdo do menu de navegação, em todas as páginas. O
-  painel flutuante no canto inferior direito e o modo edição dentro da própria
-  página saíram: editar é sempre no Layout Editor, com a barra lateral.
-- A barra lateral do Layout Editor tem quatro abas (Editar, Adicionar, Página,
-  Menu). As ferramentas de edição aparecem em grupos com nome, e a aba Editar
-  nunca abre vazia.
-- O menu do site é editado numa árvore compacta: renomear no próprio nome,
-  mostrar/ocultar pelo olho, → e ← para entrar e sair de um submenu. O botão
-  Salvar mostra quando há alterações pendentes.
+  no canto esquerdo da barra de navegação, em todas as páginas. O painel
+  flutuante no canto inferior direito e o modo edição dentro da própria página
+  saíram: editar é sempre no Layout Editor, com a barra lateral.
+- O Layout Editor funciona como um construtor de páginas: a barra começa na
+  lista de seções; clicar em algo da página mostra só as ferramentas daquilo,
+  em Conteúdo, Estilo e Bloco, com as escolhas abertas no próprio painel e
+  **← Voltar** para a lista. Adicionar, Menu e Página ficam no rodapé.
+- A navegação por pontos ao lado da página deixou de ser editável: ela segue
+  as seções sozinha.
+- O menu do site é editado ao clicar nele na página ou em Menu: arraste pela
+  alça para ordenar e para os lados para entrar ou sair de um submenu. A barra
+  da página mostra o resultado antes de salvar.
+- Armaria, Rankings e Histórias não mostram mais o seletor de mundo: o site
+  mostra sempre o mundo atual do servidor.
 - Jarl: Mods virou **Mod Manager** e Crônica virou **Logs**. Criar e remover
   páginas do site ficou num item próprio, **Páginas**, em Aparência.
 - Server Config: **Opções de inicialização** mostra os argumentos numa caixa
