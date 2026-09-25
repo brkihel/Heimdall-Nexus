@@ -1,7 +1,7 @@
 # Heimdall Sagas extension
 
 Status: **optional preview introduced in Heimdall Nexus 0.2.0** (bridge 0.1.7 since 0.2.1,
-client 0.1.4). The extension is opt-in and separate
+client 0.1.5). The extension is opt-in and separate
 from the existing `saga.json` skill ranking. It has not been installed on a live
 server or published to Hexium.
 
