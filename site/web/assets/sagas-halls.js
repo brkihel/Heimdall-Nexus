@@ -24,9 +24,6 @@ const DAMAGE={damage:'Dano',blunt:'contundente',slash:'cortante',pierce:'perfura
 const ELEMENT={Blunt:'Contundente',Slash:'Cortante',Pierce:'Perfurante',Chop:'Corte (árvores)',Pickaxe:'Mineração',Fire:'Fogo',Frost:'Gelo',Lightning:'Raio',Poison:'Veneno',Spirit:'Espiritual'};
 const MODIFIER={Normal:'normal',Resistant:'resistente',Weak:'fraco',Immune:'imune',Ignore:'ignora',VeryResistant:'muito resistente',VeryWeak:'muito fraco',SlightlyResistant:'levemente resistente',SlightlyWeak:'levemente fraco'};
 const VITALS={Health:'Vida',Stamina:'Vigor',Eitr:'Eitr',Armor:'Armadura'};
-// Backdrops from the site's own art, chosen by where the Viking's last shared feat happened.
-const SCENES={Meadows:['prados','Prados'],BlackForest:['clareira','Floresta Negra'],Swamp:['clareira','Pântano'],Mountain:['clareira','Montanha'],
-  Plains:['clareira','Planícies'],Mistlands:['mistlands','Terras Nebulosas'],AshLands:['mistlands','Terras de Cinzas'],DeepNorth:['mistlands','Extremo Norte']};
 const state={players:[],selected:new URLSearchParams(location.search).get('viking')||'',viking:null,tab:'personagem',search:''};
 
 const fmt=value=>Number(value).toLocaleString('pt-BR',{maximumFractionDigits:1});
@@ -73,9 +70,6 @@ function column(player,gear,slots,extra){const col=node('div',undefined,'vp-col'
   if(extra.length){col.append(node('div',undefined,'vp-gap'));for(const [item,label] of extra)col.append(gearCard(player,item,label))}
   return col}
 
-function scene(player){const last=(player.events||[]).find(e=>e.biome&&SCENES[e.biome]);const [art,label]=last?SCENES[last.biome]:['clareira',''];
-  return {art:`/assets/${art}-1600.webp`,note:last?`Cenário: ${label}, onde ${player.name} registrou o último feito`:'Cenário padrão: ainda sem feito com local compartilhado'}}
-
 function renderPicker(){const box=$('vp-picker');box.replaceChildren();const q=state.search.trim().toLocaleLowerCase('pt-BR');
   const list=state.players.filter(p=>!q||(p.name||'').toLocaleLowerCase('pt-BR').includes(q));
   for(const player of list){const button=node('button',undefined,'vp-chip');button.type='button';button.setAttribute('aria-pressed',String(player.id===state.selected));
@@ -95,9 +89,9 @@ function renderProfile(){const player=state.viking,box=$('vp-profile');box.repla
     b.addEventListener('click',()=>{state.tab=key;renderProfile()});tabs.append(b)}
   box.append(head,tabs,state.tab==='saga'?sagaPane(player):characterPane(player))}
 
-function characterPane(player){const gear=player.gear||[],{art,note}=scene(player);
-  const stage=node('section',undefined,'vp-stage');stage.style.setProperty('--scene',`url("${art}")`);
-  const notes=node('div',undefined,'vp-notes');notes.append(node('span','Último registro · '+when(player.seen_at)),node('span',note));stage.append(notes);
+function characterPane(player){const gear=player.gear||[];
+  const stage=node('section',undefined,'vp-stage');
+  const notes=node('div',undefined,'vp-notes');notes.append(node('span','Último registro · '+when(player.seen_at)));stage.append(notes);
   const hands=gear.filter(g=>WEAPONS.has(g.slot||g.type)),shields=gear.filter(g=>(g.slot||g.type)==='Shield'),ammo=gear.filter(g=>(g.slot||g.type)==='Ammo');
   const left=column(player,gear,LEFT,hands.map(g=>[g,TYPE[g.slot||g.type]||'Arma']));
   const right=column(player,gear,RIGHT,[...shields.map(g=>[g,'Escudo']),...ammo.map(g=>[g,'Munição'])]);
