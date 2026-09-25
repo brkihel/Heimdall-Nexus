@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace Heimdall.Sagas.Mod
 {
-    [BepInPlugin("gg.heimdall.sagas.client", "Heimdall Sagas Client", "0.1.4")]
+    [BepInPlugin("gg.heimdall.sagas.client", "Heimdall Sagas Client", "0.1.5")]
     public sealed class ClientPlugin : BaseUnityPlugin
     {
         private const string Rpc = "Heimdall.Sagas.V1";
@@ -50,7 +50,7 @@ namespace Heimdall.Sagas.Mod
             sharePosition = Config.Bind("Privacy", "SharePosition", false,
                 "Allow a live marker when Valheim's own map visibility is also enabled.");
             shareStories = Config.Bind("Privacy", "ShareStories", false,
-                "Allow your Viking name and selected shared events to be sent to OpenRouter and its selected model provider for public AI stories. Requires ShareProfile.");
+                "Allow your Viking name and selected shared events to be sent to the AI provider chosen by the server admin (OpenRouter, OpenAI, Anthropic or Google Gemini) to write public AI stories. Requires ShareProfile.");
             lastProfile = shareProfile.Value;
             lastMap = shareMap.Value;
             lastPosition = sharePosition.Value;
