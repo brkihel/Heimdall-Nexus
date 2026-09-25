@@ -11,7 +11,7 @@
     script.src = `${PANEL}/estatico/site-admin.js`;script.defer = true;
     document.head.appendChild(script);
   }
-  // Admin shortcuts at the start of the menu. The "jarl" cookie is only a hint
+  // Admin shortcuts at the right end of the menu bar. The "jarl" cookie is only a hint
   // set by the panel; the session itself is confirmed before anything shows.
   const adminShortcuts = async nav => {
     if (framed || !/(^|;\s*)jarl=1/.test(document.cookie)) return;
@@ -33,7 +33,7 @@
     shortcut('ᛃ Jarl', `${PANEL}/`, 'Painel do servidor').classList.add('heimdall-nav-jarl');
     shortcut('Layout Editor', `${PANEL}/editor?url=${encodeURIComponent(location.pathname)}`,
              'Editar esta página');
-    nav.prepend(box);
+    nav.append(box);
     nav.classList.add('has-admin');
   };
   const fallback = {style:'discreto',links:[

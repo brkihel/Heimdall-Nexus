@@ -3,7 +3,7 @@
 ## Em desenvolvimento
 
 - No site, quem está logado no Jarl vê os atalhos **Jarl** e **Layout Editor**
-  no canto esquerdo da barra de navegação, em todas as páginas. O painel
+  no canto direito da barra de navegação, em todas as páginas. O painel
   flutuante no canto inferior direito e o modo edição dentro da própria página
   saíram: editar é sempre no Layout Editor, com a barra lateral.
 - O Layout Editor funciona como um construtor de páginas: a barra começa na
