@@ -21,7 +21,7 @@ body[data-hall=armaria] footer{background:rgba(5,9,13,.85)}
 .vp-profile{border:1px solid rgba(51,71,90,.55);border-radius:3px;background:rgba(5,9,13,.28);box-shadow:0 16px 42px rgba(0,0,0,.3);overflow:hidden}
 .vp-head{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:1rem;padding:1.2rem 1.4rem;background:linear-gradient(90deg,rgba(8,14,20,.9),rgba(8,14,20,.55))}
 .vp-avatar{display:grid;place-items:center;width:72px;height:72px;border-radius:50%;border:1px solid var(--ouro-fundo);background:radial-gradient(circle at 50% 35%,var(--ardosia),var(--breu));overflow:hidden;color:var(--ouro);font:1.8rem Cinzel,Georgia,serif}
-.vp-avatar img{width:100%;height:170%;object-fit:cover;object-position:50% 4%}
+.vp-avatar.has-portrait{background-repeat:no-repeat}
 .vp-head h2{margin:0;font-size:clamp(1.6rem,3vw,2.3rem);color:var(--ouro-claro)}
 .vp-status{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .8rem;margin:.3rem 0 0;font-size:.88rem;color:var(--fraco)}
 .vp-pill{padding:.12rem .6rem;border:1px solid var(--borda-viva);border-radius:999px;color:var(--texto)}.vp-pill.on{border-color:#3f7c59;color:#7fd9a2}

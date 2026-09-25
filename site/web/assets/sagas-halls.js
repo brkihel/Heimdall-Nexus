@@ -77,9 +77,23 @@ function renderPicker(){const box=$('vp-picker');box.replaceChildren();const q=s
     button.addEventListener('click',()=>select(player.id));box.append(button)}
   if(!list.length)box.append(node('small',q?'Nenhum Viking com esse nome.':'Nenhum Viking compartilhou o perfil ainda.','vp-none'))}
 
+// The round avatar zooms on the head. Poses differ (raised weapons, capes), so
+// the head is found in each portrait: the first opaque rows near the middle.
+function headshot(avatar,url){const art=new Image();art.onload=()=>{
+  const w=64,h=96,canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d');
+  let x=.5,y=.15;
+  try{ctx.drawImage(art,0,0,w,h);const alpha=ctx.getImageData(0,0,w,h).data;const opaque=(cx,cy)=>alpha[(cy*w+cx)*4+3]>64;
+    let top=-1;for(let cy=0;cy<h&&top<0;cy++){let count=0;for(let cx=Math.floor(w*.3);cx<w*.7;cx++)if(opaque(cx,cy))count++;if(count>=2)top=cy}
+    if(top>=0){let sum=0,n=0;for(let cy=top;cy<Math.min(h,top+h*.1);cy++)for(let cx=0;cx<w;cx++)if(opaque(cx,cy)){sum+=cx;n++}
+      if(n)x=sum/n/w;y=Math.min(.6,top/h+.075)}}catch(_){/* keep the default framing */}
+  const size=avatar.clientWidth||72,width=size*3,height=width*1.5;
+  avatar.style.backgroundImage=`url("${url}")`;avatar.style.backgroundColor="var(--ardosia)";avatar.style.backgroundSize=`${width}px ${height}px`;
+  avatar.style.backgroundPosition=`${Math.round(size/2-x*width)}px ${Math.round(size/2-y*height)}px`;avatar.classList.add('has-portrait')};
+  art.src=url}
+
 function renderProfile(){const player=state.viking,box=$('vp-profile');box.replaceChildren();hideTip();if(!player){box.hidden=true;return}box.hidden=false;
   const head=node('header',undefined,'vp-head');const avatar=node('span',undefined,'vp-avatar');
-  if(player.portrait){const img=node('img');img.alt='';img.src=mediaUrl(player,player.portrait);img.onerror=()=>img.remove();avatar.append(img)}else avatar.append(node('span','ᚹ'));
+  if(player.portrait)headshot(avatar,mediaUrl(player,player.portrait));else avatar.append(node('span','ᚹ'));
   const title=node('div');title.append(node('h2',player.name||'Viking'));const status=node('p',undefined,'vp-status');
   status.append(node('span',player.online?'● Online agora':'○ Offline',player.online?'vp-pill on':'vp-pill'),node('span',player.online?'':'Visto por último '+when(player.seen_at)));
   title.append(status);const vitals=node('div',undefined,'vp-vitals');for(const v of player.vitals||[])if(v.value>0){const item=node('span');item.append(node('b',fmt(v.value)),node('small',VITALS[v.name]||v.name));vitals.append(item)}
