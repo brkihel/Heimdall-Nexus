@@ -1,5 +1,21 @@
 # Heimdall Nexus — versões
 
+## 0.2.1
+
+- O mapa público pode usar um gerador de mapas próprio da instalação, com até
+  três estilos (Vanilla, Topográfico e Birds Eye) e um seletor na página. Basta
+  apontar `HEIMDALL_EXTERNAL_ATLAS_DIR` para a exportação privada. As tiles
+  continuam passando pelo modo de mapa do admin e pelo consentimento atual dos
+  jogadores, e uma exportação de outro mundo (por exemplo, de antes de um wipe)
+  é ignorada.
+- Ponte Sagas 0.1.7: não gera o próprio mapa quando o gerador externo está em
+  uso (`HEIMDALL_SAGAS_EXTERNAL_ATLAS=1`).
+- O instalador da ponte aceita uma pasta do jogo sem link simbólico.
+- O menu do site mostra o nome do servidor em todas as páginas.
+
+Atualize pelo Jarl em **Sobre e atualizações**, no canal **Estável (main)**. Se
+a ponte Sagas mudar, reinicie o Valheim quando puder.
+
 ## 0.2.0
 
 Esta versão reúne o assistente de instalação, o Jarl e o site editável com a
