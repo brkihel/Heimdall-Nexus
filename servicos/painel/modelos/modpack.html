@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block titulo %}Modpack{% endblock %}
+{% block corpo %}
+<div class="topo">
+  <h1>Modpack</h1>
+  <span id="estado" class="pastilha meio">lendo…</span>
+  <div class="acoes">
+    <a class="btn" href="/" target="_blank" rel="noopener">Abrir o site</a>
+  </div>
+</div>
+
+<div class="modpack">
+<section class="cartao">
+  <h2>Lista de mods do site</h2>
+  <p class="dica">O site mostra os mods do modpack publicado no Hexium. Ao atualizar o modpack lá, confira aqui e publique a lista nova: nada muda no site até você aplicar.</p>
+  <div class="mp-lado">
+    <div class="mp-caixa"><span>No site</span><b id="atual-versao">—</b><small id="atual-info"></small></div>
+    <div class="mp-caixa" id="novo-caixa"><span>No Hexium</span><b id="novo-versao">consultando…</b><small id="novo-info"></small></div>
+  </div>
+  <div class="mp-pacote">
+    <label>Modpack no Hexium<input id="pacote" type="text" maxlength="200" placeholder="Autor/NomeDoModpack" spellcheck="false"></label>
+    <button class="btn" id="verificar" type="button">Verificar de novo</button>
+  </div>
+  <p class="dica">É o trecho <code>autor/nome</code> do endereço do modpack no Hexium.</p>
+</section>
+
+<section class="cartao" id="mudancas" hidden>
+  <h2>O que muda</h2>
+  <div id="listas" class="mp-listas"></div>
+</section>
+
+<section class="cartao" id="descricoes" hidden>
+  <h2>Descrições em português</h2>
+  <p class="dica">Estes mods ainda não têm descrição revisada; em branco, o site usa o texto original do Hexium. O que você escrever fica guardado para as próximas atualizações.</p>
+  <div id="lista-descricoes" class="mp-descricoes"></div>
+</section>
+
+<div class="salvar-barra" id="barra" hidden>
+  <button class="btn principal" id="aplicar" type="button">Aplicar e publicar</button>
+  <span id="aplicar-msg" role="status"></span>
+</div>
+</div>
+
+<style>
+.modpack{max-width:980px}
+.modpack .dica{color:var(--fraco); font-size:.85rem; margin:-.3rem 0 1rem}
+.mp-lado{display:grid; grid-template-columns:1fr 1fr; gap:.8rem; margin-bottom:1rem}
+.mp-caixa{display:grid; gap:.2rem; padding:.8rem 1rem; border:1px solid var(--borda); border-radius:3px; background:rgba(5,9,13,.35)}
+.mp-caixa span{font:600 .62rem Cinzel,Georgia,serif; letter-spacing:.14em; text-transform:uppercase; color:var(--fraco)}
+.mp-caixa b{font:700 1.5rem Cinzel,Georgia,serif; color:var(--osso)}
+.mp-caixa small{color:var(--fraco); font-size:.8rem}
+.mp-caixa.novo{border-color:var(--ouro)}.mp-caixa.novo b{color:var(--ouro-claro)}
+.mp-pacote{display:flex; align-items:end; gap:.8rem; flex-wrap:wrap}
+.mp-pacote label{display:grid; gap:.3rem; flex:1 1 280px; font-size:.85rem}
+.mp-pacote input{min-height:0; padding:.55rem .7rem; border-radius:3px; font-family:ui-monospace,monospace; font-size:.9rem}
+.mp-listas{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:1rem}
+.mp-lista h3{margin:0 0 .5rem; font-size:.78rem; letter-spacing:.1em; text-transform:uppercase; color:var(--fraco)}
+.mp-lista ul{list-style:none; margin:0; padding:0; display:grid; gap:.3rem}
+.mp-lista li{display:flex; justify-content:space-between; gap:.6rem; padding:.45rem .6rem; border-left:2px solid var(--borda-viva); background:rgba(5,9,13,.35); font-size:.88rem}
+.mp-lista li small{color:var(--fraco); white-space:nowrap}
+.mp-lista.novos li{border-left-color:#5aa36f}.mp-lista.removidos li{border-left-color:#b0574a}.mp-lista.alterados li{border-left-color:var(--ouro)}
+.mp-descricoes{display:grid; gap:.9rem}
+.mp-descricao{display:grid; gap:.35rem}
+.mp-descricao b{color:var(--osso); font-size:.92rem}
+.mp-descricao b small{color:var(--fraco); font-weight:400; font-family:ui-monospace,monospace; font-size:.75rem; margin-left:.4rem}
+.mp-descricao textarea{min-height:0; height:3.4rem; resize:vertical; font-family:inherit; font-size:.88rem; padding:.5rem .6rem; border-radius:3px}
+.mp-descricao p{margin:0; color:var(--fraco); font-size:.78rem; line-height:1.4}
+.salvar-barra{position:sticky; bottom:0; z-index:5; display:flex; align-items:center; gap:1rem; padding:.9rem 0 1.2rem;
+  background:linear-gradient(180deg,transparent,var(--breu) 35%); margin-bottom:1.2rem}
+#aplicar-msg{font-size:.85rem; color:var(--fraco)}
+.mp-pacote + .dica{margin:.5rem 0 0}
+@media(max-width:700px){.mp-lado{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+{% block script %}
+<script>
+const RAIZ = {{ raiz|tojson }}, $ = id => document.getElementById(id);
+let previa = null;
+
+async function pede(caminho, corpo){
+  const opcoes = {credentials:'same-origin'};
+  if (corpo !== undefined) Object.assign(opcoes, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(corpo)});
+  const r = await fetch(RAIZ + caminho, opcoes);
+  if (r.status === 401) { location.href = `${RAIZ}/entrar`; throw new Error('sessão expirada'); }
+  const d = await r.json().catch(() => ({ok:false, erro:'resposta ilegível'}));
+  if (!d.ok) throw new Error(d.erro || 'falhou');
+  return d;
+}
+function pastilha(texto, tipo){ const e = $('estado'); e.textContent = texto; e.className = 'pastilha ' + tipo; }
+const quando = iso => iso ? new Date(iso).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '';
+function el(tag, texto, classe){ const e = document.createElement(tag); if (texto != null) e.textContent = texto; if (classe) e.className = classe; return e; }
+
+function mostraAtual(atual){
+  $('atual-versao').textContent = atual.versao || 'nenhuma';
+  $('atual-info').textContent = atual.versao ? `${atual.total} mods · publicado em ${quando(atual.atualizado_em) || 'data desconhecida'}` : 'O site ainda não tem lista de mods.';
+}
+
+function lista(titulo, classe, itens, detalhe){
+  const box = el('div', null, 'mp-lista ' + classe);
+  box.append(el('h3', `${titulo} (${itens.length})`));
+  const ul = el('ul');
+  for (const item of itens){ const li = el('li'); li.append(el('span', item.nome), el('small', detalhe(item))); ul.append(li); }
+  if (!itens.length) ul.append(el('li', 'nenhum'));
+  box.append(ul);
+  return box;
+}
+
+async function verificar(){
+  $('verificar').disabled = true; $('aplicar').disabled = true;
+  $('novo-versao').textContent = 'consultando…'; $('novo-info').textContent = 'Lendo o modpack e cada mod no Hexium; pode levar alguns segundos.';
+  $('novo-caixa').classList.remove('novo');
+  pastilha('verificando', 'meio');
+  try {
+    previa = await pede('/api/site/modpack/verificar', {package: $('pacote').value.trim()});
+    mostraAtual(previa.atual);
+    const mudou = previa.novos.length || previa.removidos.length || previa.alterados.length || previa.novo.versao !== previa.atual.versao;
+    $('novo-versao').textContent = previa.novo.versao;
+    $('novo-info').textContent = `${previa.novo.total} mods` + (mudou ? '' : ' · igual ao site');
+    $('novo-caixa').classList.toggle('novo', !!mudou);
+    const listas = $('listas'); listas.replaceChildren(
+      lista('Novos', 'novos', previa.novos, item => item.versao),
+      lista('Saíram', 'removidos', previa.removidos, () => ''),
+      lista('Versão nova', 'alterados', previa.alterados, item => `${item.de} → ${item.para}`));
+    $('mudancas').hidden = !mudou;
+    const faltam = $('lista-descricoes'); faltam.replaceChildren();
+    for (const mod of previa.sem_descricao){
+      const box = el('label', null, 'mp-descricao');
+      const nome = el('b', mod.nome); nome.append(el('small', mod.pacote));
+      const campo = el('textarea'); campo.maxLength = 600; campo.dataset.pacote = mod.pacote; campo.placeholder = 'Descrição em português (opcional)';
+      box.append(nome, campo, el('p', mod.original ? 'Original: ' + mod.original : 'Sem descrição no Hexium.'));
+      faltam.append(box);
+    }
+    $('descricoes').hidden = !previa.sem_descricao.length;
+    $('barra').hidden = false;
+    $('aplicar').textContent = mudou ? `Aplicar e publicar a versão ${previa.novo.versao}` : 'Publicar de novo (atualiza as descrições)';
+    $('aplicar').disabled = false;
+    pastilha(mudou ? 'atualização disponível' : 'em dia', mudou ? 'meio' : 'viva');
+  } catch (e) {
+    $('novo-versao').textContent = '—'; $('novo-info').textContent = e.message;
+    pastilha('erro', 'morta');
+  } finally { $('verificar').disabled = false; }
+}
+
+$('verificar').onclick = verificar;
+$('aplicar').onclick = async () => {
+  if (!previa) return;
+  const descricoes = {};
+  for (const campo of document.querySelectorAll('[data-pacote]')) if (campo.value.trim()) descricoes[campo.dataset.pacote] = campo.value.trim();
+  const b = $('aplicar'); b.disabled = true; $('aplicar-msg').textContent = 'Publicando a lista no site…';
+  try {
+    const d = await pede('/api/site/modpack/aplicar', {package: previa.package, versao: previa.novo.versao, descricoes});
+    $('aplicar-msg').textContent = `Publicado: versão ${d.atual.versao}, ${d.atual.total} mods` +
+      (d.descricoes_novas ? `, ${d.descricoes_novas} descrição(ões) nova(s).` : '.');
+    await verificar();
+  } catch (e) { $('aplicar-msg').textContent = e.message; b.disabled = false; }
+};
+
+(async () => {
+  try {
+    const d = await pede('/api/site/modpack');
+    $('pacote').value = d.package || '';
+    mostraAtual(d.atual);
+    if (d.package) verificar();
+    else { $('novo-versao').textContent = '—'; $('novo-info').textContent = 'Informe o modpack abaixo e verifique.'; pastilha('sem modpack', 'meio'); }
+  } catch (e) { pastilha('erro', 'morta'); $('atual-info').textContent = e.message; }
+})();
+</script>
+{% endblock %}

@@ -1812,6 +1812,131 @@ def v_site_navegacao(_):
                         for p in manifest['paginas'] if p.get('url')]}
 
 
+def _modpack_module():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('sync_modpack_site', SITE_DIR / 'sync_modpack.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+MODPACK_CONFIG = 'modpack.json'
+MODPACK_DESCRIPTIONS = 'descricoes-pt.json'
+MODPACK_PACKAGE = re.compile(r'^[A-Za-z0-9_]{1,64}/[A-Za-z0-9_]{1,128}$')
+
+
+def _read_site_json(name: str) -> dict:
+    try:
+        value = json.loads((SITE_DIR / name).read_text(encoding='utf-8'))
+        return value if isinstance(value, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _modpack_state() -> tuple[dict, str, dict]:
+    """The published list, the Hexium package it comes from, and the pt-BR descriptions."""
+    current = _read_site_json('mods.json')
+    package = str(_read_site_json(MODPACK_CONFIG).get('package') or '')
+    if not package:
+        # Installs before the Modpack tab: the package is the one the list names.
+        found = re.search(r'/mods/([A-Za-z0-9_]+)/([A-Za-z0-9_]+)/?$', str(current.get('modpack') or ''))
+        package = f'{found.group(1)}/{found.group(2)}' if found else ''
+    descriptions = {str(k): str(v) for k, v in _read_site_json(MODPACK_DESCRIPTIONS).items()}
+    return current, package, descriptions
+
+
+def _modpack_summary(data: dict) -> dict:
+    return {'versao': data.get('versao_pack') or '', 'total': data.get('total') or len(data.get('mods') or []),
+            'atualizado_em': data.get('atualizado_em') or '', 'modpack': data.get('modpack') or ''}
+
+
+def _modpack_package(dados: dict, saved: str) -> str:
+    package = str(dados.get('package') or saved).strip()
+    if not MODPACK_PACKAGE.fullmatch(package):
+        raise Recusa('informe o modpack no formato autor/nome, como aparece no endereço do Hexium')
+    return package
+
+
+def _modpack_build(package: str, descriptions: dict) -> dict:
+    module = _modpack_module()
+    try:
+        return module.build_list(package, descriptions)
+    except module.SyncError as error:
+        raise Recusa(str(error)) from error
+
+
+def v_site_modpack(_):
+    current, package, descriptions = _modpack_state()
+    return {'package': package, 'atual': _modpack_summary(current), 'descricoes': len(descriptions)}
+
+
+def v_site_modpack_verificar(dados):
+    """What would change: read from Hexium, nothing is written."""
+    current, saved, descriptions = _modpack_state()
+    package = _modpack_package(dados, saved)
+    new = _modpack_build(package, descriptions)
+    added, removed, changed = _modpack_module().changes(current, new)
+    before = {mod['pacote']: mod for mod in current.get('mods') or []}
+    after = {mod['pacote']: mod for mod in new['mods']}
+    return {'package': package, 'atual': _modpack_summary(current), 'novo': _modpack_summary(new),
+            'novos': [{'pacote': key, 'nome': after[key]['nome'], 'versao': after[key]['versao'],
+                       'traduzida': after[key]['traduzida']} for key in added],
+            'removidos': [{'pacote': key, 'nome': before[key].get('nome') or key} for key in removed],
+            'alterados': [{'pacote': key, 'nome': after[key]['nome'], 'de': before[key].get('versao', ''),
+                           'para': after[key]['versao']} for key in changed],
+            'sem_descricao': [{'pacote': mod['pacote'], 'nome': mod['nome'], 'original': mod['original'][:600]}
+                              for mod in new['mods'] if not mod['traduzida']]}
+
+
+def v_site_modpack_aplicar(dados):
+    """Write the verified version and publish; new pt-BR descriptions are kept for next time."""
+    typed = dados.get('descricoes') or {}
+    if not isinstance(typed, dict) or len(typed) > 200:
+        raise Recusa('descrições inválidas')
+    clean = {}
+    for key, text in typed.items():
+        if not isinstance(key, str) or not re.fullmatch(r'[A-Za-z0-9_]+-[A-Za-z0-9_]+', key) or \
+                not isinstance(text, str):
+            raise Recusa('descrições inválidas')
+        text = ' '.join(''.join(c for c in text if c.isprintable() or c == ' ').split())
+        if len(text) > 600:
+            raise Recusa(f'a descrição de {key} passa de 600 caracteres')
+        if text:
+            clean[key] = text
+    with SITE_LOCK:
+        current, saved, descriptions = _modpack_state()
+        package = _modpack_package(dados, saved)
+        merged = {**descriptions, **clean}
+        new = _modpack_build(package, merged)
+        if new['versao_pack'] != str(dados.get('versao') or ''):
+            raise Recusa(f"o modpack mudou no Hexium desde a verificação (agora {new['versao_pack']}); "
+                         'verifique de novo')
+        files = {'mods.json': new, MODPACK_CONFIG: {'package': package}}
+        if clean:
+            files[MODPACK_DESCRIPTIONS] = dict(sorted(merged.items()))
+        previous = {}
+        for name, value in files.items():
+            path = SITE_DIR / name
+            previous[name] = path.read_bytes() if path.is_file() else None
+            text = json.dumps(value, ensure_ascii=False, indent=2) + '\n'
+            if path.is_file():
+                guarda_copia(path)
+                _write_as_owner(path, text)
+            else:
+                _new_site_file(path, text.encode('utf-8'))
+        try:
+            _publish(['mods'])
+        except Exception:
+            for name, before in previous.items():
+                path = SITE_DIR / name
+                if before is None:
+                    path.unlink(missing_ok=True)
+                else:
+                    _write_as_owner(path, before.decode('utf-8'))
+            raise
+    return {'atual': _modpack_summary(new), 'descricoes_novas': len(clean)}
+
+
 def v_site_navegacao_gravar(dados):
     with SITE_LOCK:
         manifest = sitetext.load_manifest(SITE_DIR)
@@ -2339,6 +2464,9 @@ VERBOS = {
     'site.identidade.gravar': v_site_identidade_gravar,
     'site.navegacao': v_site_navegacao,
     'site.navegacao.gravar': v_site_navegacao_gravar,
+    'site.modpack': v_site_modpack,
+    'site.modpack.verificar': v_site_modpack_verificar,
+    'site.modpack.aplicar': v_site_modpack_aplicar,
     'site.pagina.criar': v_site_pagina_criar,
     'site.pagina.remover': v_site_pagina_remover,
     'site.campos': v_site_campos,
@@ -2435,7 +2563,7 @@ class Atendente(socketserver.StreamRequestHandler):
                            'cronica.sessoes', 'cronica.ler', 'mundo.estado', 'mundo.seed', 'config.listar',
                            'arquivo.preparar_download', 'site.paginas', 'site.campos',
                            'site.versoes', 'site.versao.ver', 'site.previa.ler', 'site.identidade',
-                           'site.navegacao')
+                           'site.navegacao', 'site.modpack', 'site.modpack.verificar')
             silenciosos += ('sagas.settings', 'sagas.status', 'sagas.story.status', 'sistema.estado')
             if verbo not in silenciosos and not (
                 verbo in ('server.config', 'server.acesso') and not dados.get('gravar') or

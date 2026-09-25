@@ -698,6 +698,36 @@ async def api_site_navegacao_gravar(pedido: Request):
         return JSONResponse({'ok': False, 'erro': str(erro)}, status_code=400)
 
 
+@app.get(f'{RAIZ_URL}/modpack', response_class=HTMLResponse)
+async def modpack_do_site(pedido: Request):
+    exige(pedido)
+    return pagina(pedido, 'modpack.html', aba='modpack')
+
+
+@app.get(f'{RAIZ_URL}/api/site/modpack')
+async def api_site_modpack(pedido: Request):
+    usuario = exige(pedido)
+    try:
+        return {'ok': True, **await nucleo.pede_async('site.modpack', {}, usuario)}
+    except nucleo.Erro as erro:
+        return JSONResponse({'ok': False, 'erro': str(erro)}, status_code=400)
+
+
+@app.post(f'{RAIZ_URL}/api/site/modpack/{{acao}}')
+async def api_site_modpack_acao(pedido: Request, acao: str):
+    usuario = exige(pedido)
+    if acao not in ('verificar', 'aplicar') or \
+            not pedido.headers.get('content-type', '').startswith('application/json'):
+        return JSONResponse({'ok': False, 'erro': 'pedido inválido'}, status_code=400)
+    try:
+        corpo = await pedido.json()
+        if not isinstance(corpo, dict):
+            raise ValueError('pedido inválido')
+        return {'ok': True, **await nucleo.pede_async(f'site.modpack.{acao}', corpo, usuario)}
+    except (ValueError, nucleo.Erro) as erro:
+        return JSONResponse({'ok': False, 'erro': str(erro)}, status_code=400)
+
+
 IDENTITY_UPLOAD_LIMIT = 8 * 1024 * 1024
 
 

@@ -1,5 +1,14 @@
 # Heimdall Nexus — versões
 
+## 0.2.8
+
+- **Aparência › Modpack**: compara a lista de mods do site com o modpack
+  publicado no Hexium (versão, mods novos, que saíram e com versão nova) e
+  publica a lista atualizada com um clique. Mods novos sem descrição em
+  português aparecem para você escrever antes de publicar; as descrições
+  ficam guardadas para as próximas atualizações. Nada muda no site até
+  aplicar, e a versão aplicada é sempre a que foi verificada.
+
 ## 0.2.7
 
 - **Armaria** virou a página de perfil de cada Viking: equipamento com os
