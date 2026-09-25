@@ -1,5 +1,10 @@
 # Heimdall Nexus — versões
 
+## 0.2.4
+
+- O ícone da estação no Console acompanha a estação informada pelo Seasonality,
+  inclusive após redefinir o ciclo.
+
 ## 0.2.3
 
 - O editor do menu organiza páginas em um nível de links filhos. No site,

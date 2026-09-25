@@ -18,7 +18,7 @@
   <div class="medidor">⏱ <b id="m-uptime">—</b> <small>no ar</small></div>
   <div class="medidor">🧍 <b id="m-jogadores">—</b> <small>vikings</small></div>
   <div class="medidor">🌙 <b id="m-mundo">—</b></div>
-  <div class="medidor" id="medidor-estacao" style="display:none">🍂 <b id="m-estacao">—</b></div>
+  <div class="medidor" id="medidor-estacao" style="display:none"><span id="m-estacao-icone" aria-hidden="true">—</span> <b id="m-estacao">—</b></div>
 </div>
 
 <div class="cartao">
@@ -90,8 +90,11 @@ async function lerEstado(){
     const t = publico.tempo_de_jogo || {};
     document.getElementById('m-mundo').textContent = t.dia ? `dia ${t.dia} · ${t.hora}` : '—';
     const nomes = {Spring:'Primavera', Summer:'Verão', Fall:'Outono', Winter:'Inverno'};
+    const icones = {Spring:'🌱', Summer:'☀️', Fall:'🍂', Winter:'❄️'};
+    const estacao = (publico.estacoes||{}).atual;
     document.getElementById('medidor-estacao').style.display = (d.features||[]).includes('estacoes') ? '' : 'none';
-    document.getElementById('m-estacao').textContent = nomes[(publico.estacoes||{}).atual] || '—';
+    document.getElementById('m-estacao-icone').textContent = icones[estacao] || '—';
+    document.getElementById('m-estacao').textContent = nomes[estacao] || '—';
 
     document.getElementById('tabela-servicos').innerHTML = Object.entries(d.servicos).map(([nome, s]) => {
       const ativo = s.ActiveState === 'active';
