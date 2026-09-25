@@ -46,10 +46,11 @@ também precisa de BepInEx e da DLL Client.
    O instalador exige um Nexus já instalado, BepInEx no servidor e a DLL
    **Bridge**, não o ZIP. Ele cria a fila privada, configura o serviço de
    importação e a rota pública; o reinício carrega a DLL no Valheim.
-4. No computador do jogador, instale BepInEx para Valheim e extraia
-   `dist/sagas/HeimdallSagas.Client-0.1.4.zip` na pasta do jogo. O ZIP
-   coloca `HeimdallSagas.Client.dll` em
-   `BepInEx/plugins/HeimdallSagas/`. Não instale a Bridge no cliente.
+4. No computador do jogador, instale o pacote `HeimdallSagasClient` pelo
+   gerenciador de mods (Gale ou r2modman), ou importe
+   `dist/sagas/HeimdallSagas.Client-0.2.1.zip` nele. Manualmente, copie a
+   pasta `plugins/HeimdallSagas` do ZIP para `BepInEx/plugins/`. Não instale
+   a Bridge no cliente.
 5. Abra o jogo uma vez para gerar
    `BepInEx/config/gg.heimdall.sagas.client.cfg`. As opções
    `ShareProfile`, `ShareMap`, `SharePosition` e `ShareStories` começam em `false`.

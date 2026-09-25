@@ -11,12 +11,15 @@
     <Compile Include="../WirePacket.cs" Link="WirePacket.cs" />
     <Compile Include="../KillFilter.cs" Link="KillFilter.cs" />
     <Compile Include="../BiomeTag.cs" Link="BiomeTag.cs" />
+    <Compile Include="../MediaLimits.cs" Link="MediaLimits.cs" />
+    <Compile Include="../Wire.cs" Link="Wire.cs" />
     <Reference Include="BepInEx"><HintPath>$(BepInExRefDir)/BepInEx.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="0Harmony"><HintPath>$(BepInExRefDir)/0Harmony.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="assembly_valheim"><HintPath>$(GameRefDir)/assembly_valheim.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine"><HintPath>$(GameRefDir)/UnityEngine.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(GameRefDir)/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.JSONSerializeModule"><HintPath>$(GameRefDir)/UnityEngine.JSONSerializeModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Newtonsoft.Json"><HintPath>$(GameRefDir)/Newtonsoft.Json.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="assembly_utils"><HintPath>$(GameRefDir)/assembly_utils.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="assembly_guiutils"><HintPath>$(GameRefDir)/assembly_guiutils.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>

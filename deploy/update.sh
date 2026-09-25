@@ -81,11 +81,21 @@ route = '''    location ^~ /api/sagas/v1/atlas/ {
     }
 
 '''
-if 'location ^~ /api/sagas/v1/atlas/' not in text:
-    marker = '    location = /api/sagas/v1/overview {'
-    if marker not in text:
-        raise SystemExit('The Nexus Nginx configuration has an unexpected layout.')
-    path.write_text(text.replace(marker, route + marker, 1))
+profile_route = '''    location ^~ /api/sagas/v1/vikings/ {
+        limit_except GET { deny all; }
+        proxy_pass http://127.0.0.1:8791;
+        proxy_set_header Host $host;
+    }
+
+'''
+marker = '    location = /api/sagas/v1/overview {'
+for needle, block in (('location ^~ /api/sagas/v1/atlas/', route),
+                      ('location ^~ /api/sagas/v1/vikings/', profile_route)):
+    if needle not in text:
+        if marker not in text:
+            raise SystemExit('The Nexus Nginx configuration has an unexpected layout.')
+        text = text.replace(marker, block + marker, 1)
+path.write_text(text)
 PY
   if ! nginx -t; then
     cp -p "$nginx_backup" /etc/nginx/sites-available/heimdall-nexus
@@ -103,6 +113,10 @@ for helper in publicar.py values.py sync_modpack.py identidade.py navegacao.py; 
 done
 for asset in vivo.js modpack.js mod-placeholder.svg navegacao.js navegacao.css sagas-resumo.js sagas-resumo.css sagas-halls.js sagas-halls.css historias-bg.webp historias-layout.css boss-fights.js boss-fights.css; do
   install -D -m 0640 -o root -g "$PANEL_OS_USER" "$RUNTIME/site/web/assets/$asset" "$SITE_DIR/assets/$asset"
+done
+# Armory backdrops: the default and one per biome, as the art is added.
+for art in "$RUNTIME"/site/web/assets/armaria-*.webp; do
+  install -D -m 0640 -o root -g "$PANEL_OS_USER" "$art" "$SITE_DIR/assets/$(basename "$art")"
 done
 for art in "$RUNTIME"/site/web/assets/boss-fights/*.webp; do
   install -D -m 0640 -o root -g "$PANEL_OS_USER" "$art" "$SITE_DIR/assets/boss-fights/$(basename "$art")"

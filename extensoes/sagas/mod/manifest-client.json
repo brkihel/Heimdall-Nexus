@@ -1,7 +1,7 @@
 {
   "name": "HeimdallSagasClient",
-  "version_number": "0.1.4",
+  "version_number": "0.2.1",
   "website_url": "https://github.com/brkihel/Heimdall-Nexus",
-  "description": "Optional Heimdall Nexus companion for player-approved Valheim Sagas data.",
+  "description": "Heimdall Nexus companion: shares your Viking's profile, feats and map moments with the server's website, only if you turn it on. Everything starts off. Needs a server running Heimdall Sagas.",
   "dependencies": []
 }

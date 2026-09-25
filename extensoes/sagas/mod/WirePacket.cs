@@ -4,12 +4,39 @@ namespace Heimdall.Sagas.Mod
 {
 #pragma warning disable CS0649 // Fields are also populated by JsonUtility.
     [Serializable]
+    internal sealed class Stat
+    {
+        public string name = "";
+        public float value;
+    }
+
+    [Serializable]
+    internal sealed class GemSocket
+    {
+        public string name = "";
+        public string icon = "";
+        public string[] effects = Array.Empty<string>();
+    }
+
+    [Serializable]
     internal sealed class GearItem
     {
         public string name = "";
         public string slot = "";
         public int quality;
         public float durability;
+        // Profile page details (protocol 1 readers ignore missing fields).
+        public string prefab = "";
+        public string type = "";
+        public float max_durability;
+        public bool equipped;
+        public bool active;
+        public int hotbar;
+        public string icon = "";
+        public Stat[] stats = Array.Empty<Stat>();
+        public string[] effects = Array.Empty<string>();
+        public string socket_color = "";
+        public GemSocket[] sockets = Array.Empty<GemSocket>();
     }
 
     // Flat payloads keep Unity's built-in JSON serializer sufficient. The bridge
@@ -43,6 +70,9 @@ namespace Heimdall.Sagas.Mod
         public float fraction;
         public long utc;
         public GearItem[] gear = Array.Empty<GearItem>();
+        public GearItem[] hotbar = Array.Empty<GearItem>();
+        public string portrait = "";
+        public Stat[] vitals = Array.Empty<Stat>();
     }
 #pragma warning restore CS0649
 }

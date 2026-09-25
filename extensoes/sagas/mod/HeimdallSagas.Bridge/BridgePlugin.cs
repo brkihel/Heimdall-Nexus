@@ -14,13 +14,17 @@ using UnityEngine;
 
 namespace Heimdall.Sagas.Mod
 {
-    [BepInPlugin("gg.heimdall.sagas.bridge", "Heimdall Sagas Bridge", "0.1.7")]
+    [BepInPlugin("gg.heimdall.sagas.bridge", "Heimdall Sagas Bridge", "0.2.1")]
     public sealed class BridgePlugin : BaseUnityPlugin
     {
         private const string Rpc = "Heimdall.Sagas.V1";
         private const string Hello = "Heimdall.Sagas.Hello.V1";
         private const string Probe = "Heimdall.Sagas.Probe.V1";
         private const string Ack = "Heimdall.Sagas.Ack.V1";
+        private const string MediaRpc = "Heimdall.Sagas.Media.V1";
+        private const string MediaAck = "Heimdall.Sagas.MediaAck.V1";
+        // Per player: one image in transit, and at most this much per minute.
+        private const int MediaBytesPerMinute = 6 * 1024 * 1024;
         private static readonly FieldInfo lastHit = AccessTools.Field(typeof(Character), "m_lastHit");
         private static BridgePlugin current;
         [Serializable]
@@ -37,9 +41,22 @@ namespace Heimdall.Sagas.Mod
         private sealed class PendingWrite
         {
             internal string Json;
+            internal byte[] Media;
+            internal string MediaName;
             internal ZRpc ReplyTo;
             internal string EventId;
+            internal string AckName = Ack;
         }
+        private sealed class MediaTransfer
+        {
+            internal string Kind, Id;
+            internal byte[] Bytes;
+            internal bool[] Received;
+            internal float Started;
+        }
+        private readonly Dictionary<ZRpc, MediaTransfer> transfers = new Dictionary<ZRpc, MediaTransfer>();
+        private readonly Dictionary<ZRpc, (float Minute, int Bytes)> mediaBudget =
+            new Dictionary<ZRpc, (float, int)>();
         private readonly HashSet<ZRpc> registered = new HashSet<ZRpc>();
         private readonly Dictionary<ZRpc, float> nextPacket = new Dictionary<ZRpc, float>();
         private readonly Dictionary<ZRpc, WirePacket> latest = new Dictionary<ZRpc, WirePacket>();
@@ -104,7 +121,7 @@ namespace Heimdall.Sagas.Mod
             if (Time.unscaledTime >= nextSettingsRefresh) RefreshSettings();
             while (committed.TryDequeue(out var done)) {
                 if (done.ReplyTo != null && registered.Contains(done.ReplyTo))
-                    done.ReplyTo.Invoke(Ack, done.EventId);
+                    done.ReplyTo.Invoke(done.AckName, done.EventId);
             }
             var peers = ZNet.instance.GetPeers().Where(p => p.IsReady()).ToArray();
             var live = new HashSet<ZRpc>(peers.Select(p => p.m_rpc));
@@ -112,9 +129,10 @@ namespace Heimdall.Sagas.Mod
                 if (registered.Add(peer.m_rpc)) {
                     var owner = peer;
                     peer.m_rpc.Register<string>(Rpc, (rpc, data) => Receive(owner, rpc, data));
+                    peer.m_rpc.Register<ZPackage>(MediaRpc, (rpc, package) => ReceiveMedia(owner, rpc, package));
                     peer.m_rpc.Register<string>(Probe, (rpc, version) => {
                         if (rpc == owner.m_rpc && owner.IsReady() && version == "1")
-                            rpc.Invoke(Hello, "1:" + (settings.gear ? "g" : "") +
+                            rpc.Invoke(Hello, "1:" + (settings.gear ? "gm" : "") +
                                                 (settings.events ? "e" : "") + ":" +
                                                 (settings.kill_mode == "notable" ? "n" :
                                                  settings.kill_mode == "bosses" ? "b" : "a"));
@@ -136,6 +154,9 @@ namespace Heimdall.Sagas.Mod
                 registered.Remove(rpc);
                 announced.Remove(rpc);
             }
+            foreach (var rpc in transfers.Keys.Where(p => !live.Contains(p) ||
+                         Time.unscaledTime - transfers[p].Started > 120f).ToArray()) transfers.Remove(rpc);
+            foreach (var rpc in mediaBudget.Keys.Where(p => !live.Contains(p)).ToArray()) mediaBudget.Remove(rpc);
             if (settings.enabled && settings.clock && EnvMan.instance != null &&
                 Time.unscaledTime >= nextClock) {
                 nextClock = Time.unscaledTime + 30f;
@@ -161,7 +182,7 @@ namespace Heimdall.Sagas.Mod
         private void Receive(ZNetPeer peer, ZRpc rpc, string data)
         {
             if (ZNet.instance == null || !ZNet.instance.IsServer() || peer.m_rpc != rpc ||
-                !peer.IsReady() || data == null || data.Length > 8192) return;
+                !peer.IsReady() || data == null || data.Length > 32768) return;
             if (nextPacket.TryGetValue(rpc, out var next) && Time.unscaledTime < next) return;
             nextPacket[rpc] = Time.unscaledTime + .2f;
             if (!TryPlayerId(peer, out var playerId)) {
@@ -171,9 +192,7 @@ namespace Heimdall.Sagas.Mod
                 }
                 return;
             }
-            WirePacket packet;
-            try { packet = JsonUtility.FromJson<WirePacket>(data); }
-            catch (ArgumentException) { return; }
+            var packet = Wire.Read(data);
             if (packet == null || packet.version != 1) return;
             if (packet.type != "presence" && packet.type != "withdraw" &&
                 !(packet.type == "event" && (packet.kind == "death" || packet.kind == "kill"))) return;
@@ -195,9 +214,11 @@ namespace Heimdall.Sagas.Mod
                 packet.share_stories &= packet.share_profile;
                 packet.share_position &= peer.m_publicRefPos;
                 if (!packet.share_position) packet.x = packet.z = 0;
-                packet.gear = packet.share_profile && settings.gear
-                    ? (packet.gear ?? Array.Empty<GearItem>()).Where(g => g != null).Take(32).ToArray()
-                    : Array.Empty<GearItem>();
+                var profile = packet.share_profile && settings.gear;
+                packet.gear = profile ? Items(packet.gear, 24) : Array.Empty<GearItem>();
+                packet.hotbar = profile ? Items(packet.hotbar, 8) : Array.Empty<GearItem>();
+                packet.portrait = profile && MediaLimits.IsId(packet.portrait) ? packet.portrait : "";
+                packet.vitals = profile ? Stats(packet.vitals, 8) : Array.Empty<Stat>();
                 latest[rpc] = packet;
                 if (announced.Add(rpc))
                     Logger.LogInfo("Heimdall Sagas accepted a client sharing snapshot.");
@@ -226,6 +247,68 @@ namespace Heimdall.Sagas.Mod
             }
             if (!FiniteCoordinate(packet.x) || !FiniteCoordinate(packet.z)) return;
             Enqueue(packet, packet.type == "event" ? rpc : null);
+        }
+
+        // Bounds every profile field; the Nexus importer validates the content again.
+        private static GearItem[] Items(GearItem[] items, int maximum) =>
+            (items ?? Array.Empty<GearItem>()).Where(g => g != null).Take(maximum).Select(g => new GearItem {
+                name = SafeText(g.name, 120), slot = SafeText(g.slot, 40), type = SafeText(g.type, 40),
+                prefab = SafeText(g.prefab, 80), quality = Math.Max(1, Math.Min(1000, g.quality)),
+                durability = Finite(g.durability), max_durability = Finite(g.max_durability),
+                equipped = g.equipped, active = g.active, hotbar = Math.Max(0, Math.Min(8, g.hotbar)),
+                icon = MediaLimits.IsId(g.icon) ? g.icon : "", stats = Stats(g.stats, 16),
+                effects = (g.effects ?? Array.Empty<string>()).Take(12).Select(e => SafeText(e, 200)).ToArray(),
+                socket_color = SafeText(g.socket_color, 9),
+                sockets = (g.sockets ?? Array.Empty<GemSocket>()).Where(s => s != null).Take(11).Select(s => new GemSocket {
+                    name = SafeText(s.name, 120), icon = MediaLimits.IsId(s.icon) ? s.icon : "",
+                    effects = (s.effects ?? Array.Empty<string>()).Take(8).Select(e => SafeText(e, 160)).ToArray()
+                }).ToArray()
+            }).ToArray();
+
+        private static Stat[] Stats(Stat[] stats, int maximum) =>
+            (stats ?? Array.Empty<Stat>()).Where(s => s != null).Take(maximum)
+                .Select(s => new Stat { name = SafeText(s.name, 40), value = Finite(s.value) }).ToArray();
+
+        private static float Finite(float value) =>
+            float.IsNaN(value) || float.IsInfinity(value) ? 0 : Math.Max(-1000000, Math.Min(1000000, value));
+
+        private void ReceiveMedia(ZNetPeer peer, ZRpc rpc, ZPackage package)
+        {
+            if (ZNet.instance == null || !ZNet.instance.IsServer() || peer.m_rpc != rpc || !peer.IsReady() ||
+                package == null || !settings.enabled || !settings.gear ||
+                !latest.TryGetValue(rpc, out var consent) || !consent.share_profile) return;
+            string kind, id;
+            int total, index;
+            byte[] data;
+            try {
+                kind = package.ReadString();
+                id = package.ReadString();
+                total = package.ReadInt();
+                index = package.ReadInt();
+                data = package.ReadByteArray();
+            } catch { return; }
+            if (!MediaLimits.IsKind(kind) || !MediaLimits.IsId(id) || total < 33 ||
+                total > MediaLimits.MaximumBytes(kind) || data == null) return;
+            var chunks = (total + MediaLimits.ChunkBytes - 1) / MediaLimits.ChunkBytes;
+            if (index < 0 || index >= chunks ||
+                data.Length != Math.Min(MediaLimits.ChunkBytes, total - index * MediaLimits.ChunkBytes)) return;
+            var minute = Mathf.Floor(Time.unscaledTime / 60f);
+            var budget = mediaBudget.TryGetValue(rpc, out var used) && used.Minute == minute ? used.Bytes : 0;
+            if (budget + data.Length > MediaBytesPerMinute) return;
+            mediaBudget[rpc] = (minute, budget + data.Length);
+            if (!transfers.TryGetValue(rpc, out var transfer) || transfer.Id != id || transfer.Kind != kind ||
+                transfer.Bytes.Length != total)
+                transfers[rpc] = transfer = new MediaTransfer { Kind = kind, Id = id, Bytes = new byte[total],
+                    Received = new bool[chunks], Started = Time.unscaledTime };
+            Array.Copy(data, 0, transfer.Bytes, index * MediaLimits.ChunkBytes, data.Length);
+            transfer.Received[index] = true;
+            if (transfer.Received.Any(r => !r)) return;
+            transfers.Remove(rpc);
+            if (!MediaLimits.Valid(kind, id, transfer.Bytes)) return;
+            if (queue == null || !queue.TryAdd(new PendingWrite { Media = transfer.Bytes,
+                    MediaName = "media-" + kind + "-" + id + ".png", ReplyTo = rpc, EventId = id,
+                    AckName = MediaAck }))
+                Interlocked.Increment(ref writeFailures);
         }
 
         private static bool TryPlayerId(ZNetPeer peer, out long id)
@@ -443,7 +526,7 @@ namespace Heimdall.Sagas.Mod
         private void Enqueue(WirePacket packet, ZRpc replyTo = null)
         {
             if (queue == null || string.IsNullOrEmpty(packet.world)) return;
-            if (!queue.TryAdd(new PendingWrite { Json = JsonUtility.ToJson(packet),
+            if (!queue.TryAdd(new PendingWrite { Json = Wire.Write(packet),
                      ReplyTo = replyTo, EventId = packet.id })) Interlocked.Increment(ref writeFailures);
         }
 
@@ -462,6 +545,7 @@ namespace Heimdall.Sagas.Mod
                 if (full) { Interlocked.Increment(ref writeFailures); continue; }
                 // One writer owns the spool. Lexical order matches accepted packet order,
                 // including a later consent withdrawal after earlier event packets.
+                if (packet.Media != null) { WriteMedia(packet); continue; }
                 var tick = Math.Max(DateTime.UtcNow.Ticks, lastSpoolTick + 1);
                 lastSpoolTick = tick;
                 var name = tick.ToString("D19") + "-" + Guid.NewGuid().ToString("N");
@@ -481,6 +565,30 @@ namespace Heimdall.Sagas.Mod
                     Interlocked.Increment(ref writeFailures);
                     try { File.Delete(temporary); } catch { }
                 }
+            }
+        }
+
+        // Images are named by their content hash: rewriting one is harmless.
+        private void WriteMedia(PendingWrite packet)
+        {
+            var complete = Path.Combine(inbox, packet.MediaName);
+            var temporary = Path.Combine(inbox, "." + packet.MediaName + ".tmp");
+            try {
+                if (!File.Exists(complete)) {
+                    if (Directory.EnumerateFiles(inbox, "media-*.png").Take(512).Count() >= 512) {
+                        Interlocked.Increment(ref writeFailures);
+                        return;
+                    }
+                    using (var stream = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None)) {
+                        stream.Write(packet.Media, 0, packet.Media.Length);
+                        stream.Flush(true);
+                    }
+                    File.Move(temporary, complete);
+                }
+                committed.Enqueue(packet);
+            } catch {
+                Interlocked.Increment(ref writeFailures);
+                try { File.Delete(temporary); } catch { }
             }
         }
     }

@@ -80,6 +80,33 @@ async def sagas_public_overview(limit: int = 50, story_limit: int = 6):
     return JSONResponse(data, headers={'Cache-Control': 'no-store'})
 
 
+@app.get('/api/sagas/v1/vikings/{actor}')
+async def sagas_public_viking(actor: str):
+    """One shared Viking of the current world, read with current consent."""
+    try:
+        data = sagas.viking_view(sagas.current_world() or '', actor)
+    except (OSError, ValueError, sagas.sqlite3.Error):
+        data = None
+    if data is None:
+        return JSONResponse({'available': False}, status_code=404, headers={'Cache-Control': 'no-store'})
+    return JSONResponse({'available': True, **data}, headers={'Cache-Control': 'no-store'})
+
+
+@app.get('/api/sagas/v1/vikings/{actor}/media/{media_id}.png')
+async def sagas_public_viking_media(actor: str, media_id: str):
+    """An item icon or portrait, only while its Viking's profile shows it."""
+    try:
+        file = sagas.media_file(sagas.current_world() or '', actor, media_id)
+    except (OSError, ValueError, sagas.sqlite3.Error):
+        file = None
+    if file is None:
+        return Response(status_code=404, headers={'Cache-Control': 'no-store'})
+    # Short private caching: withdrawing consent must reach browsers quickly.
+    return FileResponse(file, media_type='image/png', headers={
+        'Cache-Control': 'private, max-age=300', 'X-Content-Type-Options': 'nosniff',
+        'Content-Security-Policy': "default-src 'none'"})
+
+
 @app.get('/api/sagas/v1/atlas/{world}/{revision}/{z}/{x}/{y}.webp')
 async def sagas_public_atlas(world: str, revision: str, z: int, x: int, y: int):
     try:

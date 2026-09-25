@@ -16,6 +16,7 @@ import stat
 import struct
 import tempfile
 import time
+import zlib
 from contextlib import nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
@@ -31,6 +32,12 @@ EVENT_ID = re.compile(r'^[A-Za-z0-9_-]{8,96}$')
 BIOME = re.compile(r'^[A-Za-z][A-Za-z0-9_]{0,39}$')
 KINDS = {'kill', 'death', 'drop', 'collect', 'pickup', 'boss', 'bounty', 'discover'}
 MAX_PACKET = 64 * 1024
+MEDIA_ID = re.compile(r'^[a-f0-9]{64}$')
+MEDIA_FILE = re.compile(r'^media-(icon|portrait)-([a-f0-9]{64})\.png$')
+# Item icons and character portraits: largest file and picture accepted.
+MEDIA_LIMITS = {'icon': (48 * 1024, 128, 128), 'portrait': (1024 * 1024, 1024, 1536)}
+MAX_MEDIA_STORED = 4000
+MEDIA_UNUSED_DAYS = 14
 MAX_BATCH = 500
 MAX_EVENTS_STORED = 100000
 MAX_STORIES_STORED = 1000
@@ -158,6 +165,77 @@ def _number(value: object, minimum: float, maximum: float) -> float:
     return result
 
 
+def _media_id(value: object) -> str:
+    if value in (None, ''):
+        return ''
+    if not isinstance(value, str) or not MEDIA_ID.fullmatch(value):
+        raise InvalidPacket('invalid media id')
+    return value
+
+
+def _stats(raw: object, maximum: int) -> list:
+    if raw in (None, ''):
+        return []
+    if not isinstance(raw, list) or len(raw) > maximum:
+        raise InvalidPacket('invalid statistics')
+    out = []
+    for entry in raw:
+        if not isinstance(entry, dict):
+            raise InvalidPacket('invalid statistic')
+        out.append({'name': _label(entry.get('name'), 40),
+                    'value': round(_number(entry.get('value', 0), -1000000, 1000000), 3)})
+    return out
+
+
+def _texts(raw: object, maximum: int, length: int) -> list:
+    if raw in (None, ''):
+        return []
+    if not isinstance(raw, list) or len(raw) > maximum:
+        raise InvalidPacket('invalid text list')
+    return [_label(value, length) for value in raw]
+
+
+def _items(raw: object, maximum: int) -> list:
+    """Equipment and hotbar entries; older clients send only the first four fields."""
+    raw = raw or []
+    if not isinstance(raw, list) or len(raw) > maximum:
+        raise InvalidPacket('invalid equipment list')
+    out = []
+    for item in raw:
+        if not isinstance(item, dict):
+            raise InvalidPacket('invalid equipment item')
+        for flag in ('equipped', 'active'):
+            if not isinstance(item.get(flag, False), bool):
+                raise InvalidPacket('invalid equipment flag')
+        color = item.get('socket_color', '')
+        if color and (not isinstance(color, str) or not re.fullmatch(r'#[0-9A-Fa-f]{6}', color)):
+            raise InvalidPacket('invalid socket color')
+        sockets = item.get('sockets') or []
+        if not isinstance(sockets, list) or len(sockets) > 11 or \
+                any(not isinstance(socket, dict) for socket in sockets):
+            raise InvalidPacket('invalid sockets')
+        out.append({
+            'name': _label(item.get('name'), 120),
+            'slot': _label(item.get('slot'), 40),
+            'type': _label(item.get('type', ''), 40),
+            'prefab': _label(item.get('prefab', ''), 80),
+            'quality': int(_number(item.get('quality'), 1, 1000)),
+            'durability': round(_number(item.get('durability'), 0, 100000), 1),
+            'max_durability': round(_number(item.get('max_durability', 0), 0, 100000), 1),
+            'equipped': bool(item.get('equipped', False)),
+            'active': bool(item.get('active', False)),
+            'hotbar': int(_number(item.get('hotbar', 0), 0, 8)),
+            'icon': _media_id(item.get('icon', '')),
+            'stats': _stats(item.get('stats'), 16),
+            'effects': _texts(item.get('effects'), 12, 200),
+            'socket_color': color.lower() if color else '',
+            'sockets': [{'name': _label(socket.get('name'), 120),
+                         'icon': _media_id(socket.get('icon', '')),
+                         'effects': _texts(socket.get('effects'), 8, 160)} for socket in sockets],
+        })
+    return out
+
+
 def validate(raw: object) -> dict:
     """Accept only the first, intentionally small protocol version."""
     if not isinstance(raw, dict) or raw.get('version') != 1:
@@ -188,20 +266,10 @@ def validate(raw: object) -> dict:
             out['z'] = _number(raw.get('z'), -20000, 20000)
         else:
             out['x'] = out['z'] = None
-        gear = raw.get('gear') or []
-        if not isinstance(gear, list) or len(gear) > 32:
-            raise InvalidPacket('invalid equipment list')
-        out['gear'] = []
-        if out['share_profile']:
-            for item in gear:
-                if not isinstance(item, dict):
-                    raise InvalidPacket('invalid equipment item')
-                out['gear'].append({
-                    'name': _label(item.get('name'), 120),
-                    'slot': _label(item.get('slot'), 40),
-                    'quality': int(_number(item.get('quality'), 1, 1000)),
-                    'durability': _number(item.get('durability'), 0, 10000),
-                })
+        out['gear'] = _items(raw.get('gear'), 32) if out['share_profile'] else []
+        out['hotbar'] = _items(raw.get('hotbar'), 8) if out['share_profile'] else []
+        out['portrait'] = _media_id(raw.get('portrait', '')) if out['share_profile'] else ''
+        out['vitals'] = _stats(raw.get('vitals'), 8) if out['share_profile'] else []
         return out
     event_id = raw.get('id')
     if not isinstance(event_id, str) or not EVENT_ID.fullmatch(event_id):
@@ -252,6 +320,8 @@ CREATE TABLE IF NOT EXISTS players (
   share_stories INTEGER NOT NULL DEFAULT 0,
   x REAL, z REAL, seen_at INTEGER NOT NULL,
   gear_json TEXT NOT NULL DEFAULT '[]',
+  hotbar_json TEXT NOT NULL DEFAULT '[]', portrait TEXT NOT NULL DEFAULT '',
+  vitals_json TEXT NOT NULL DEFAULT '[]',
   PRIMARY KEY(world, id), FOREIGN KEY(world) REFERENCES worlds(id)
 );
 CREATE TABLE IF NOT EXISTS events (
@@ -305,6 +375,9 @@ def connect(path: Path = DATABASE) -> sqlite3.Connection:
         db.execute("ALTER TABLE players ADD COLUMN gear_json TEXT NOT NULL DEFAULT '[]'")
     if 'share_stories' not in columns:
         db.execute('ALTER TABLE players ADD COLUMN share_stories INTEGER NOT NULL DEFAULT 0')
+    for column, default in (('hotbar_json', "'[]'"), ('portrait', "''"), ('vitals_json', "'[]'")):
+        if column not in columns:
+            db.execute(f'ALTER TABLE players ADD COLUMN {column} TEXT NOT NULL DEFAULT {default}')
     world_columns = {row[1] for row in db.execute('PRAGMA table_info(worlds)')}
     if 'name' not in world_columns:
         db.execute("ALTER TABLE worlds ADD COLUMN name TEXT NOT NULL DEFAULT ''")
@@ -337,20 +410,28 @@ def ingest(db: sqlite3.Connection, packet: dict, now: int | None = None,
             db.execute('UPDATE worlds SET name=?, day=?, fraction=?, clock_at=? WHERE id=?',
                        (packet['world_name'], packet['day'], packet['fraction'], now, world))
         elif packet['type'] == 'presence':
+            compact = {'ensure_ascii': False, 'separators': (',', ':')}
             db.execute('''INSERT INTO players(world,id,name,online,share_profile,share_map,
-                          share_position,share_stories,x,z,seen_at,gear_json)
-                          VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
+                          share_position,share_stories,x,z,seen_at,gear_json,hotbar_json,
+                          portrait,vitals_json)
+                          VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                           ON CONFLICT(world,id) DO UPDATE SET
                           name=excluded.name, online=excluded.online,
                           share_profile=excluded.share_profile, share_map=excluded.share_map,
                           share_position=excluded.share_position,
                           share_stories=excluded.share_stories, x=excluded.x, z=excluded.z,
-                          seen_at=excluded.seen_at, gear_json=excluded.gear_json''',
+                          seen_at=excluded.seen_at, gear_json=excluded.gear_json,
+                          hotbar_json=excluded.hotbar_json, vitals_json=excluded.vitals_json,
+                          portrait=CASE WHEN excluded.portrait!='' OR excluded.share_profile=0
+                                   THEN excluded.portrait ELSE players.portrait END''',
                        (world, packet['actor'], packet['name'], int(packet['online']),
                         int(packet['share_profile']), int(packet['share_map']),
                         int(packet['share_position']), int(packet['share_stories']),
                         packet['x'], packet['z'], now,
-                        json.dumps(packet['gear'], ensure_ascii=False, separators=(',', ':'))))
+                        json.dumps(packet['gear'], **compact),
+                        json.dumps(packet.get('hotbar', []), **compact),
+                        packet.get('portrait', ''),
+                        json.dumps(packet.get('vitals', []), **compact)))
             if not packet['share_stories']:
                 db.execute('''DELETE FROM stories WHERE id IN
                               (SELECT story_id FROM story_refs WHERE world=? AND actor=?)''',
@@ -457,6 +538,135 @@ def import_cartography(state: Path) -> None:
         meta_path.unlink(missing_ok=True)
 
 
+PNG_SIGNATURE = b'\x89PNG\r\n\x1a\n'
+
+
+def clean_png(data: bytes, kind: str) -> bytes:
+    """Return a minimal PNG (IHDR, one IDAT, IEND) after checking every chunk.
+
+    Only 8-bit RGB/RGBA, non-interlaced images within the kind's limits pass. The
+    compressed stream must inflate to exactly the size the header promises, so a
+    file cannot expand into more memory than its picture.
+    """
+    maximum, max_width, max_height = MEDIA_LIMITS[kind]
+    if len(data) > maximum or not data.startswith(PNG_SIGNATURE):
+        raise ValueError('not a png')
+    pos, header, idat, ended = 8, None, [], False
+    while pos + 12 <= len(data):
+        length, = struct.unpack('>I', data[pos:pos + 4])
+        ctype = data[pos + 4:pos + 8]
+        if pos + 12 + length > len(data):
+            raise ValueError('truncated chunk')
+        body = data[pos + 8:pos + 8 + length]
+        crc, = struct.unpack('>I', data[pos + 8 + length:pos + 12 + length])
+        if zlib.crc32(ctype + body) & 0xffffffff != crc:
+            raise ValueError('bad checksum')
+        pos += 12 + length
+        if header is None and ctype != b'IHDR':
+            raise ValueError('header first')
+        if ctype == b'IHDR':
+            if header is not None or length != 13:
+                raise ValueError('bad header')
+            header = body
+        elif ctype == b'IDAT':
+            idat.append(body)
+        elif ctype == b'IEND':
+            ended = True
+            break
+        elif not ctype[:1].islower():
+            raise ValueError('unsupported critical chunk')
+    if header is None or not idat or not ended:
+        raise ValueError('incomplete png')
+    width, height, depth, color, compression, filtering, interlace = struct.unpack('>IIBBBBB', header)
+    if not (1 <= width <= max_width and 1 <= height <= max_height) or depth != 8 or \
+            color not in (2, 6) or compression or filtering or interlace:
+        raise ValueError('unsupported picture')
+    expected = height * (1 + width * (4 if color == 6 else 3))
+    inflater = zlib.decompressobj()
+    raw = inflater.decompress(b''.join(idat), expected + 1)
+    if len(raw) != expected or inflater.unconsumed_tail or not inflater.eof:
+        raise ValueError('picture size mismatch')
+
+    def chunk(name: bytes, body: bytes) -> bytes:
+        return struct.pack('>I', len(body)) + name + body + \
+            struct.pack('>I', zlib.crc32(name + body) & 0xffffffff)
+    return PNG_SIGNATURE + chunk(b'IHDR', header) + chunk(b'IDAT', b''.join(idat)) + chunk(b'IEND', b'')
+
+
+def import_media(state: Path) -> int:
+    """Move item icons and portraits written by the bridge into private storage."""
+    inbox, target = state / 'inbox', state / 'media'
+    imported = 0
+    for path in sorted(inbox.glob('media-*.png'))[:200]:
+        match = MEDIA_FILE.fullmatch(path.name)
+        try:
+            if not match:
+                raise ValueError('unexpected name')
+            kind, media_id = match.groups()
+            descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            with os.fdopen(descriptor, 'rb') as source:
+                if not stat.S_ISREG(os.fstat(source.fileno()).st_mode):
+                    raise ValueError('not a regular file')
+                data = source.read(MEDIA_LIMITS[kind][0] + 1)
+            if hashlib.sha256(data).hexdigest() != media_id:
+                raise ValueError('content does not match its name')
+            clean = clean_png(data, kind)
+            target.mkdir(mode=0o750, exist_ok=True)
+            final = target / f'{media_id}.png'
+            if not final.exists():
+                temporary = target / f'.{media_id}.tmp'
+                temporary.write_bytes(clean)
+                os.replace(temporary, final)
+            os.utime(final)
+            imported += 1
+        except (OSError, ValueError, KeyError, zlib.error, struct.error):
+            pass
+        path.unlink(missing_ok=True)
+    return imported
+
+
+def _shown_media(row) -> set[str]:
+    """Pictures a shared profile shows: its portrait, item icons and gem icons."""
+    shown = {row['portrait']} if row['portrait'] else set()
+    for item in json.loads(row['gear_json']) + json.loads(row['hotbar_json']):
+        shown.update(value for value in [item.get('icon', '')] +
+                     [socket.get('icon', '') for socket in item.get('sockets', [])] if value)
+    return shown
+
+
+def prune_media(state: Path, db: sqlite3.Connection, now: int | None = None) -> None:
+    """Pictures nobody shows any more are removed after two weeks; the store stays bounded."""
+    folder = state / 'media'
+    if not folder.is_dir():
+        return
+    now = int(time.time()) if now is None else now
+    shown = set()
+    for row in db.execute('SELECT gear_json, hotbar_json, portrait FROM players WHERE share_profile=1'):
+        shown |= _shown_media(row)
+    files = sorted(folder.glob('*.png'), key=lambda path: path.stat().st_mtime, reverse=True)
+    for index, path in enumerate(files):
+        if path.stem in shown:
+            os.utime(path, (now, now))
+        elif index >= MAX_MEDIA_STORED or now - path.stat().st_mtime > MEDIA_UNUSED_DAYS * 86400:
+            path.unlink(missing_ok=True)
+
+
+def media_file(world: str, actor: str, media_id: str, path: Path = DATABASE) -> Path | None:
+    """A picture is public only while its Viking shares a profile that shows it."""
+    settings = load_settings(path.parent)
+    if not settings['enabled'] or not settings['gear'] or not IDENTIFIER.fullmatch(world or '') or \
+            not IDENTIFIER.fullmatch(actor or '') or not MEDIA_ID.fullmatch(media_id or ''):
+        return None
+    file = path.parent / 'media' / f'{media_id}.png'
+    if file.is_symlink() or not file.is_file() or not path.is_file():
+        return None
+    with sqlite3.connect(f'file:{path}?mode=ro', uri=True, timeout=3) as db:
+        db.row_factory = sqlite3.Row
+        row = db.execute('''SELECT gear_json, hotbar_json, portrait FROM players
+                            WHERE world=? AND id=? AND share_profile=1''', (world, actor)).fetchone()
+    return file if row is not None and media_id in _shown_media(row) else None
+
+
 def process_inbox(state: Path = STATE, limit: int = MAX_BATCH) -> dict:
     """Only complete .json files are processed; duplicate delivery is harmless."""
     inbox, rejected = state / 'inbox', state / 'rejected'
@@ -468,6 +678,13 @@ def process_inbox(state: Path = STATE, limit: int = MAX_BATCH) -> dict:
     with connect(state / 'sagas.sqlite3') as db:
         maintain(db)
         import_cartography(state)
+        import_media(state)
+        if not db.execute("SELECT 1 FROM maintenance WHERE key='media_prune' AND value>?",
+                          (int(time.time()) - 3600,)).fetchone():
+            prune_media(state, db)
+            with db:
+                db.execute('''INSERT INTO maintenance(key,value) VALUES('media_prune',?)
+                              ON CONFLICT(key) DO UPDATE SET value=excluded.value''', (int(time.time()),))
         files = sorted(inbox.glob('*.json'))
         accepted_paths = []
         db.execute('BEGIN')
@@ -517,6 +734,51 @@ def process_inbox(state: Path = STATE, limit: int = MAX_BATCH) -> dict:
     return counts
 
 
+def _public_player(row, settings: dict) -> dict:
+    player = dict(row)
+    for key in ('gear', 'hotbar', 'vitals'):
+        player[key] = json.loads(player.pop(key + '_json')) if settings['gear'] else []
+    if not settings['gear']:
+        player['portrait'] = ''
+    player['online'] = bool(player['online'] and int(time.time()) - player['seen_at'] < 90)
+    if not player.pop('share_position') or not player['online']:
+        player['x'] = player['z'] = None
+    return player
+
+
+def viking_view(world: str, actor: str, path: Path = DATABASE) -> dict | None:
+    """One shared profile: equipment, portrait and the Viking's recorded feats."""
+    settings = load_settings(path.parent)
+    if not path.is_file() or not settings['enabled'] or not IDENTIFIER.fullmatch(world or '') or \
+            not IDENTIFIER.fullmatch(actor or ''):
+        return None
+    with sqlite3.connect(f'file:{path}?mode=ro', uri=True, timeout=3) as db:
+        db.row_factory = sqlite3.Row
+        row = db.execute('''SELECT id, name, online, share_position, x, z, seen_at, gear_json,
+                            hotbar_json, portrait, vitals_json FROM players
+                            WHERE world=? AND id=? AND share_profile=1''', (world, actor)).fetchone()
+        if row is None:
+            return None
+        player = _public_player(row, settings)
+        player['feats'] = {'kills': 0, 'bosses': 0, 'deaths': 0, 'discoveries': 0}
+        player['events'] = []
+        if settings['events']:
+            counts = db.execute('''SELECT SUM(kind='kill'), SUM(kind='kill' AND boss=1),
+                                  SUM(kind='death'), SUM(kind='discover')
+                                  FROM events WHERE world=? AND actor=?''', (world, actor)).fetchone()
+            player['feats'] = dict(zip(player['feats'], (int(value or 0) for value in counts)))
+            player['events'] = [dict(event) for event in db.execute(
+                '''SELECT e.id, e.kind, e.target, e.stars, e.boss, e.elite, e.occurred_at,
+                   CASE WHEN p.share_map=1 THEN e.biome ELSE '' END AS biome
+                   FROM events e JOIN players p ON p.world=e.world AND p.id=e.actor
+                   WHERE e.world=? AND e.actor=? AND
+                     (?='all' OR e.kind!='kill' OR (?='bosses' AND e.boss=1) OR
+                      (?='notable' AND (e.boss=1 OR e.elite=1 OR e.stars>=3)))
+                   ORDER BY e.occurred_at DESC LIMIT 40''',
+                (world, actor, settings['kill_mode'], settings['kill_mode'], settings['kill_mode']))]
+        return player
+
+
 def public_view(path: Path = DATABASE, world: str = '', limit: int = 50,
                 strict_world: bool = False) -> dict:
     """Read-only response; a withdrawn profile is hidden immediately."""
@@ -536,17 +798,11 @@ def public_view(path: Path = DATABASE, world: str = '', limit: int = 50,
         if strict_world:
             worlds = [entry for entry in worlds if entry['id'] == selected]
         players = []
-        for row in db.execute('''SELECT id, name, online, share_position, x, z, seen_at, gear_json
+        for row in db.execute('''SELECT id, name, online, share_position, x, z, seen_at, gear_json,
+                                 hotbar_json, portrait, vitals_json
                                  FROM players WHERE world=? AND share_profile=1
                                  ORDER BY online DESC, name COLLATE NOCASE''', (selected,)):
-            player = dict(row)
-            player['gear'] = json.loads(player.pop('gear_json'))
-            if not settings['gear']:
-                player['gear'] = []
-            player['online'] = bool(player['online'] and int(time.time()) - player['seen_at'] < 90)
-            if not player.pop('share_position') or not player['online']:
-                player['x'] = player['z'] = None
-            players.append(player)
+            players.append(_public_player(row, settings))
         event_columns = {row[1] for row in db.execute('PRAGMA table_info(events)')}
         boss = 'e.boss' if 'boss' in event_columns else '0'
         elite = 'e.elite' if 'elite' in event_columns else '0'
