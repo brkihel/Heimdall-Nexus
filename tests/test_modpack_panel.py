@@ -9,13 +9,13 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'servicos/painel'))
 import executor  # noqa: E402
 
-PACK = 'GenesisMods/GenesisHeimModPack'
+PACK = 'ExampleOwner/ServerPack'
 API = 'https://valheim.hexium.gg/api/experimental/package/'
 
 
 def hexium(version, deps):
-    pages = {API + 'GenesisMods/GenesisHeimModPack/': {
-        'package_url': 'https://valheim.hexium.gg/mods/GenesisMods/GenesisHeimModPack',
+    pages = {API + 'ExampleOwner/ServerPack/': {
+        'package_url': 'https://valheim.hexium.gg/mods/ExampleOwner/ServerPack',
         'latest': {'version_number': version, 'dependencies': deps}}}
     for dep in deps:
         owner, name, number = dep.rsplit('-', 2)[0], dep.rsplit('-', 2)[1], dep.rsplit('-', 2)[2]
@@ -29,7 +29,7 @@ def site(tmp_path, monkeypatch):
     web = ROOT / 'site/web'
     (tmp_path / 'sync_modpack.py').write_text((web / 'sync_modpack.py').read_text())
     (tmp_path / 'mods.json').write_text(json.dumps({
-        'modpack': 'https://valheim.hexium.gg/mods/GenesisMods/GenesisHeimModPack', 'versao_pack': '1.0.0',
+        'modpack': 'https://valheim.hexium.gg/mods/ExampleOwner/ServerPack', 'versao_pack': '1.0.0',
         'total': 2, 'mods': [{'pacote': 'A-Old', 'nome': 'Old', 'versao': '1.0.0'},
                              {'pacote': 'A-Kept', 'nome': 'Kept', 'versao': '1.0.0'}]}))
     (tmp_path / 'descricoes-pt.json').write_text(json.dumps({'A-Kept': 'Mantido'}))
