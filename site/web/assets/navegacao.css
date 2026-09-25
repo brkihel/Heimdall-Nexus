@@ -31,3 +31,5 @@
 @media(prefers-reduced-motion:reduce){.heimdall-nav-submenu{transition:none}.heimdall-nav *{scroll-behavior:auto!important}}
 /* Existing Wiki header remains visible below the site menu. */
 .topo{top:var(--heimdall-nav-height,58px)}
+/* One world per server: pages installed before 0.2.6 still carry a world picker. */
+label[for="world"]:has(> select#world){display:none}

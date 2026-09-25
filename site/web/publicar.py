@@ -52,6 +52,13 @@ def public_html(source: str, path: str, ident: dict | None = None) -> str:
             source = re.sub(r'<link\b[^>]*\brel=["\'](?:shortcut )?icon["\'][^>]*>\s*',
                             '', source, flags=re.I)
             source = source.replace('</head>', f'<link rel="icon" href="{icon}">\n</head>', 1)
+    # Assets are cached for a week: links without a version would keep old copies
+    # after an update, so every one gets the hash of its current content.
+    def versioned(match: re.Match) -> str:
+        if not (BASE / 'assets' / match.group(2)).is_file():
+            return match.group(0)
+        return f'{match.group(1)}{asset(match.group(2))}"'
+    source = re.sub(r'((?:href|src)=")/assets/([\w.-]+\.(?:css|js))"', versioned, source)
     if '/assets/tema.css' not in source:
         source = source.replace('</head>', '<link rel="stylesheet" href="/assets/tema.css">\n</head>', 1)
     if path in {'index.html', 'mapa/index.html', 'historias/index.html'} and \
