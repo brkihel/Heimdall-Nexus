@@ -204,8 +204,12 @@ for template in "$ROOT"/site/web/modelos-pagina/*.html; do
     install -D -m 0640 "$template" "$SITE_DIR/modelos-pagina/$(basename "$template")"
 done
 [[ -e "$SITE_DIR/marca/favicon.svg" ]] || install -D -m 0640 "$ROOT/site/web/marca/favicon.svg" "$SITE_DIR/marca/favicon.svg"
-for asset in vivo.js modpack.js mod-placeholder.svg navegacao.js navegacao.css sagas-resumo.js sagas-resumo.css sagas-halls.js sagas-halls.css historias-bg.webp armaria-bg.webp historias-layout.css boss-fights.js boss-fights.css; do
+for asset in vivo.js modpack.js mod-placeholder.svg navegacao.js navegacao.css sagas-resumo.js sagas-resumo.css sagas-halls.js sagas-halls.css historias-bg.webp historias-layout.css boss-fights.js boss-fights.css; do
   install -D -m 0644 "$ROOT/site/web/assets/$asset" "$SITE_DIR/assets/$asset"
+done
+# Armory backdrops: the default and one per biome, as the art is added.
+for art in "$ROOT"/site/web/assets/armaria-*.webp; do
+  install -D -m 0644 "$art" "$SITE_DIR/assets/$(basename "$art")"
 done
 for art in "$ROOT"/site/web/assets/boss-fights/*.webp; do
   install -D -m 0644 "$art" "$SITE_DIR/assets/boss-fights/$(basename "$art")"

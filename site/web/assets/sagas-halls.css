@@ -3,7 +3,7 @@
 /* ---- Armory: one Viking's profile, in the site's colors */
 /* The armory is the whole page: no title block (older page copies still have
    one), the backdrop behind everything. */
-body[data-hall=armaria]{background:linear-gradient(180deg,rgba(5,9,13,.5),rgba(5,9,13,.12) 30%,rgba(5,9,13,.2) 65%,rgba(5,9,13,.92)),url("/assets/armaria-bg.webp") center top/cover fixed var(--breu)}
+body[data-hall=armaria]{background:linear-gradient(180deg,rgba(5,9,13,.5),rgba(5,9,13,.12) 30%,rgba(5,9,13,.2) 65%,rgba(5,9,13,.92)),var(--armaria-bg,url("/assets/armaria-bg.webp")) center top/cover fixed var(--breu)}
 body[data-hall=armaria] .hall-hero{display:none}
 body[data-hall=armaria] .hall-main{padding-top:1.6rem}
 body[data-hall=armaria] footer{background:rgba(5,9,13,.85)}

@@ -87,7 +87,18 @@ function renderProfile(){const player=state.viking,box=$('vp-profile');box.repla
   const tabs=node('div',undefined,'vp-tabs');tabs.setAttribute('role','tablist');
   for(const [key,label] of [['personagem','Personagem'],['saga','Saga']]){const b=node('button',label);b.type='button';b.setAttribute('role','tab');b.setAttribute('aria-selected',String(state.tab===key));
     b.addEventListener('click',()=>{state.tab=key;renderProfile()});tabs.append(b)}
+  setBackdrop(player);
   box.append(head,tabs,state.tab==='saga'?sagaPane(player):characterPane(player))}
+
+// The page backdrop follows the biome of the Viking's latest shared feat when the
+// site has art for it (/assets/armaria-<biome>.webp); otherwise the default stays.
+const BIOMES={Meadows:'prados',BlackForest:'floresta-negra',Swamp:'pantano',Mountain:'montanha',Plains:'planicies',
+  Mistlands:'terras-nebulosas',AshLands:'terras-de-cinzas',DeepNorth:'extremo-norte',Ocean:'oceano'};
+let backdrop='';
+function setBackdrop(player){const last=(player.events||[]).find(e=>BIOMES[e.biome]);const file=last?`/assets/armaria-${BIOMES[last.biome]}.webp`:'';
+  if(file===backdrop)return;backdrop=file;const body=document.body;if(!file){body.style.removeProperty('--armaria-bg');return}
+  const art=new Image();art.onload=()=>{if(backdrop===file)body.style.setProperty('--armaria-bg',`url("${file}")`)};
+  art.onerror=()=>{if(backdrop===file)body.style.removeProperty('--armaria-bg')};art.src=file}
 
 function characterPane(player){const gear=player.gear||[];
   const stage=node('section',undefined,'vp-stage');
