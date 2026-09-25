@@ -1,7 +1,7 @@
 # Heimdall Sagas extension
 
 Status: **optional preview introduced in Heimdall Nexus 0.2.0** (bridge and
-client 0.2.0 add the Armory profile). The extension is opt-in and separate
+client 0.2.1 add the Armory profile). The extension is opt-in and separate
 from the existing `saga.json` skill ranking. It has not been installed on a live
 server or published to Hexium.
 
@@ -31,7 +31,9 @@ There are three components:
    renders pages with the site's appearance tokens. A separate one-shot worker
    makes OpenRouter requests only after an administrator queues a chapter.
 
-The client and bridge negotiate protocol version 1 before telemetry is sent.
+The client and bridge negotiate protocol version 1 before telemetry is sent. Packets are JSON
+written with the game's own Newtonsoft.Json; Unity's JsonUtility drops arrays of
+plugin classes, so it is not used for them.
 Client events retain an ID across retries; the database has a unique key on
 world, actor, and event ID. The bridge acknowledges an event after writing the
 file, so reconnects may resend without duplicating the public record. Spool
@@ -73,7 +75,7 @@ that reference that Viking while keeping ordinary shared events.
 
 ## Armory profiles
 
-With `ShareProfile` on, client 0.2.0 sends each equipped item's type, quality,
+With `ShareProfile` on, client 0.2.1 sends each equipped item's type, quality,
 durability, stats, effects and Jewelcrafting sockets, the hotbar (slots 1–8),
 and maximum health, stamina, eitr and armor. Item icons and a transparent
 portrait are PNG files sent separately in 60 KiB pieces over a dedicated RPC,

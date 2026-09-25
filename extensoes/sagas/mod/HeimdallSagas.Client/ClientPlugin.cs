@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace Heimdall.Sagas.Mod
 {
-    [BepInPlugin("gg.heimdall.sagas.client", "Heimdall Sagas Client", "0.2.0")]
+    [BepInPlugin("gg.heimdall.sagas.client", "Heimdall Sagas Client", "0.2.1")]
     public sealed class ClientPlugin : BaseUnityPlugin
     {
         private const string Rpc = "Heimdall.Sagas.V1";
@@ -103,7 +103,7 @@ namespace Heimdall.Sagas.Mod
                 foreach (var path in Directory.EnumerateFiles(outbox, "*.json").Take(256)) {
                     try {
                         if (new FileInfo(path).Length > 8192) continue;
-                        var packet = JsonUtility.FromJson<WirePacket>(File.ReadAllText(path));
+                        var packet = Wire.Read(File.ReadAllText(path));
                         if (packet != null && packet.type == "event" &&
                             (Guid.TryParseExact(packet.id, "N", out _) ||
                              packet.id != null && packet.id.Length == 64 &&
@@ -426,7 +426,7 @@ namespace Heimdall.Sagas.Mod
                 var target = Path.Combine(outbox, packet.id + ".json");
                 using (var stream = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None))
                 using (var writer = new StreamWriter(stream, new UTF8Encoding(false))) {
-                    writer.Write(JsonUtility.ToJson(packet));
+                    writer.Write(Wire.Write(packet));
                     writer.Flush();
                     stream.Flush(true);
                 }
@@ -472,7 +472,7 @@ namespace Heimdall.Sagas.Mod
         {
             var peer = ZNet.instance?.GetServerPeer();
             if (peer == null || !peer.IsReady()) return;
-            peer.m_rpc.Invoke(Rpc, JsonUtility.ToJson(packet));
+            peer.m_rpc.Invoke(Rpc, Wire.Write(packet));
         }
 
         [HarmonyPatch(typeof(Player), "OnDeath")]

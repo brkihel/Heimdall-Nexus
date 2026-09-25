@@ -14,7 +14,7 @@ using UnityEngine;
 
 namespace Heimdall.Sagas.Mod
 {
-    [BepInPlugin("gg.heimdall.sagas.bridge", "Heimdall Sagas Bridge", "0.2.0")]
+    [BepInPlugin("gg.heimdall.sagas.bridge", "Heimdall Sagas Bridge", "0.2.1")]
     public sealed class BridgePlugin : BaseUnityPlugin
     {
         private const string Rpc = "Heimdall.Sagas.V1";
@@ -192,9 +192,7 @@ namespace Heimdall.Sagas.Mod
                 }
                 return;
             }
-            WirePacket packet;
-            try { packet = JsonUtility.FromJson<WirePacket>(data); }
-            catch (ArgumentException) { return; }
+            var packet = Wire.Read(data);
             if (packet == null || packet.version != 1) return;
             if (packet.type != "presence" && packet.type != "withdraw" &&
                 !(packet.type == "event" && (packet.kind == "death" || packet.kind == "kill"))) return;
@@ -528,7 +526,7 @@ namespace Heimdall.Sagas.Mod
         private void Enqueue(WirePacket packet, ZRpc replyTo = null)
         {
             if (queue == null || string.IsNullOrEmpty(packet.world)) return;
-            if (!queue.TryAdd(new PendingWrite { Json = JsonUtility.ToJson(packet),
+            if (!queue.TryAdd(new PendingWrite { Json = Wire.Write(packet),
                      ReplyTo = replyTo, EventId = packet.id })) Interlocked.Increment(ref writeFailures);
         }
 

@@ -26,7 +26,7 @@ artifacts.mkdir(parents=True, exist_ok=True)
 for kind in ('Client', 'Bridge'):
     framework = 'netstandard2.1' if kind == 'Client' else 'net48'
     dll = root / f'extensoes/sagas/mod/HeimdallSagas.{kind}/bin/Release/{framework}/HeimdallSagas.{kind}.dll'
-    version = '0.2.0'
+    version = '0.2.1'
     output = artifacts / f'HeimdallSagas.{kind}-{version}.zip'
     with ZipFile(output, 'w', ZIP_DEFLATED) as archive:
         if kind == 'Client':
@@ -47,7 +47,7 @@ for kind in ('Client', 'Bridge'):
                 raise SystemExit('Client package is missing required Hexium files.')
             manifest = json.loads(archive.read('manifest.json'))
             if manifest.get('name') != 'HeimdallSagasClient' or \
-                    manifest.get('version_number') != '0.2.0':
+                    manifest.get('version_number') != '0.2.1':
                 raise SystemExit('Client package has an unexpected identity.')
             icon = archive.read('icon.png')
             if icon[:8] != b'\x89PNG\r\n\x1a\n' or \

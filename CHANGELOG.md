@@ -7,7 +7,7 @@
   item em uso, vida, vigor, eitr e armadura, detalhes de cada item ao passar o
   mouse (atributos, efeitos, engastes do Jewelcrafting) e a aba Saga com os
   feitos do Viking. O cenário acompanha o bioma do último feito compartilhado.
-- Heimdall Sagas Client e Bridge 0.2.0 enviam os ícones e o retrato. O retrato
+- Heimdall Sagas Client e Bridge 0.2.1 enviam os ícones e o retrato. O retrato
   é tirado pelo jogo quando o visual muda; a seção `[Portrait]` do cliente
   liga, desliga e ajusta luz e câmera, e F9 refaz na hora. Tudo segue o
   `ShareProfile` do jogador e a opção de equipamento do admin.
