@@ -30,10 +30,11 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2 3 7v10l9 5 9-5V7Zm0 0v20M3 7l9 5 9-5"/></svg>Mods</a>
 
     <div class="grupo">Administração</div>
-    <a href="{{ raiz }}/site" class="{{ 'ativo' if aba == 'site' }}">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20h4L19 9l-4-4L4 16Zm9-13 4 4M14 20h6"/></svg>Site</a>
-    <a href="{{ raiz }}/aparencia" class="{{ 'ativo' if aba == 'aparencia' }}">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.9 1.4-2l-.3-.8c-.4-1.1.4-2.2 1.6-2.2H17a4 4 0 0 0 4-4c0-5-4-9-9-9Z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></svg>Aparência</a>
+    <details class="lado-submenu" {{ 'open' if aba in ('site', 'aparencia') }}>
+      <summary>Aparência</summary>
+      <a href="{{ raiz }}/site" class="{{ 'ativo' if aba == 'site' }}">Editor de layout</a>
+      <a href="{{ raiz }}/aparencia" class="{{ 'ativo' if aba == 'aparencia' }}">Configurações Globais</a>
+    </details>
     <a href="{{ raiz }}/cronica" class="{{ 'ativo' if aba == 'cronica' }}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 19V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2Zm0 0a2 2 0 0 1 2-2h12M8 7h7M8 11h5"/></svg>Crônica</a>
     <a href="{{ raiz }}/sagas" class="{{ 'ativo' if aba == 'sagas' }}">ᛋ Sagas</a>

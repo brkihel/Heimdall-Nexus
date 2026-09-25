@@ -44,6 +44,20 @@ def event(**changes):
 
 
 class SagasContractTests(unittest.TestCase):
+    def test_public_map_defaults_to_most_recent_world(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            state = Path(temporary)
+            enable(state)
+            dbfile = state / 'sagas.sqlite3'
+            with sagas.connect(dbfile) as db:
+                db.execute('INSERT INTO worlds (id, name, clock_at) VALUES (?, ?, ?)',
+                           ('1' * 64, 'Old', 10))
+                db.execute('INSERT INTO worlds (id, name, clock_at) VALUES (?, ?, ?)',
+                           ('2' * 64, 'Current', 20))
+            view = sagas.public_view(dbfile)
+            self.assertEqual(view['world'], '2' * 64)
+            self.assertEqual(sagas.public_view(dbfile, world='1' * 64)['world'], '1' * 64)
+
     def test_external_atlas_styles_follow_world_and_consent(self):
         atlas_spec = importlib.util.spec_from_file_location('heimdall_atlas', ROOT / 'servicos/painel/atlas.py')
         atlas = importlib.util.module_from_spec(atlas_spec)
@@ -68,6 +82,13 @@ class SagasContractTests(unittest.TestCase):
                 Image.new('RGB', (256, 256), (255, 0, 0)).save(target, 'WEBP')
             with sagas.connect(state / 'sagas.sqlite3') as db:
                 db.execute('INSERT INTO worlds (id, name) VALUES (?, ?)', (world, 'World'))
+            with patch.object(atlas, 'LEGACY_WEB_ROOT', root), \
+                    patch.dict('os.environ', {'HEIMDALL_EXTERNAL_ATLAS_DIR': ''}):
+                legacy = root / 'old-web' / 'mapa'
+                legacy.parent.mkdir()
+                external.rename(legacy)
+                external = legacy
+                self.assertEqual(atlas.summary(state, world)['maxNativeZoom'], 5)
             with patch.dict('os.environ', {'HEIMDALL_EXTERNAL_ATLAS_DIR': str(external)}):
                 info = atlas.summary(state, world)
                 self.assertEqual(info['maxNativeZoom'], 5)

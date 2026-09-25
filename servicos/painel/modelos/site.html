@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block titulo %}Site{% endblock %}
+{% block titulo %}Editor de layout{% endblock %}
 {% block cabeca %}
 <style>
   .site-quadro{position:relative; height:calc(100vh - 250px); min-height:520px; border:1px solid var(--borda);
@@ -37,10 +37,10 @@
 {% endblock %}
 {% block corpo %}
 <div class="topo">
-  <h1>Site</h1>
+  <h1>Editor de layout</h1>
   <span id="estado" class="pastilha meio">lendo…</span>
   <div class="acoes">
-    <a class="btn bom" id="btn-tela-cheia" href="{{ raiz }}/editor">Editor em tela cheia</a>
+    <a class="btn bom" id="btn-tela-cheia" href="{{ raiz }}/editor">Layout Editor</a>
     <a class="btn" href="{{ raiz }}/editor?aba=menu">Configurar menu</a>
     <a class="btn" id="btn-abrir" href="/" target="_blank" rel="noopener">Abrir no site</a>
     <a class="btn" href="{{ raiz }}/">Painel do servidor</a>

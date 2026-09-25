@@ -973,8 +973,7 @@ def v_mods_remover(dados):
                 shutil.rmtree(pasta)
                 anota(f'removido {pasta} (cópia em {guarda})')
         _roda(['/usr/bin/python3', str(FERRAMENTAS / 'relock.py')], anota)
-        subprocess.run(['systemctl', 'start', GAME_SERVICE], timeout=240)
-        anota('servidor religado')
+        anota('servidor permanece parado; inicie-o pelo painel quando quiser')
 
     return {'tarefa': _tarefa(f'remover {nome}', [passos])}
 
@@ -1061,8 +1060,11 @@ def _personagens():
 def v_mundo_estado(_):
     nome = _nome_do_mundo()
     pasta = MUNDOS / nome
+    server = operacoes.server_read()
     estado = {'mundo': nome, 'existe': pasta.is_dir(), 'ativo': _servidor_ativo(),
-              'personagens': _personagens(), 'wipes': []}
+              'personagens': _personagens(), 'wipes': [],
+              'modificadores': server['modificadores'],
+              'modificadores_suportados': server['modificadores_suportados']}
     arquivo = _fwl_atual(pasta) if pasta.is_dir() else None
     if arquivo:
         try:
@@ -1194,7 +1196,13 @@ def v_mundo_wipe(dados):
         raise Recusa('seed só faz sentido apagando o mundo')
     if seed and not fwl.seed_valida(seed):
         raise Recusa('seed: até 32 letras, números, - ou _')
-    religar = dados.get('religar', True) is not False
+    modifiers = dados.get('modificadores')
+    if modifiers is not None:
+        if not mundo:
+            raise Recusa('modificadores só podem mudar ao apagar o mundo')
+        if not operacoes.server_read()['modificadores_suportados']:
+            raise Recusa('o lançador instalado não aceita modificadores de mundo')
+        _operacao(operacoes._modifier_changes, modifiers)
 
     def passos(anota):
         import fcntl
@@ -1218,12 +1226,13 @@ def v_mundo_wipe(dados):
                 _arquiva_personagens(caixa, anota)
                 anota('personagens arquivados: todo mundo entra com personagem novo '
                       '(o ServerCharacters recusa personagem que já pisou em outro mundo)')
+            if modifiers is not None:
+                _operacao(operacoes.server_save, {'modificadores': modifiers})
+                anota('modificadores de mundo preparados para o próximo início')
             _fecha_caixa(caixa, mundo_anterior=anterior, concluido=agora())
         finally:
             trava.close()
-        if religar:
-            subprocess.run(['systemctl', 'start', GAME_SERVICE], timeout=240)
-            anota('servidor religado — mundo novo leva alguns minutos para gerar')
+        anota('servidor permanece parado; inicie-o pelo painel quando quiser')
         anota(f'tudo o que saiu está em {caixa}')
 
     titulo = 'wipe de ' + ' e '.join(x for x, s in [('mundo', mundo), ('personagens', personagens)] if s)
@@ -1256,7 +1265,6 @@ def v_mundo_instalar(dados):
     if not meta.riverheim and not dados.get('sem_riverheim'):
         raise Recusa('esse mundo não foi gerado com o Riverheim: o terreno seria o do jogo '
                      'padrão. Gere com o modpack instalado.')
-    religar = dados.get('religar', True) is not False
 
     def passos(anota):
         import fcntl
@@ -1289,9 +1297,7 @@ def v_mundo_instalar(dados):
         finally:
             trava.close()
             shutil.rmtree(ficha, ignore_errors=True)
-        if religar:
-            subprocess.run(['systemctl', 'start', GAME_SERVICE], timeout=240)
-            anota('servidor religado')
+        anota('servidor permanece parado; inicie-o pelo painel quando quiser')
         anota(f'o mundo anterior está em {caixa}')
 
     return {'tarefa': _tarefa(f'instalar mundo enviado (seed {meta.seed})', [passos])}
@@ -1858,9 +1864,20 @@ def _publish(targets: list[str]) -> list[str]:
 
 def v_site_identidade(_):
     module = _identity_module()
+    manifest = sitetext.load_manifest(SITE_DIR)
+    custom = []
+    for page in manifest['paginas']:
+        source = SITE_DIR / page['fonte']
+        if source.is_file():
+            text = source.read_text(encoding='utf-8')
+            expected = ('nome', 'slogan', 'rodape', 'logo') if page['id'] == 'inicio' else ('nome', 'rodape')
+            missing = [name for name in expected
+                       if f'data-identidade="{name}"' not in text]
+            if missing:
+                custom.append({'titulo': page['titulo'], 'campos': missing})
     return {'identidade': module.carregar(SITE_DIR),
             'cores': [{'chave': k, 'variavel': v, 'rotulo': r, 'padrao': d} for k, v, r, d in module.CORES],
-            'paletas': module.PALETAS}
+            'paletas': module.PALETAS, 'paginas_personalizadas': custom}
 
 
 def v_site_identidade_gravar(dados):

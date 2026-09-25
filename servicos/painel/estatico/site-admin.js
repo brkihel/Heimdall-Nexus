@@ -199,7 +199,7 @@
       $('a', {class: 'jarl-brand', href: `${ROOT}/`, target: '_top', title: 'Painel do servidor'},
         $('span', {class: 'jarl-rune'}, 'ᛃ'), 'Jarl'),
       $('a', {class: 'jarl-btn', href: `${ROOT}/editor?url=${encodeURIComponent(location.pathname)}`, target: '_top',
-              title: 'Editor em tela cheia, com elementos e dados ao vivo para arrastar'}, 'Tela cheia'),
+              title: 'Abrir o Layout Editor'}, 'Layout Editor'),
       ui.toggle, ui.editBar, ui.note);
     ui.toasts = $('div', {class: 'jarl-toasts', 'data-jarl-ui': ''});
     ui.toolbar = $('div', {class: 'jarl-toolbar', 'data-jarl-ui': '', hidden: true});

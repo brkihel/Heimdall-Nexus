@@ -395,34 +395,30 @@ def _maintenance():
         yield
 
 
-def backup_create(*, resume=True):
+def backup_create():
     with _maintenance():
-        return _backup_create(resume=resume)
+        return _backup_create()
 
 
-def _backup_create(*, resume=True):
+def _backup_create():
     BACKUPS.mkdir(parents=True, exist_ok=True)
     was_online = online()
     if was_online:
         _system('stop')
+    stamp = dt.datetime.now(dt.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
+    final = BACKUPS / f'{stamp}.tar.gz'
+    temp = BACKUPS / f'.{stamp}.partial'
     try:
-        stamp = dt.datetime.now(dt.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
-        final = BACKUPS / f'{stamp}.tar.gz'
-        temp = BACKUPS / f'.{stamp}.partial'
-        try:
-            with tarfile.open(temp, 'w:gz', dereference=False) as archive:
-                for name in ('saves', 'config', 'server.env', 'server-profile.json'):
-                    path = GAME / name
-                    if path.exists():
-                        archive.add(path, arcname=name, recursive=True)
-            os.chmod(temp, 0o600)
-            os.replace(temp, final)
-        finally:
-            temp.unlink(missing_ok=True)
-        return final.name
+        with tarfile.open(temp, 'w:gz', dereference=False) as archive:
+            for name in ('saves', 'config', 'server.env', 'server-profile.json'):
+                path = GAME / name
+                if path.exists():
+                    archive.add(path, arcname=name, recursive=True)
+        os.chmod(temp, 0o600)
+        os.replace(temp, final)
     finally:
-        if was_online and resume:
-            _system('start')
+        temp.unlink(missing_ok=True)
+    return final.name
 
 
 def backup_restore(name: str):
@@ -437,63 +433,59 @@ def _backup_restore(name: str):
     was_online = online()
     if was_online:
         _system('stop')
-    try:
-        safety = _backup_create(resume=False)
-        with tempfile.TemporaryDirectory(dir=GAME) as folder:
-            stage = Path(folder)
-            with tarfile.open(path, 'r:gz') as archive:
-                members = archive.getmembers()
-                if any(m.issym() or m.islnk() or m.isdev() or m.name.startswith('/') or
-                       '..' in Path(m.name).parts or
-                       m.name.split('/')[0] not in {'saves', 'config', 'server.env', 'server-profile.json',
-                                                       'service', 'mods.lock.json', 'appmanifest_896660.acf',
-                                                       'backup-metadata.json', 'release',
-                                                       'antes-da-instalacao.log'}
-                       for m in members):
-                    raise Problem('backup contém caminhos inseguros')
-                # Avoid extractall: Python 3.10 lacks extraction filters. Only
-                # regular files and directories below four fixed roots are used.
-                for member in members:
-                    if member.name.split('/')[0] not in {'saves', 'config', 'server.env', 'server-profile.json'}:
-                        continue
-                    if not (member.isfile() or member.isdir()):
-                        continue
-                    dest = stage / member.name
-                    if member.isdir():
-                        dest.mkdir(parents=True, exist_ok=True)
-                    else:
-                        dest.parent.mkdir(parents=True, exist_ok=True)
-                        with archive.extractfile(member) as src, dest.open('wb') as out:
-                            shutil.copyfileobj(src, out)
-                        os.chmod(dest, member.mode & 0o777)
-            for name in ('saves', 'config', 'server.env', 'server-profile.json'):
-                source = stage / name
-                if not source.exists():
+    safety = _backup_create()
+    with tempfile.TemporaryDirectory(dir=GAME) as folder:
+        stage = Path(folder)
+        with tarfile.open(path, 'r:gz') as archive:
+            members = archive.getmembers()
+            if any(m.issym() or m.islnk() or m.isdev() or m.name.startswith('/') or
+                   '..' in Path(m.name).parts or
+                   m.name.split('/')[0] not in {'saves', 'config', 'server.env', 'server-profile.json',
+                                                   'service', 'mods.lock.json', 'appmanifest_896660.acf',
+                                                   'backup-metadata.json', 'release',
+                                                   'antes-da-instalacao.log'}
+                   for m in members):
+                raise Problem('backup contém caminhos inseguros')
+            # Avoid extractall: Python 3.10 lacks extraction filters. Only
+            # regular files and directories below four fixed roots are used.
+            for member in members:
+                if member.name.split('/')[0] not in {'saves', 'config', 'server.env', 'server-profile.json'}:
                     continue
-                target = GAME / name
-                previous = GAME / ('.before-restore-' + uuid.uuid4().hex + '-' + name)
-                if target.exists():
-                    target.rename(previous)
-                source.rename(target)
-                if name in ('saves', 'config'):
-                    import pwd
-                    account = pwd.getpwnam('valheim')
-                    for item in [target, *target.rglob('*')]:
-                        if not item.is_symlink():
-                            os.chown(item, account.pw_uid, account.pw_gid)
-                elif name == 'server.env':
-                    import grp
-                    os.chown(target, 0, grp.getgrnam('valheim').gr_gid)
-                    os.chmod(target, 0o640)
-                if previous.exists():
-                    if previous.is_dir():
-                        shutil.rmtree(previous)
-                    else:
-                        previous.unlink()
-        return safety
-    finally:
-        if was_online:
-            _system('start')
+                if not (member.isfile() or member.isdir()):
+                    continue
+                dest = stage / member.name
+                if member.isdir():
+                    dest.mkdir(parents=True, exist_ok=True)
+                else:
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    with archive.extractfile(member) as src, dest.open('wb') as out:
+                        shutil.copyfileobj(src, out)
+                    os.chmod(dest, member.mode & 0o777)
+        for name in ('saves', 'config', 'server.env', 'server-profile.json'):
+            source = stage / name
+            if not source.exists():
+                continue
+            target = GAME / name
+            previous = GAME / ('.before-restore-' + uuid.uuid4().hex + '-' + name)
+            if target.exists():
+                target.rename(previous)
+            source.rename(target)
+            if name in ('saves', 'config'):
+                import pwd
+                account = pwd.getpwnam('valheim')
+                for item in [target, *target.rglob('*')]:
+                    if not item.is_symlink():
+                        os.chown(item, account.pw_uid, account.pw_gid)
+            elif name == 'server.env':
+                import grp
+                os.chown(target, 0, grp.getgrnam('valheim').gr_gid)
+                os.chmod(target, 0o640)
+            if previous.exists():
+                if previous.is_dir():
+                    shutil.rmtree(previous)
+                else:
+                    previous.unlink()
+    return safety
 
 
 def schedules_tick():

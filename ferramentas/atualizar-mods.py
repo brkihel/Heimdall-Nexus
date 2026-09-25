@@ -66,18 +66,16 @@ if pulados: print(f'  configs preservadas (nao sobrescritas): {sorted(set(pulado
 
 trava = open('/run/lock/heimdall-maintenance.lock','w')
 fcntl.flock(trava, fcntl.LOCK_EX | fcntl.LOCK_NB)
-# Servidor ja parado nao e erro: e o jeito mais seguro de instalar. O que
-# nao se pode fazer e LIGAR um servidor que o operador desligou — por isso
-# o 'finally' la embaixo so religa se tiver sido este script a parar.
+# Maintenance leaves the game stopped until the administrator starts it.
 ativo_antes = estado_do_servico() == 'active'
 if not ativo_antes:
     print('servidor ja estava parado; instalo assim e deixo como encontrei')
 carimbo = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')
 backup = ROOT/'backups'/f'{carimbo}-atualizacao.tar.gz'
-marca = time.time()-2; parado=False; guardadas={}
+marca = time.time()-2; guardadas={}
 try:
     if ativo_antes:
-        run('systemctl','stop',SERVICE); parado=True
+        run('systemctl','stop',SERVICE)
     assert subprocess.run(['systemctl','is-active','--quiet',SERVICE]).returncode!=0
     # O que precisa ser verdade e que a ultima geracao do mundo esteja COMPLETA,
     # nao que ela seja nova. Com o servidor vazio o relogio do Valheim fica parado
@@ -144,4 +142,4 @@ except BaseException as e:
         if antiga.exists(): shutil.move(str(antiga), str(d))
     print(f'\nFALHOU, revertido: {e!r}'); raise
 finally:
-    if parado: run('systemctl','start',SERVICE); print('servidor religado')
+    print('servidor permanece parado; inicie-o pelo painel quando quiser')

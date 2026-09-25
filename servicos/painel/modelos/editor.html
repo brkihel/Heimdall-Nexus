@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Editor do site — Heimdall Nexus</title>
+<title>Layout Editor — Heimdall Nexus</title>
 <link rel="icon" href="{{ raiz }}/estatico/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="{{ raiz }}/estatico/fontes/fontes.css?v={{ v }}">
 <link rel="stylesheet" href="{{ raiz }}/estatico/site-admin.css?v={{ v }}">
@@ -62,7 +62,7 @@
   </section>
 
   <section class="aba" data-aba="menu">
-    <p class="dica">Este menu aparece em todas as páginas públicas. Mude nomes, ordem e visibilidade; as cores seguem a Aparência do site. Salvar publica imediatamente.</p>
+    <p class="dica">Este menu aparece em todas as páginas públicas. Adicione ou remova links, mude nomes e ordem. Salvar publica imediatamente.</p>
     <label class="menu-estilo">Visual do menu<select id="menu-estilo"><option value="discreto">Discreto</option><option value="destaque">Destaque dourado</option><option value="personalizado">Cores próprias</option></select></label>
     <div class="menu-cores" id="menu-cores" hidden>
       <label>Fundo<input type="color" data-cor="background"></label>
@@ -71,6 +71,7 @@
       <p class="dica">Confira o contraste das cores na página publicada, também no celular.</p>
     </div>
     <div id="menu-links" class="menu-links"></div>
+    <div class="menu-adicionar"><label>Adicionar página<select id="menu-nova-pagina"></select></label><button class="jarl-btn" id="menu-adicionar" type="button">Adicionar link</button></div>
     <button class="jarl-btn jarl-primary" id="menu-salvar" type="button">Salvar menu</button>
   </section>
 
@@ -87,7 +88,7 @@
       <button data-largura="390" title="Celular">▮</button>
     </div>
     <a class="jarl-btn" id="b-ver" target="_blank" rel="noopener">Ver página</a>
-    <a class="jarl-btn" href="{{ raiz }}/site">Aba Site</a>
+    <a class="jarl-btn" href="{{ raiz }}/site">Editor de layout</a>
   </footer>
 </aside>
 
@@ -240,12 +241,13 @@ function trocaAba(nome) {
 }
 
 // ---------------------------------------------------------------- shared public navigation
-let menuConfig = null;
+let menuConfig = null, menuPaginas = [];
 async function desenhaMenu() {
   if (!menuConfig) {
     const response = await api('/api/site/navegacao');
     if (!response) return;
     menuConfig = response.config;
+    menuPaginas = response.paginas || [];
     $('#menu-estilo').value = menuConfig.style;
     for (const input of document.querySelectorAll('[data-cor]')) input.value = menuConfig.palette[input.dataset.cor];
   }
@@ -265,9 +267,23 @@ async function desenhaMenu() {
     up.addEventListener('click', () => { [menuConfig.links[index - 1],menuConfig.links[index]] = [menuConfig.links[index],menuConfig.links[index - 1]];desenhaMenu(); });
     const down = document.createElement('button');down.type = 'button';down.className = 'jarl-btn';down.textContent = '↓';down.title = 'Mover para baixo';down.disabled = index === menuConfig.links.length - 1;
     down.addEventListener('click', () => { [menuConfig.links[index + 1],menuConfig.links[index]] = [menuConfig.links[index],menuConfig.links[index + 1]];desenhaMenu(); });
-    row.append(title,visible,up,down);box.append(row);
+    const remove = document.createElement('button');remove.type='button';remove.className='jarl-btn';
+    remove.textContent='×';remove.title='Remover link do menu';remove.setAttribute('aria-label', `Remover ${link.label} do menu`);
+    remove.addEventListener('click', () => { menuConfig.links.splice(index, 1);desenhaMenu(); });
+    row.append(title,visible,up,down,remove);box.append(row);
   }
+  const selector=$('#menu-nova-pagina');selector.replaceChildren();
+  for(const page of menuPaginas.filter(page=>!menuConfig.links.some(link=>link.id===page.id))){
+    const option=document.createElement('option');option.value=page.id;option.textContent=page.titulo;selector.append(option);
+  }
+  $('#menu-adicionar').disabled=!selector.options.length;
 }
+$('#menu-adicionar').addEventListener('click',()=>{
+  const page=menuPaginas.find(item=>item.id===$('#menu-nova-pagina').value);
+  if(!page)return;
+  menuConfig.links.push({id:page.id,label:page.titulo.slice(0,28),visible:true});
+  desenhaMenu();
+});
 $('#menu-estilo').addEventListener('change', event => {
   if (menuConfig) menuConfig.style = event.target.value;
   $('#menu-cores').hidden = event.target.value !== 'personalizado';

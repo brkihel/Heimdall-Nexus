@@ -76,6 +76,21 @@ def test_backup_create_and_restore_in_isolated_directory(tmp_path, monkeypatch):
     assert (game / 'backups' / safety).is_file()
 
 
+def test_backup_never_starts_game_after_stopping_it(tmp_path, monkeypatch):
+    game = tmp_path / 'game'
+    game.mkdir()
+    (game / 'server.env').write_text('VH_NAME="Test"\n')
+    monkeypatch.setattr(operacoes, 'GAME', game)
+    monkeypatch.setattr(operacoes, 'BACKUPS', game / 'backups')
+    monkeypatch.setattr(operacoes, 'MAINTENANCE_LOCK', tmp_path / 'maintenance.lock')
+    monkeypatch.setattr(operacoes, 'online', lambda: True)
+    actions = []
+    monkeypatch.setattr(operacoes, '_system', actions.append)
+    archive = operacoes.backup_create()
+    assert (game / 'backups' / archive).is_file()
+    assert actions == ['stop']
+
+
 def test_password_cannot_be_inside_server_name(tmp_path, monkeypatch):
     env = tmp_path / 'server.env'
     env.write_text('VH_NAME="Norte"\nVH_WORLD="World"\nVH_PORT="2456"\nVH_PASSWORD="secret"\n')

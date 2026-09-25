@@ -593,7 +593,7 @@ async def api_enviar(pedido: Request):
     if destino == 'mundo':
         verbo, dados = 'mundo.instalar', {
             'ficha': ficha, 'nome': nome, 'confirmar': formulario.get('confirmar', ''),
-            'religar': formulario.get('religar') != '0'}
+        }
     else:
         verbo, dados = 'arquivo.receber', {
             'ficha': ficha, 'nome': nome, 'pasta': destino,

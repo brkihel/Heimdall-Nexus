@@ -9,7 +9,7 @@
 <p class="dica">
   Wipe e troca de mundo param o servidor, fazem o backup completo de sempre e só então
   mexem. Nada é apagado: o que sai vai para <code>/srv/valheim/wipes/</code>, com data,
-  e dá para voltar pela aba Arquivos.
+  e dá para voltar pela aba Arquivos. O servidor fica desligado até você iniciá-lo.
 </p>
 
 <div class="cartao">
@@ -22,7 +22,6 @@
   <div class="opcoes-wipe">
     <label class="interruptor"><input type="checkbox" id="w-mundo" checked> Apagar o mundo</label>
     <label class="interruptor"><input type="checkbox" id="w-personagens"> Apagar os personagens</label>
-    <label class="interruptor"><input type="checkbox" id="w-religar" checked> Religar ao terminar</label>
   </div>
   <div class="nota" id="nota-personagens">
     Mantendo os personagens, todo mundo entra no mundo novo com o personagem de sempre.
@@ -32,12 +31,41 @@
       <input type="text" id="w-seed" maxlength="32" placeholder="ex.: HkQ7dPz2Lx" autocomplete="off"></label>
     <button class="btn" id="btn-sortear" type="button">Sortear</button>
   </div>
+  <fieldset id="w-modificadores" class="wipe-modificadores">
+    <legend>Modificadores do mundo novo</legend>
+    <label class="interruptor"><input type="checkbox" id="w-gerenciar" checked> Aplicar estas regras quando eu iniciar o servidor</label>
+    <p class="dica">As escolhas ficam salvas também em Server Config. O servidor continuará desligado após o wipe.</p>
+    <div class="wipe-grade" id="w-regras">
+      <label>Combate<select data-modificador="combat"><option value="veryeasy">Muito fácil</option><option value="easy">Fácil</option><option value="default">Normal</option><option value="hard">Difícil</option><option value="veryhard">Muito difícil</option></select></label>
+      <label>Morte<select data-modificador="deathpenalty"><option value="casual">Casual</option><option value="veryeasy">Muito fácil</option><option value="easy">Fácil</option><option value="default">Normal</option><option value="hard">Difícil</option><option value="hardcore">Pesadelo</option></select></label>
+      <label>Recursos<select data-modificador="resources"><option value="muchless">Muito menos</option><option value="less">Menos</option><option value="default">Normal</option><option value="more">Mais</option><option value="muchmore">Muito mais</option><option value="most">Máximo</option></select></label>
+      <label>Invasões<select data-modificador="raids"><option value="none">Nenhuma</option><option value="muchless">Muito menos</option><option value="less">Menos</option><option value="default">Normal</option><option value="more">Mais</option><option value="muchmore">Muito mais</option></select></label>
+      <label>Portais<select data-modificador="portals"><option value="casual">Casual</option><option value="default">Normal</option><option value="hard">Difícil</option><option value="veryhard">Muito difícil</option></select></label>
+    </div>
+    <div class="wipe-chaves" id="w-chaves">
+      <label><input type="checkbox" value="playerevents"> Invasões por progresso dos jogadores</label>
+      <label><input type="checkbox" value="fire"> Incêndios</label>
+      <label><input type="checkbox" value="nomap"> Sem minimapa</label>
+      <label><input type="checkbox" value="passivemobs"> Criaturas passivas</label>
+      <label><input type="checkbox" value="nobuildcost"> Construção sem custo</label>
+    </div>
+    <p id="w-mod-aviso" class="dica" hidden>O lançador instalado não aceita modificadores; atualize o Heimdall antes de fazer o wipe com regras novas.</p>
+  </fieldset>
   <div class="linha-campos">
     <label>Para confirmar, escreva o nome do mundo
       <input type="text" id="w-confirmar" autocomplete="off"></label>
     <button class="btn ruim" id="btn-wipe" type="button" disabled>Fazer wipe</button>
   </div>
 </div>
+
+<style>
+.wipe-modificadores{border:1px solid var(--borda-viva);border-radius:3px;margin:1rem 0;padding:1rem}
+.wipe-modificadores legend{color:var(--osso);font-family:Cinzel,serif;font-size:.8rem}
+.wipe-grade,.wipe-chaves{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:.6rem;margin:.8rem 0}
+.wipe-grade label{display:grid;gap:.3rem;color:var(--texto);font-size:.85rem}
+.wipe-grade select{width:100%;padding:.55rem;background:var(--noite);color:var(--osso);border:1px solid var(--borda-viva);border-radius:3px}
+.wipe-chaves label{display:flex;align-items:center;gap:.45rem;font-size:.85rem}
+</style>
 
 <div class="cartao">
   <h2>Usar um mundo gerado no jogo</h2>
@@ -71,7 +99,7 @@
 {% block script %}
 <script>
 const RAIZ = {{ raiz|tojson }};
-let MUNDO = null, tarefaAberta = null;
+let MUNDO = null, tarefaAberta = null, modificadoresSuportados = false;
 
 function recado(texto, tipo='bom'){
   const caixa = document.createElement('div');
@@ -98,6 +126,16 @@ async function ler(){
   const d = await post({verbo:'mundo.estado'});
   if (!d) return;
   MUNDO = d.mundo;
+  modificadoresSuportados = !!d.modificadores_suportados;
+  const mods = d.modificadores || {gerenciar:false, valores:{}, chaves:[]};
+  document.getElementById('w-gerenciar').checked = true;
+  document.querySelectorAll('[data-modificador]').forEach(select => {
+    select.value = mods.valores[select.dataset.modificador] || 'default';
+  });
+  document.querySelectorAll('#w-chaves input').forEach(input => {
+    input.checked = mods.chaves.includes(input.value);
+  });
+  document.getElementById('w-mod-aviso').hidden = modificadoresSuportados;
   const r = document.getElementById('resumo');
   r.textContent = d.ativo ? 'servidor no ar' : 'servidor parado';
   r.className = 'pastilha ' + (d.ativo ? 'viva' : 'morta');
@@ -133,6 +171,9 @@ function confere(){
   document.getElementById('linha-seed').style.opacity = mundo ? 1 : .4;
   document.getElementById('w-seed').disabled = !mundo;
   document.getElementById('btn-sortear').disabled = !mundo;
+  const fieldset = document.getElementById('w-modificadores');
+  fieldset.disabled = !mundo || !modificadoresSuportados;
+  fieldset.style.opacity = fieldset.disabled ? .5 : 1;
   document.getElementById('nota-personagens').textContent = pers
     ? 'Apagando os personagens, todo mundo precisa criar um personagem novo: o ServerCharacters recusa qualquer personagem que já tenha entrado em outro mundo.'
     : 'Mantendo os personagens, todo mundo entra no mundo novo com o personagem de sempre.';
@@ -185,23 +226,28 @@ document.getElementById('btn-wipe').onclick = async () => {
   const mundo = document.getElementById('w-mundo').checked;
   const personagens = document.getElementById('w-personagens').checked;
   const seed = document.getElementById('w-seed').value.trim();
+  const gerenciar = document.getElementById('w-gerenciar').checked;
+  const modificadores = mundo && modificadoresSuportados ? {
+    gerenciar,
+    valores: Object.fromEntries([...document.querySelectorAll('[data-modificador]')].map(select =>
+      [select.dataset.modificador, select.value])),
+    chaves: [...document.querySelectorAll('#w-chaves input:checked')].map(input => input.value)
+  } : null;
   const o_que = [mundo && 'o MUNDO', personagens && 'os PERSONAGENS'].filter(Boolean).join(' e ');
-  if (!confirm(`Wipe de ${o_que} de ${MUNDO}.\n\nO servidor vai parar, fazer backup e voltar ` +
-               (mundo ? (seed ? `com a seed ${seed}.` : 'com uma seed sorteada.') : 'com o mesmo mundo.') +
+  if (!confirm(`Wipe de ${o_que} de ${MUNDO}.\n\nO servidor vai parar, fazer backup e permanecer desligado. ` +
+               (mundo ? (seed ? `Seed: ${seed}.` : 'A seed será sorteada ao iniciar.') : 'O mundo será mantido.') +
                '\n\nContinuar?')) return;
-  const d = await post({verbo:'mundo.wipe', dados:{mundo, personagens, seed,
-    confirmar: document.getElementById('w-confirmar').value.trim(),
-    religar: document.getElementById('w-religar').checked}});
+  const d = await post({verbo:'mundo.wipe', dados:{mundo, personagens, seed, modificadores,
+    confirmar: document.getElementById('w-confirmar').value.trim()}});
   if (d && d.tarefa){ document.getElementById('w-confirmar').value = ''; confere(); acompanha(d.tarefa); }
 };
 
 document.getElementById('btn-enviar').onclick = () => {
   const arquivo = document.getElementById('m-arquivo').files[0];
-  if (!confirm(`Trocar ${MUNDO} pelo mundo de ${arquivo.name}?\n\nO mundo atual vai para o arquivo de wipes.`)) return;
+  if (!confirm(`Trocar ${MUNDO} pelo mundo de ${arquivo.name}?\n\nO mundo atual vai para o arquivo de wipes. O servidor permanecerá desligado.`)) return;
   const corpo = new FormData();
   corpo.append('destino', 'mundo');
   corpo.append('confirmar', document.getElementById('m-confirmar').value.trim());
-  corpo.append('religar', document.getElementById('w-religar').checked ? '1' : '0');
   corpo.append('arquivo', arquivo);
   const barra = document.getElementById('m-progresso');
   barra.hidden = false;

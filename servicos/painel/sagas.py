@@ -456,7 +456,8 @@ def public_view(path: Path = DATABASE, world: str = '', limit: int = 50) -> dict
     limit = max(1, min(100, limit))
     with sqlite3.connect(f'file:{path}?mode=ro', uri=True, timeout=3) as db:
         db.row_factory = sqlite3.Row
-        worlds = [dict(r) for r in db.execute('SELECT id, name, day, fraction, clock_at FROM worlds ORDER BY id')]
+        worlds = [dict(r) for r in db.execute(
+            'SELECT id, name, day, fraction, clock_at FROM worlds ORDER BY clock_at DESC, id')]
         if not worlds:
             return {'available': True, 'worlds': [], 'players': [], 'events': []}
         selected = world if any(w['id'] == world for w in worlds) else worlds[0]['id']

@@ -44,4 +44,4 @@ try:
  out.with_suffix(out.suffix+'.sha256').write_text(f'{digest}  {out.name}\n')
  print(out)
 finally:
- if active: run('systemctl','start',service_name)
+ print('servidor permanece parado; inicie-o pelo painel quando quiser')

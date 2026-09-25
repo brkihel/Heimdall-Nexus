@@ -51,6 +51,31 @@ class NavigationTests(unittest.TestCase):
             self.assertEqual([x['id'] for x in loaded['links'][:2]], ['wiki', 'inicio'])
             self.assertIn('mapa', [x['id'] for x in loaded['links']])
 
+    def test_removed_link_stays_removed_and_can_be_added_again(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            config = navegacao.defaults(self.manifest)
+            removed = config['links'].pop(1)
+            (base / navegacao.FILE).write_text(json.dumps(config))
+            loaded = navegacao.load(base, self.manifest)
+            self.assertNotIn(removed['id'], [link['id'] for link in loaded['links']])
+            self.assertNotIn(removed['label'],
+                             [link['label'] for link in navegacao.public(loaded, self.manifest)['links']])
+            loaded['links'].append(removed)
+            self.assertEqual(navegacao.validate(loaded, self.manifest), loaded)
+
+    def test_legacy_navigation_is_upgraded_without_losing_order(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            config = navegacao.defaults(self.manifest)
+            config.pop('known')
+            config['version'] = 1
+            config['links'].reverse()
+            (base / navegacao.FILE).write_text(json.dumps(config))
+            loaded = navegacao.load(base, self.manifest)
+            self.assertEqual(loaded['version'], 2)
+            self.assertEqual(loaded['links'][0]['id'], config['links'][0]['id'])
+
     def test_migration_keeps_custom_home_and_wiki(self):
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
@@ -75,6 +100,15 @@ class NavigationTests(unittest.TestCase):
         self.assertIn('/assets/boss-fights.js?v=', published)
         self.assertEqual(publicar.public_html(published, 'index.html'), published)
         self.assertNotIn('navegacao.js', source)
+
+    def test_publisher_replaces_missing_legacy_favicon(self):
+        source = '<html><head><link rel="icon" href="/favicon.ico"></head><body></body></html>'
+        identity = {'favicon': '/marca/new.ico'}
+        published = publicar.public_html(source, 'index.html', identity)
+        self.assertIn('href="/marca/new.ico"', published)
+        self.assertNotIn('href="/favicon.ico"', published)
+        self.assertIn('/assets/tema.css', published)
+        self.assertEqual(publicar.public_html(published, 'index.html', identity), published)
 
     def test_battle_art_loads_on_story_and_map_pages_only(self):
         source = '<html><head></head><body></body></html>'

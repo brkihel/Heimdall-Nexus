@@ -27,6 +27,7 @@ MAX_NATIVE_ZOOM = 4            # 256 * 2**4 = 4096 px
 URL = '/api/sagas/v1/atlas'
 EXTERNAL_STYLES = {'vanilla': 'Vanilla', 'topografico': 'Topográfico',
                    'birds-eye': 'Birds Eye'}
+LEGACY_WEB_ROOT = Path('/srv')
 
 
 def _atomic_json(path: Path, value: dict) -> None:
@@ -220,9 +221,17 @@ def _external(world: str) -> tuple[Path, dict] | None:
     its raw tiles, or the known-lands consent mask could be bypassed.
     """
     configured = os.environ.get('HEIMDALL_EXTERNAL_ATLAS_DIR', '')
-    if not configured:
-        return None
-    root = Path(configured)
+    # Previous installations may retain a separate webroot used by a private
+    # generator. Check only conventional map exports and require a matching UID.
+    roots = [Path(configured)] if configured else sorted(LEGACY_WEB_ROOT.glob('*-web/mapa'))
+    for root in roots:
+        found = _external_from(root, world)
+        if found:
+            return found
+    return None
+
+
+def _external_from(root: Path, world: str) -> tuple[Path, dict] | None:
     metadata = root / 'metadata.json'
     try:
         if root.is_symlink() or metadata.is_symlink() or metadata.stat().st_size > 16384:

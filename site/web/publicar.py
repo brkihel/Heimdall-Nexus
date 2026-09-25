@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import datetime
 import hashlib
+import html
 import json
 import os
 import pwd
@@ -38,11 +39,21 @@ FIXOS = {
 }
 
 
-def public_html(source: str, path: str) -> str:
+def public_html(source: str, path: str, ident: dict | None = None) -> str:
     """Add the shared menu without changing the instance's editable source."""
     def asset(name: str) -> str:
         digest = hashlib.sha256((BASE / 'assets' / name).read_bytes()).hexdigest()[:10]
         return f'/assets/{name}?v={digest}'
+    # Legacy pages may have no identity markers. Their old root favicon files
+    # are not copied to the Nexus webroot, so point them at the managed icon.
+    if ident and 'data-identidade="favicon"' not in source:
+        icon = html.escape(ident.get('favicon') or '/marca/favicon.svg', quote=True)
+        if f'<link rel="icon" href="{icon}">' not in source:
+            source = re.sub(r'<link\b[^>]*\brel=["\'](?:shortcut )?icon["\'][^>]*>\s*',
+                            '', source, flags=re.I)
+            source = source.replace('</head>', f'<link rel="icon" href="{icon}">\n</head>', 1)
+    if '/assets/tema.css' not in source:
+        source = source.replace('</head>', '<link rel="stylesheet" href="/assets/tema.css">\n</head>', 1)
     if path in {'index.html', 'mapa/index.html', 'historias/index.html'} and \
             '/assets/boss-fights.js' not in source:
         source = source.replace('</head>', f'<link rel="stylesheet" href="{asset("boss-fights.css")}">\n'
@@ -175,7 +186,7 @@ def main(argv: list[str]) -> int:
             dados = fonte.read_bytes()
             if origem.endswith('.html'):
                 source = identidade.aplicar(dados.decode('utf-8'), ident)
-                dados = public_html(source, caminho).encode('utf-8')
+                dados = public_html(source, caminho, ident).encode('utf-8')
             if origem.endswith('.html') and b'@@' in dados:
                 print(f'!! {origem} ainda tem marcador @@ — não publiquei')
                 return 1

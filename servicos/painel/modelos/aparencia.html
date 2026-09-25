@@ -1,19 +1,20 @@
 {% extends "base.html" %}
-{% block titulo %}Aparência{% endblock %}
+{% block titulo %}Configurações Globais{% endblock %}
 {% block corpo %}
 <div class="topo">
-  <h1>Aparência</h1>
+  <h1>Configurações Globais</h1>
   <span id="estado" class="pastilha meio">lendo…</span>
   <div class="acoes">
-    <a class="btn" href="{{ raiz }}/site">Editar textos das páginas</a>
+    <a class="btn" href="{{ raiz }}/site">Editor de layout</a>
     <a class="btn" href="/" target="_blank" rel="noopener">Abrir o site</a>
   </div>
 </div>
 
 <div class="aparencia">
+<div class="aviso-caixa" id="aviso-personalizadas" hidden></div>
 <section class="cartao" id="identidade">
   <h2>Identidade</h2>
-  <p class="dica">Nome, slogan e rodapé aparecem em todas as páginas. O logo ocupa o lugar do nome no topo da página inicial.</p>
+  <p class="dica">Nome, slogan e rodapé atualizam as páginas que usam os campos globais. O logo ocupa o lugar do nome nas páginas preparadas para ele.</p>
   <div class="grade-ap">
     <label>Nome do site<input id="nome" type="text" maxlength="60" required></label>
     <label>Endereço do site<input id="url" type="text" maxlength="120" placeholder="https://seu-dominio.com"></label>
@@ -42,7 +43,7 @@
 
 <section class="cartao" id="cores">
   <h2>Cores</h2>
-  <p class="dica">Esta tabela vale para o site inteiro. Comece por uma paleta pronta e ajuste o que quiser.</p>
+  <p class="dica">A paleta é publicada para todo o site. Componentes com cores próprias nas páginas personalizadas continuam com suas cores até serem editados no Editor de layout.</p>
   <div class="paletas" id="paletas"></div>
   <div class="tabela-cores" id="tabela-cores"></div>
   <div class="amostra" id="amostra">
@@ -192,6 +193,12 @@ for (const bloco of document.querySelectorAll('.imagem')){
 async function carregar(){
   try {
     estado = await pede('/api/site/identidade');
+    const personalizadas = estado.paginas_personalizadas || [];
+    const aviso = $('aviso-personalizadas');
+    aviso.hidden = !personalizadas.length;
+    if (personalizadas.length) aviso.textContent = 'Páginas personalizadas: ' +
+      personalizadas.map(p => p.titulo + ' (' + p.campos.join(', ') + ')').join('; ') +
+      '. Esses textos e imagens fazem parte do layout da página e devem ser editados no Editor de layout. Favicon e paleta continuam globais.';
     const i = estado.identidade;
     for (const k of ['nome','slogan','rodape','url']) $(k).value = i[k] || '';
     cores = {...i.cores}; pendentes = {}; remover = {};

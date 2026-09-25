@@ -19,7 +19,8 @@ def defaults(manifest: dict) -> dict:
     pages = {page['id']: page for page in manifest['paginas'] if page.get('url')}
     order = [*filter(pages.__contains__, DEFAULT_ORDER),
              *sorted(set(pages) - set(DEFAULT_ORDER))]
-    return {'version': 1, 'style': 'discreto', 'palette': PALETTE.copy(),
+    return {'version': 2, 'style': 'discreto', 'palette': PALETTE.copy(),
+            'known': order,
             'links': [{'id': key, 'label': LABELS.get(key, pages[key]['titulo']),
                        'visible': True} for key in order]}
 
@@ -27,11 +28,17 @@ def defaults(manifest: dict) -> dict:
 def validate(value: object, manifest: dict) -> dict:
     pages = {page['id']: page for page in manifest['paginas'] if page.get('url')}
     if not isinstance(value, dict) or set(value) not in ({'version', 'style', 'links'},
-                                                       {'version', 'style', 'links', 'palette'}) or \
-            type(value['version']) is not int or value['version'] != 1 or \
+                                                       {'version', 'style', 'links', 'palette'},
+                                                       {'version', 'style', 'links', 'palette', 'known'}) or \
+            type(value['version']) is not int or value['version'] not in (1, 2) or \
             value['style'] not in STYLES or not isinstance(value['links'], list) or \
             len(value['links']) > 50:
         raise ValueError('configuração do menu inválida')
+    known = value.get('known', list(pages))
+    if not isinstance(known, list) or len(known) > 50 or \
+            any(not isinstance(key, str) or key not in pages for key in known) or \
+            len(set(known)) != len(known):
+        raise ValueError('páginas conhecidas do menu inválidas')
     palette = value.get('palette', PALETTE)
     if not isinstance(palette, dict) or set(palette) != set(PALETTE) or any(
             not isinstance(color, str) or not COLOR.fullmatch(color)
@@ -49,9 +56,10 @@ def validate(value: object, manifest: dict) -> dict:
         seen.add(link['id'])
         links.append({'id': link['id'], 'label': link['label'].strip(),
                       'visible': link['visible']})
-    if seen != set(pages):
-        raise ValueError('o menu precisa listar todas as páginas do site')
-    return {'version': 1, 'style': value['style'], 'palette': palette, 'links': links}
+    if (value['version'] == 1 and seen != set(pages)) or not seen <= set(known):
+        raise ValueError('páginas do menu inválidas')
+    return {'version': 2, 'style': value['style'], 'palette': palette,
+            'known': known, 'links': links}
 
 
 def load(base: Path, manifest: dict) -> dict:
@@ -60,17 +68,21 @@ def load(base: Path, manifest: dict) -> dict:
         saved = json.loads((base / FILE).read_text(encoding='utf-8'))
         if not isinstance(saved, dict) or not isinstance(saved.get('links'), list):
             raise ValueError('configuração do menu inválida')
-        present = {page['id'] for page in manifest['paginas']}
+        present = {page['id'] for page in manifest['paginas'] if page.get('url')}
         saved = {**saved, 'links': [item for item in saved['links']
                                    if isinstance(item, dict) and item.get('id') in present]}
+        if 'known' in saved:
+            saved['known'] = [key for key in saved['known'] if key in present]
         old = validate(saved, {'paginas': [page for page in manifest['paginas']
-                                           if page['id'] in {x['id'] for x in saved['links']}]})
+                                           if page['id'] in (set(saved.get('known') or []) |
+                                                             {x['id'] for x in saved['links']})]})
     except (OSError, ValueError, TypeError, AttributeError):
         return fallback
     current = {item['id']: item for item in fallback['links']}
     links = [item for item in old['links'] if item['id'] in current]
-    links += [item for item in fallback['links'] if item['id'] not in {x['id'] for x in links}]
-    return {'version': 1, 'style': old['style'], 'palette': old['palette'], 'links': links}
+    links += [item for item in fallback['links'] if item['id'] not in old['known']]
+    return {'version': 2, 'style': old['style'], 'palette': old['palette'],
+            'known': list(current), 'links': links}
 
 
 def public(value: dict, manifest: dict, name: str = '') -> dict:

@@ -242,10 +242,8 @@ function acompanha(id, sobre = {tipo: 'varredura'}){
     fecharAviso(aviso);
     const texto = saida.join('\n');
     if (d.estado === 'pronto') {
-      const religado = /servidor religado/.test(texto), estavaParado = /ja estava parado/.test(texto);
-      const aplicar = religado ? 'O servidor foi reiniciado para aplicar.' :
-        estavaParado ? 'O servidor estava desligado: ligue-o para aplicar.' :
-        sobre.tipo === 'varredura' ? '' : 'Reinicie o servidor para aplicar.';
+      const aplicar = sobre.tipo === 'varredura' ? '' :
+        'O servidor permanece desligado. Inicie-o pelo Console para aplicar.';
       const mundo = sobre.tipo === 'instalar' ? ' Alguns mods só funcionam plenamente num mundo novo.' : '';
       avisar({tipo: 'ok', titulo: tipo.feito(nome), texto: (aplicar + mundo).trim() || 'Pronto.', duracao: 9000});
     } else {

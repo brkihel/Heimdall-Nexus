@@ -1,5 +1,19 @@
 # Heimdall Nexus — versões
 
+## 0.2.2
+
+- O wipe de mundo permite definir os modificadores que serão aplicados no
+  próximo início do servidor, usando as mesmas regras da Server Config.
+- Instalação, atualização e remoção de mods, wipes, troca de mundo e backups
+  deixam o jogo desligado. O início do jogo fica a cargo do administrador.
+- O mapa público escolhe por padrão o mundo com atividade mais recente e
+  descobre exportações de geradores externos em `/srv/*-web/mapa`, mantendo a
+  checagem do UID e as regras de compartilhamento das tiles.
+- O editor em tela cheia permite adicionar e remover páginas do menu público.
+- O Jarl reúne o Editor de layout e as Configurações Globais em Aparência,
+  explica quais páginas têm conteúdo próprio e corrige o favicon de páginas
+  antigas durante a publicação.
+
 ## 0.2.1
 
 - O mapa público pode usar um gerador de mapas próprio da instalação, com até

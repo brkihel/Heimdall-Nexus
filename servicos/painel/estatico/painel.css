@@ -31,6 +31,11 @@ h1,h2,h3{font-family:'Cinzel',serif; color:var(--osso); letter-spacing:.04em; ma
 .lado a:hover{color:var(--ouro-claro); background:rgba(200,164,92,.05)}
 .lado a.ativo{color:var(--ouro-claro); border-left-color:var(--ouro);
   background:rgba(200,164,92,.08)}
+.lado-submenu summary{cursor:pointer;list-style:none;padding:.55rem 1.3rem;color:var(--texto);font-size:.92rem}
+.lado-submenu summary::-webkit-details-marker{display:none}
+.lado-submenu summary::after{content:'⌄';float:right;color:var(--ouro)}
+.lado-submenu[open] summary{color:var(--ouro-claro)}
+.lado-submenu a{padding-left:2rem;font-size:.85rem}
 .lado svg{width:17px; height:17px; flex:none; opacity:.85}
 .rodape-lado{margin-top:auto; padding:1.2rem 1.3rem; font-size:.8rem; color:var(--fraco)}
 
