@@ -1,6 +1,6 @@
 # Heimdall Sagas extension
 
-Status: **optional preview included in Heimdall Nexus 0.2.0** (bridge 0.1.6,
+Status: **optional preview introduced in Heimdall Nexus 0.2.0** (bridge 0.1.7 on this branch,
 client 0.1.4). The extension is opt-in and separate
 from the existing `saga.json` skill ranking. It has not been installed on a live
 server or published to Hexium.
@@ -89,6 +89,18 @@ or revoking consent takes effect on the next request. Full-world mode explicitly
 reveals every tile. The old biome grid is discarded. Client exploration fog is
 not captured. Exporting layers uses about 117 MB of private storage per world,
 plus rendered tiles; the worker runs outside the game with a 2 GB memory cap.
+
+An installation can instead keep an existing map exporter. Set
+`HEIMDALL_EXTERNAL_ATLAS_DIR` for the panel and executor to a read-only
+directory containing `metadata.json` and `tiles/<revision>/<style>/<z>/<x>/<y>.webp`.
+The metadata must identify the current Valheim world UID, a 24,576 m world
+span, 8,192 px source, 256 px tiles, zoom 5, and any of `vanilla`,
+`topografico`, and `birds-eye`. The public map then offers the available styles
+and applies the same admin map mode and current player consent to every tile
+request. A stale export from before a wipe is ignored because its world UID
+does not match. The raw tile directory **must not be served by Nginx**; only
+the consent-filtering `/api/sagas/v1/atlas/` endpoint may expose it. This
+integration does not install or change the external exporter.
 
 ## Story providers and automatic chapters
 

@@ -1,4 +1,4 @@
-# Heimdall Sagas preview (Client 0.1.4, Bridge 0.1.6)
+# Heimdall Sagas preview (Client 0.1.4, Bridge 0.1.7)
 
 This is an original optional companion to Heimdall Nexus. It currently records
 player presence, last known equipped items, opted-in live position, kills, deaths,

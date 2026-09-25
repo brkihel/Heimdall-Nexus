@@ -1,5 +1,7 @@
 """Security and delivery contracts for the optional Sagas extension."""
 import importlib.util
+import hashlib
+import io
 import json
 import sqlite3
 import sys
@@ -42,6 +44,48 @@ def event(**changes):
 
 
 class SagasContractTests(unittest.TestCase):
+    def test_external_atlas_styles_follow_world_and_consent(self):
+        atlas_spec = importlib.util.spec_from_file_location('heimdall_atlas', ROOT / 'servicos/painel/atlas.py')
+        atlas = importlib.util.module_from_spec(atlas_spec)
+        with patch.dict(sys.modules, {'sagas': sagas}):
+            atlas_spec.loader.exec_module(atlas)
+        from PIL import Image
+        uid = 1612050509
+        world = hashlib.sha256(str(uid).encode()).hexdigest()
+        rev = '1' * 12
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            state, external = root / 'state', root / 'generated'
+            state.mkdir(); external.mkdir()
+            enable(state)
+            (external / 'metadata.json').write_text(json.dumps({
+                'uid': uid, 'revision': rev, 'size': 8192, 'tileSize': 256,
+                'maxNativeZoom': 5, 'worldSpan': atlas.SPAN,
+                'styles': [{'id': name} for name in ('vanilla', 'topografico', 'birds-eye')]}))
+            for style in ('vanilla', 'topografico', 'birds-eye'):
+                target = external / 'tiles' / rev / style / '0' / '0' / '0.webp'
+                target.parent.mkdir(parents=True)
+                Image.new('RGB', (256, 256), (255, 0, 0)).save(target, 'WEBP')
+            with sagas.connect(state / 'sagas.sqlite3') as db:
+                db.execute('INSERT INTO worlds (id, name) VALUES (?, ?)', (world, 'World'))
+            with patch.dict('os.environ', {'HEIMDALL_EXTERNAL_ATLAS_DIR': str(external)}):
+                info = atlas.summary(state, world)
+                self.assertEqual(info['maxNativeZoom'], 5)
+                self.assertEqual(len(info['styles']), 3)
+                self.assertIsNone(atlas.summary(state, 'a' * 64))
+                self.assertIsNone(atlas.tile(state, world, rev, 0, 0, 0, 'unknown'))
+                self.assertIsNone(atlas.tile(state, world, '2' * 12, 0, 0, 0, 'vanilla'))
+                hidden = Image.open(io.BytesIO(atlas.tile(state, world, rev, 0, 0, 0, 'vanilla')))
+                self.assertLess(hidden.getpixel((128, 128))[0], 30)
+                settings = sagas.load_settings(state)
+                settings['map_mode'] = 'full'
+                (state / 'settings.json').write_text(json.dumps(settings))
+                full = Image.open(io.BytesIO(atlas.tile(state, world, rev, 0, 0, 0, 'topografico')))
+                self.assertGreater(full.getpixel((128, 128))[0], 200)
+                settings['map_mode'] = 'off'
+                (state / 'settings.json').write_text(json.dumps(settings))
+                self.assertIsNone(atlas.tile(state, world, rev, 0, 0, 0, 'vanilla'))
+
     def test_discovery_keeps_boss_flag_and_ignores_kill_filter(self):
         packet = sagas.validate(event(kind='discover', target='Eikthyrnir', boss=True))
         self.assertTrue(packet['boss'])

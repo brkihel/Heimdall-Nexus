@@ -73,8 +73,8 @@ def load(base: Path, manifest: dict) -> dict:
     return {'version': 1, 'style': old['style'], 'palette': old['palette'], 'links': links}
 
 
-def public(value: dict, manifest: dict) -> dict:
+def public(value: dict, manifest: dict, name: str = '') -> dict:
     pages = {page['id']: page['url'] for page in manifest['paginas'] if page.get('url')}
-    return {'style': value['style'], 'palette': value['palette'],
+    return {'name': name[:60], 'style': value['style'], 'palette': value['palette'],
             'links': [{'label': link['label'], 'url': pages[link['id']]}
                       for link in value['links'] if link['visible'] and link['id'] in pages]}

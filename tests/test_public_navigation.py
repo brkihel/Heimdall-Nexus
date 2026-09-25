@@ -24,6 +24,8 @@ class NavigationTests(unittest.TestCase):
     def test_navigation_accepts_only_known_internal_pages(self):
         config = navegacao.defaults(self.manifest)
         self.assertEqual(navegacao.validate(config, self.manifest), config)
+        self.assertEqual(navegacao.public(config, self.manifest, 'Meu Mundo')['name'],
+                         'Meu Mundo')
         bad = json.loads(json.dumps(config))
         bad['links'][0]['label'] = '<script>alert(1)</script>'
         with self.assertRaises(ValueError):

@@ -51,6 +51,11 @@ main{padding-bottom:5rem}
 .map-panel{grid-column:1/-1;padding:1.1rem}
 .map-head{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin:0 .25rem .9rem}
 .map-head h2{font-size:clamp(1.3rem,2.4vw,1.8rem);margin:.25rem 0 0}
+.map-head-actions{display:flex;align-items:center;justify-content:flex-end;gap:.65rem;flex-wrap:wrap}
+.map-styles{display:flex;gap:.2rem;padding:.2rem;border:1px solid var(--borda-viva);border-radius:3px;background:var(--noite)}
+.map-styles button{min-height:40px;padding:.45rem .7rem;border:1px solid transparent;border-radius:3px;background:transparent;color:var(--fraco);font:600 .68rem Cinzel,Georgia,serif;cursor:pointer}
+.map-styles button[aria-pressed=true]{border-color:var(--ouro-fundo);background:rgba(200,164,92,.12);color:var(--ouro-claro)}
+.map-styles button:focus-visible{outline:2px solid var(--ouro-claro)}
 .map-mode{border:1px solid rgba(200,164,92,.45);color:var(--ouro-claro);font:600 .62rem Cinzel,Georgia,serif;letter-spacing:.16em;text-transform:uppercase;padding:.4rem .7rem;border-radius:3px}
 .atlas{position:relative;height:clamp(360px,62vh,720px);border:1px solid var(--borda-viva);border-radius:3px;overflow:hidden;background:#070d12;touch-action:none;user-select:none}
 .atlas svg{display:block;width:100%;height:100%;cursor:grab}
@@ -185,7 +190,7 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
 <section class="hero"><div class="shell"><div><div class="eyebrow">Heimdall Nexus · Aventuras registradas</div><h1>Atlas dos Vikings</h1><p>O mundo visto pelos relatos que os jogadores escolheram compartilhar.</p><div class="divisor" aria-hidden="true"><i></i><b></b><i></i></div></div></div></section>
 <div class="shell toolbar"><label for="world">Mundo <select id="world"></select></label><span class="toolbar-note">Atualização automática a cada 30 segundos</span></div>
 <main class="shell"><p id="status" role="status">Carregando o mapa…</p><div id="dashboard" class="dashboard" hidden>
-  <section class="panel map-panel" id="map-panel"><div class="map-head"><div><div class="eyebrow">Além da fogueira</div><h2>O mundo conhecido</h2></div><span class="map-mode" id="map-mode">Pontos registrados</span></div>
+  <section class="panel map-panel" id="map-panel"><div class="map-head"><div><div class="eyebrow">Além da fogueira</div><h2>O mundo conhecido</h2></div><div class="map-head-actions"><div class="map-styles" id="map-styles" role="group" aria-label="Estilo do terreno" hidden></div><span class="map-mode" id="map-mode">Pontos registrados</span></div></div>
   <div class="atlas" id="atlas">
     <svg id="map" role="img" aria-labelledby="map-title"><title id="map-title">Mapa do mundo com locais compartilhados</title>
       <g id="map-base"><circle class="world-disc" cx="256" cy="256" r="219"/><circle class="world-ring" cx="256" cy="256" r="49"/><circle class="world-ring" cx="256" cy="256" r="122"/><circle class="world-ring" cx="256" cy="256" r="195"/><text class="world-label" x="256" y="14">NORTE</text></g>
@@ -472,6 +477,26 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
   function currentAtlas() {
     return payload && payload.atlas ? payload.atlas : null;
   }
+  let mapStyle = '';
+  function renderStyles(atlas) {
+    const picker = $('map-styles');
+    const styles = atlas && Array.isArray(atlas.styles) ? atlas.styles : [];
+    picker.hidden = styles.length < 2;
+    if (!styles.some(item => item.id === mapStyle)) mapStyle = styles[0]?.id || 'birds-eye';
+    picker.replaceChildren();
+    for (const item of styles) {
+      const button = document.createElement('button');
+      button.type = 'button'; button.textContent = item.label;
+      button.setAttribute('aria-pressed', String(item.id === mapStyle));
+      button.addEventListener('click', () => {
+        mapStyle = item.id; visibleTiles = '';
+        for (const other of picker.children)
+          other.setAttribute('aria-pressed', String(other === button));
+        renderTiles();
+      });
+      picker.append(button);
+    }
+  }
   let visibleTiles = '';
   function renderTiles() {
     const group = $('map-tiles'), atlas = currentAtlas();
@@ -488,7 +513,7 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
     const top = Math.max(0, Math.floor(vb.y / step));
     const right = Math.min(count - 1, Math.floor((vb.x + vb.width) / step));
     const bottom = Math.min(count - 1, Math.floor((vb.y + vb.height) / step));
-    const key = [atlas.tiles, zoom, left, top, right, bottom].join(':');
+    const key = [atlas.tiles, mapStyle, zoom, left, top, right, bottom].join(':');
     if (key === visibleTiles) return;
     visibleTiles = key;
     group.replaceChildren();
@@ -496,7 +521,7 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
       const image = document.createElementNS(svgNS, 'image');
       image.setAttribute('x', x * step); image.setAttribute('y', y * step);
       image.setAttribute('width', step); image.setAttribute('height', step);
-      image.setAttribute('href', atlas.tiles.replace('{z}', zoom).replace('{x}', x).replace('{y}', y));
+      image.setAttribute('href', atlas.tiles.replace('{style}', mapStyle).replace('{z}', zoom).replace('{x}', x).replace('{y}', y));
       group.append(image);
     }
   }
@@ -538,12 +563,13 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
     pins.replaceChildren();
     const points = mapPoints();
     const atlas = currentAtlas();
+    renderStyles(atlas);
     $('map-base').style.display = atlas && layers.terrain ? 'none' : '';
     $('map-mode').textContent = !atlas ? 'Pontos registrados' :
       atlas.mode === 'full' ? 'Mundo inteiro' : 'Terras conhecidas';
     $('map-intro').textContent = !atlas ?
       'O terreno aparece quando a ponte gerar o mapa e o admin escolher um modo no Jarl.' :
-      atlas.mode === 'full' ? 'Mapa Birds Eye do mundo inteiro.' :
+      atlas.mode === 'full' ? 'Mapa do mundo inteiro no estilo escolhido acima.' :
       'O terreno aparece em volta dos locais compartilhados; o resto segue sob névoa.';
     for (const point of points) {
       const [x, y] = toMap(point);

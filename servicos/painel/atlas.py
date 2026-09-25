@@ -25,6 +25,8 @@ PIXEL = 6
 SPAN = SIZE * PIXEL            # 24,576 m, centred on the world origin
 MAX_NATIVE_ZOOM = 4            # 256 * 2**4 = 4096 px
 URL = '/api/sagas/v1/atlas'
+EXTERNAL_STYLES = {'vanilla': 'Vanilla', 'topografico': 'Topográfico',
+                   'birds-eye': 'Birds Eye'}
 
 
 def _atomic_json(path: Path, value: dict) -> None:
@@ -211,10 +213,53 @@ def _points(db: sqlite3.Connection, world: str) -> list[list[int]]:
     return [[a * 100, b * 100] for a, b in sorted(set(cells + live))]
 
 
+def _external(world: str) -> tuple[Path, dict] | None:
+    """Find an optional, separately generated atlas for this exact world UID.
+
+    The configured directory is private to the panel. The site must not expose
+    its raw tiles, or the known-lands consent mask could be bypassed.
+    """
+    configured = os.environ.get('HEIMDALL_EXTERNAL_ATLAS_DIR', '')
+    if not configured:
+        return None
+    root = Path(configured)
+    metadata = root / 'metadata.json'
+    try:
+        if root.is_symlink() or metadata.is_symlink() or metadata.stat().st_size > 16384:
+            return None
+        info = json.loads(metadata.read_text(encoding='utf-8'))
+        uid = info['uid']
+        revision_id = info['revision']
+        styles = info['styles']
+        if type(uid) is not int or uid == 0 or \
+                hashlib.sha256(str(uid).encode()).hexdigest() != world or \
+                not isinstance(revision_id, str) or not re.fullmatch(r'[a-f0-9]{12}', revision_id) or \
+                (info['size'], info['tileSize'], info['maxNativeZoom'], info['worldSpan']) != \
+                (8192, 256, 5, SPAN) or \
+                not isinstance(styles, list) or not styles or len(styles) > 3:
+            return None
+        names = [item['id'] for item in styles]
+        if len(set(names)) != len(names) or any(name not in EXTERNAL_STYLES for name in names):
+            return None
+        tiles = root / 'tiles' / revision_id
+        if tiles.is_symlink() or not tiles.is_dir():
+            return None
+        return root, {'revision': revision_id, 'styles': names}
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
 def summary(state: Path, world: str) -> dict | None:
     settings = sagas.load_settings(state)
     if not settings['enabled'] or settings['map_mode'] == 'off' or not sagas.IDENTIFIER.fullmatch(world or ''):
         return None
+    external = _external(world)
+    if external:
+        _, info = external
+        return {'mode': settings['map_mode'],
+                'tiles': f'{URL}/{world}/{info["revision"]}/{{style}}/{{z}}/{{x}}/{{y}}.webp',
+                'styles': [{'id': key, 'label': EXTERNAL_STYLES[key]} for key in info['styles']],
+                'maxNativeZoom': 5, 'span': SPAN, 'radius': 10500}
     try:
         info = json.loads((state / 'cartography' / world / 'published.json').read_text())
         rev = info['revision']
@@ -223,22 +268,34 @@ def summary(state: Path, world: str) -> dict | None:
     except (OSError, ValueError, KeyError, TypeError):
         return None
     result = {'mode': settings['map_mode'], 'tiles': f'{URL}/{world}/{rev}/{{z}}/{{x}}/{{y}}.webp',
+              'styles': [{'id': 'birds-eye', 'label': 'Birds Eye'}],
               'maxNativeZoom': MAX_NATIVE_ZOOM, 'span': SPAN, 'radius': 10500}
     return result
 
 
-def tile(state: Path, world: str, revision_id: str, z: int, x: int, y: int) -> bytes | None:
+def tile(state: Path, world: str, revision_id: str, z: int, x: int, y: int,
+         style: str = 'birds-eye') -> bytes | None:
     """Read a private tile and apply current consent before returning any bytes."""
-    if not sagas.IDENTIFIER.fullmatch(world or '') or not re.fullmatch(r'[a-f0-9]{16}', revision_id):
-        return None
-    if not (0 <= z <= MAX_NATIVE_ZOOM and 0 <= x < 2 ** z and 0 <= y < 2 ** z):
+    if not sagas.IDENTIFIER.fullmatch(world or '') or \
+            not re.fullmatch(r'(?:[a-f0-9]{12}|[a-f0-9]{16})', revision_id):
         return None
     info = summary(state, world)
-    if info is None or f'/{revision_id}/' not in info['tiles']:
+    if info is None or f'/{revision_id}/' not in info['tiles'] or \
+            not (0 <= z <= info['maxNativeZoom'] and 0 <= x < 2 ** z and 0 <= y < 2 ** z):
         return None
-    source = state / 'cartography' / world / 'tiles' / revision_id / str(z) / str(x) / f'{y}.webp'
+    if '{style}' in info['tiles']:
+        external = _external(world)
+        if external is None or style not in external[1]['styles']:
+            return None
+        source = external[0] / 'tiles' / revision_id / style / str(z) / str(x) / f'{y}.webp'
+    else:
+        if style != 'birds-eye':
+            return None
+        source = state / 'cartography' / world / 'tiles' / revision_id / str(z) / str(x) / f'{y}.webp'
     try:
-        if source.is_symlink() or source.stat().st_size > 1024 * 1024:
+        if source.is_symlink() or source.stat().st_size > 1024 * 1024 or \
+                ('{style}' in info['tiles'] and
+                 not source.resolve().is_relative_to(external[0].resolve())):
             return None
         content = source.read_bytes()
     except OSError:

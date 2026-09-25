@@ -14,7 +14,7 @@ using UnityEngine;
 
 namespace Heimdall.Sagas.Mod
 {
-    [BepInPlugin("gg.heimdall.sagas.bridge", "Heimdall Sagas Bridge", "0.1.6")]
+    [BepInPlugin("gg.heimdall.sagas.bridge", "Heimdall Sagas Bridge", "0.1.7")]
     public sealed class BridgePlugin : BaseUnityPlugin
     {
         private const string Rpc = "Heimdall.Sagas.V1";
@@ -60,6 +60,7 @@ namespace Heimdall.Sagas.Mod
         private float nextLandmarkScan;
         private string atlasWorld = "";
         private bool landmarksLogged;
+        private bool externalAtlas;
         private readonly HashSet<string> landmarkSeen = new HashSet<string>();
         // Location prefab names; true marks a boss altar. Vegvisir boss hints
         // add their target names at runtime, so modded bosses are learned too.
@@ -74,6 +75,7 @@ namespace Heimdall.Sagas.Mod
         {
             inbox = Environment.GetEnvironmentVariable("HEIMDALL_SAGAS_INBOX");
             settingsPath = Environment.GetEnvironmentVariable("HEIMDALL_SAGAS_SETTINGS");
+            externalAtlas = Environment.GetEnvironmentVariable("HEIMDALL_SAGAS_EXTERNAL_ATLAS") == "1";
             if (string.IsNullOrWhiteSpace(inbox)) {
                 Logger.LogInfo("Heimdall Sagas bridge is idle; no Nexus inbox is configured.");
                 return;
@@ -145,7 +147,8 @@ namespace Heimdall.Sagas.Mod
                 nextLandmarkScan = Time.unscaledTime + 5f;
                 ScanLandmarks(peers);
             }
-            if (settings.enabled && (settings.map_mode == "explored" || settings.map_mode == "full") &&
+            if (!externalAtlas && settings.enabled &&
+                (settings.map_mode == "explored" || settings.map_mode == "full") &&
                 atlasWorld != WorldId() && WorldGenerator.instance != null &&
                 WorldId() != "") {
                 atlasWorld = WorldId();

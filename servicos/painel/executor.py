@@ -9,6 +9,7 @@ for comprometido, o atacante herda esta lista, e nada alem dela.
 Tudo que passa por aqui vai para a auditoria, inclusive o que foi recusado.
 """
 import getpass
+import atlas
 import hashlib
 import grp
 import json
@@ -23,6 +24,7 @@ import sys
 import time
 import re
 import secrets
+import sqlite3
 import tempfile
 import threading
 import urllib.request
@@ -2085,6 +2087,16 @@ def v_sagas_settings(_):
 
 def v_sagas_status(_):
     status = sagas.admin_status(HEIMDALL_STATE_ROOT / 'sagas', VALHEIM_ROOT)
+    status['external_atlas'] = 0
+    database = HEIMDALL_STATE_ROOT / 'sagas/sagas.sqlite3'
+    if database.is_file():
+        try:
+            with sqlite3.connect(f'file:{database}?mode=ro', uri=True, timeout=3) as db:
+                status['external_atlas'] = sum(
+                    atlas._external(row[0]) is not None
+                    for row in db.execute('SELECT id FROM worlds LIMIT 100'))
+        except sqlite3.Error:
+            pass
     try:
         status['importer_timer_active'] = subprocess.run(
             ['systemctl', 'is-active', '--quiet', 'heimdall-sagas-ingest.timer'],

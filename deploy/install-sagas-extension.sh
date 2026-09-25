@@ -63,10 +63,18 @@ if not settings.exists():
                                     'kill_mode': 'all'}) + '\n')
 os.chown(settings, panel_id, sagas_group)
 os.chmod(settings, 0o640)
-target = game / 'current/BepInEx/plugins/HeimdallSagas/HeimdallSagas.Bridge.dll'
-for part in (game / 'current', game / 'current/BepInEx', game / 'current/BepInEx/plugins'):
+current = game / 'current'
+release = current.resolve(strict=True)
+if current.is_symlink():
+    release_root = (game / 'releases').resolve(strict=True)
+    if not release.is_relative_to(release_root) or release.name != 'game':
+        raise SystemExit(f'Unsafe current game release: {current}')
+if not release.is_dir():
+    raise SystemExit(f'Unsafe current game release: {current}')
+for part in (release / 'BepInEx', release / 'BepInEx/plugins'):
     if part.is_symlink() or not part.is_dir():
         raise SystemExit(f'Unsafe game plugin directory: {part}')
+target = release / 'BepInEx/plugins/HeimdallSagas/HeimdallSagas.Bridge.dll'
 if target.parent.is_symlink():
     raise SystemExit(f'Unsafe bridge directory: {target.parent}')
 target.parent.mkdir(exist_ok=True, mode=0o755)

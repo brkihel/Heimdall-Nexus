@@ -190,7 +190,8 @@ def main(argv: list[str]) -> int:
             pub.copiar_pasta(BASE / 'assets', 'assets', alvo)
         elif alvo == 'navegacao':
             manifest = json.loads((BASE / 'site-pages.json').read_text(encoding='utf-8'))
-            config = navegacao.public(navegacao.load(BASE, manifest), manifest)
+            config = navegacao.public(navegacao.load(BASE, manifest), manifest,
+                                      ident['nome'])
             pub.escrever('assets/navegacao.json',
                          (json.dumps(config, ensure_ascii=False, separators=(',', ':')) + '\n').encode(), alvo)
         elif alvo == 'sitemap':

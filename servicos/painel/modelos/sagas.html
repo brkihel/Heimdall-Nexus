@@ -168,7 +168,7 @@ function sagasShow(d){
   ]);
   requirements('req-mapa',[
     [d.settings.enabled,'Extensão ligada',d.settings.enabled?'':'Ligue “Extensão ativa” em Módulos.'],
-    [d.atlas>0&&!d.atlas_error,'Mapa Birds Eye pronto',d.atlas_error>0?'HN-ATL-001 · A geração falhou. Confira: sudo journalctl -u heimdall-sagas-atlas -n 50 --no-pager':d.atlas>0?'Pronto para '+d.atlas+' mundo(s).':
+    [d.external_atlas>0||(d.atlas>0&&!d.atlas_error),'Mapa pronto',d.external_atlas>0?'Gerador externo pronto para '+d.external_atlas+' mundo(s); os estilos disponíveis aparecem no mapa.':d.atlas_error>0?'HN-ATL-001 · A geração falhou. Confira: sudo journalctl -u heimdall-sagas-atlas -n 50 --no-pager':d.atlas>0?'Birds Eye pronto para '+d.atlas+' mundo(s).':
       d.atlas_waiting>0?'Camadas recebidas. O renderizador está preparando as tiles; aguarde alguns minutos.':
       'A ponte exporta o mapa após iniciar o Valheim com a extensão ligada. Reinicie o servidor e aguarde alguns minutos.'],
     [(d.settings.map_mode||'explored')!=='off','Modo do mapa escolhido',(d.settings.map_mode||'explored')!=='off'?'':'Escolha “Terras conhecidas” ou “Mundo inteiro” abaixo e salve.'],

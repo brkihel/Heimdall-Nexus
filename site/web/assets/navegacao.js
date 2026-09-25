@@ -27,7 +27,8 @@
     const inner = document.createElement('div');inner.className = 'heimdall-nav-inner';
     const brand = document.createElement('a');brand.className = 'heimdall-nav-brand';brand.href = '/';
     const identity = document.querySelector('[data-identidade="nome"]');
-    brand.textContent = identity?.getAttribute('content') || identity?.textContent?.trim() || 'Heimdall Nexus';
+    brand.textContent = identity?.getAttribute('content') || identity?.textContent?.trim() ||
+      (typeof config.name === 'string' ? config.name.slice(0,60) : '') || 'Heimdall Nexus';
     const links = document.createElement('div');links.className = 'heimdall-nav-links';
     for (const entry of config.links) {
       if (!entry || typeof entry.label !== 'string' || typeof entry.url !== 'string' ||

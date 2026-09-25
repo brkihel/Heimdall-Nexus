@@ -90,6 +90,18 @@ async def sagas_public_atlas(world: str, revision: str, z: int, x: int, y: int):
     return Response(content, media_type='image/webp', headers={'Cache-Control': 'no-store'})
 
 
+@app.get('/api/sagas/v1/atlas/{world}/{revision}/{style}/{z}/{x}/{y}.webp')
+async def sagas_public_external_atlas(world: str, revision: str, style: str,
+                                      z: int, x: int, y: int):
+    try:
+        content = atlas.tile(sagas.STATE, world, revision, z, x, y, style)
+    except (OSError, ValueError, sagas.sqlite3.Error):
+        content = None
+    if content is None:
+        return Response(status_code=404, headers={'Cache-Control': 'no-store'})
+    return Response(content, media_type='image/webp', headers={'Cache-Control': 'no-store'})
+
+
 def assinador():
     config = nucleo.le_config()
     segredo = config.get('segredo')
