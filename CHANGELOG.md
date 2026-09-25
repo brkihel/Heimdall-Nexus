@@ -1,5 +1,26 @@
 # Heimdall Nexus — versões
 
+## 1.0.0
+
+Primeira versão estável. Reúne tudo o que veio nas 0.2.x:
+
+- **Servidor:** instalação guiada, Server Config com modificadores e listas de
+  acesso, wipe e troca de mundo, Mod Manager, Tarefas, Backups, Logs,
+  Auditoria e atualização pelo próprio Jarl, em canais estável ou de
+  desenvolvimento.
+- **Site:** Layout Editor no estilo construtor de páginas, menu com
+  submenus editado arrastando, Páginas, Configurações Globais, Modpack
+  sincronizado com o Hexium e atalhos do Jarl nas páginas para quem está
+  logado.
+- **Sagas (opcional):** mapa Birds Eye, momentos, Armaria com retrato e
+  equipamento, rankings recentes e histórias com IA, tudo sob o consentimento
+  de cada jogador.
+- As confirmações do painel usam uma caixa própria, que o navegador não
+  consegue bloquear.
+- O Mod Manager avisa corretamente que instalar, atualizar ou remover um mod
+  deixa o servidor desligado.
+- Documentação e wiki revistas para a 1.0, com capturas novas.
+
 ## 0.2.9
 
 - As confirmações do Jarl (ligar, reiniciar, apagar, wipe, restaurar…) usam

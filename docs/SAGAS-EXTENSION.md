@@ -1,9 +1,11 @@
 # Heimdall Sagas extension
 
-Status: **optional preview introduced in Heimdall Nexus 0.2.0** (bridge and
-client 0.2.1 add the Armory profile). The extension is opt-in and separate
-from the existing `saga.json` skill ranking. It has not been installed on a live
-server or published to Hexium.
+Status: **optional extension, part of Heimdall Nexus 1.0** (bridge and client
+0.2.1, which add the Armory profile). The extension is opt-in and separate
+from the existing `saga.json` skill ranking. It runs on a live server and has
+been played with one client at a time; the client package is not yet
+published on Hexium. Rows marked "Implemented in preview" below still await a
+wider multi-player test.
 
 ## Ownership and design
 

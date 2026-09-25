@@ -13,7 +13,7 @@ from one guided wizard, on a fresh Ubuntu or Debian machine.
 [![Valheim](https://img.shields.io/badge/Valheim-dedicated%20server-c8a45c?style=flat-square&labelColor=0d151d)](https://valheim.com/support/a-guide-to-dedicated-servers/)
 [![Platform](https://img.shields.io/badge/Ubuntu%20%7C%20Debian-x86--64-c8a45c?style=flat-square&labelColor=0d151d)](#quick-start)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-c8a45c?style=flat-square&labelColor=0d151d)](https://www.python.org/)
-[![Version](https://img.shields.io/badge/version-0.2.1-c8a45c?style=flat-square&labelColor=0d151d)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.0-c8a45c?style=flat-square&labelColor=0d151d)](CHANGELOG.md)
 
 </div>
 
@@ -27,15 +27,17 @@ The installer runs on your server and opens in your own browser. Five screens: s
 
 ## Run the server from one panel
 
-Start, stop and restart the game, watch the live log, edit files and mod configs, install and update mods, schedule restarts and backups, and restore any backup with one click. Every change is recorded in an audit log.
+Start, stop and restart the game, watch the live log, edit files and mod configs, install and update mods, wipe or swap worlds, schedule restarts and backups, and restore any backup with one click. Risky actions ask first in the panel's own dialog, and every change is recorded in an audit log.
 
 <img src=".github/assets/panel.webp" alt="Heimdall Nexus admin panel" width="100%">
 
 ## Give your community a real website
 
-A fast site with live server status, players online, world time and your mod list. Set your name, logo, favicon and colors in **Aparência**, edit every text right on the page, and add pages from wiki or blank templates. No code, no spreadsheets.
+A fast site with live server status, players online, world time and your mod list. Set your name, logo, favicon and colors in **Aparência**, and edit any page in the **Layout Editor**: click something on the page and only its tools appear, in Content, Style and Block tabs. Add pages from wiki or blank templates, and arrange the site menu by dragging. No code, no spreadsheets.
 
 <img src=".github/assets/site.webp" alt="A community website made with Heimdall Nexus" width="100%">
+
+<img src=".github/assets/editor.webp" alt="The Layout Editor with a text selected and its Style tools open" width="100%">
 
 <sub>Screenshots use sample data.</sub>
 
@@ -70,15 +72,16 @@ Then sign in at `https://your-domain/jarl/entrar`. Full walkthrough: [**Installa
 - Valheim Dedicated Server through SteamCMD, as a systemd service
 - Optional BepInEx, with modpacks from Thunderstore or Hexium (paste the link)
 - Your own `.zip` modpack with private mods
-- Server Config: name, world, port, password, world modifiers, admins and allowlist
+- Server Config: name, world, port, password, world modifiers, admins, allowlist and bans, with the resulting launch options on view
+- World wipes with a new name, seed and modifiers, or swap in an uploaded world
 
 </td>
 <td width="50%" valign="top">
 
 **Day to day**
-- Live console, file manager and mod config editor
-- Install and update mods, with a verified backup before each change
-- Update Heimdall from Jarl, with progress, error codes and a stable channel
+- Live console, file manager, mod config editor and chat/admin logs
+- Mod Manager: install, update and remove mods, with a verified backup before each change
+- Update Heimdall from Jarl, with progress, error codes and stable or development channels
 - Tarefas: cron schedules for restarts, starts, stops and backups
 - Backups you can download, restore, lock and delete
 
@@ -88,11 +91,12 @@ Then sign in at `https://your-domain/jarl/entrar`. Full walkthrough: [**Installa
 <td width="50%" valign="top">
 
 **Website**
-- Live status, players, world clock and mod list
-- Visual editor with versions and shareable previews
+- Live status, players, world clock and a mod list you refresh from Hexium in **Modpack**
+- Layout Editor with versions, undo and shareable previews
 - Name, logo, favicon, background and a global color table
-- Editable navigation and pages for map, stories, armory and rankings
-- Pages from wiki or blank templates
+- A shared menu with submenus, edited by dragging, with live preview
+- Pages for map, stories, armory and rankings, plus pages from wiki or blank templates
+- Signed-in admins get **Jarl** and **Layout Editor** shortcuts on every page
 
 </td>
 <td width="50%" valign="top">
@@ -109,11 +113,13 @@ Then sign in at `https://your-domain/jarl/entrar`. Full walkthrough: [**Installa
 
 ## Optional Sagas extension
 
-Sagas adds a Birds Eye map, Viking moments, equipment, rankings and AI-assisted
-chapters to the site. The admin enables each feature in Jarl; players choose
-separately whether to share their profile, map, position and story facts.
-Provider keys stay on the server. The [Sagas guide](https://github.com/brkihel/Heimdall-Nexus/wiki/Sagas)
-explains installation, consent and the remaining preview limits.
+Sagas adds a Birds Eye map, Viking moments, an **Armory** with each Viking's
+profile (a portrait rendered by the game, equipment with icons, hotbar and
+item details), rankings and AI-assisted chapters to the site. The admin
+enables each feature in Jarl; players choose separately whether to share their
+profile, map, position and story facts. Provider keys stay on the server. The
+[Sagas guide](https://github.com/brkihel/Heimdall-Nexus/wiki/Sagas) explains
+installation, consent and what is still on the roadmap.
 
 <img src=".github/assets/stories.webp" alt="Sample Viking story with the campfire background and boss battle art" width="100%">
 
@@ -132,7 +138,7 @@ Everything lives in the [**wiki**](https://github.com/brkihel/Heimdall-Nexus/wik
 
 From the panel: **Jarl → Sobre e atualizações → Procurar atualizações**. Review the changes, approve the exact version, and the panel updates and comes back on its own.
 
-<img src=".github/assets/updates.webp" alt="Jarl showing Heimdall Nexus 0.2.0 and the stable update channel" width="100%">
+<img src=".github/assets/updates.webp" alt="Jarl showing Heimdall Nexus 1.0.0 on the stable update channel" width="100%">
 
 Screenshots use illustrative data; they do not show a real server.
 
@@ -142,7 +148,7 @@ From a terminal on an installed server:
 cd ~/Heimdall-Nexus && git pull --ff-only && sudo ./deploy/update.sh
 ```
 
-It updates the panel and tools without touching worlds, mods or site content, and does not restart Valheim.
+It updates the panel and tools without touching worlds, mods or site content, and does not restart Valheim. If the Sagas bridge changed, restart the game when convenient.
 
 ## License
 

@@ -13,7 +13,7 @@
   O que está instalado sai do <code>mods.lock.json</code> do servidor; o catálogo junta o
   Hexium e a Thunderstore. Pacote que existe nas duas aparece uma vez, pela loja com a
   versão mais nova (no empate, o Hexium). Instalar, atualizar e remover param o servidor,
-  fazem backup verificado e religam — tudo sozinho.
+  guardam uma cópia do que muda e o deixam desligado: inicie-o pelo Console quando terminar.
 </p>
 
 <div class="abas">
@@ -204,13 +204,13 @@ async function procura(nova=true){
 function ligaBotoes(){
   document.querySelectorAll('[data-instalar]').forEach(b => b.onclick = () =>
     executa('mods.instalar', {nome:b.dataset.instalar, versao:b.dataset.versao},
-            `Instalar ${b.dataset.instalar} ${b.dataset.versao}?\n\nO servidor para, instala e religa.`));
+            `Instalar ${b.dataset.instalar} ${b.dataset.versao}?\n\nO servidor para e continua desligado; ligue-o pelo Console quando quiser.`));
   document.querySelectorAll('[data-atualizar]').forEach(b => b.onclick = () =>
     executa('mods.atualizar', {nome:b.dataset.atualizar, versao:b.dataset.versao},
-            `Atualizar ${b.dataset.atualizar} para ${b.dataset.versao}?\n\nO servidor para, atualiza e religa.`));
+            `Atualizar ${b.dataset.atualizar} para ${b.dataset.versao}?\n\nO servidor para e continua desligado; ligue-o pelo Console quando quiser.`));
   document.querySelectorAll('[data-remover]').forEach(b => b.onclick = () =>
     executa('mods.remover', {nome:b.dataset.remover},
-            `Remover ${b.dataset.remover}?\n\nA pasta vai para o porão de cópias antes de sumir.`));
+            `Remover ${b.dataset.remover}?\n\nA pasta vai para o porão de cópias antes de sumir. O servidor para e continua desligado.`));
 }
 
 async function executa(verbo, dados, pergunta){
