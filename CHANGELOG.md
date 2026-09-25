@@ -1,5 +1,12 @@
 # Heimdall Nexus — versões
 
+## 0.2.5
+
+- O editor do menu mostra a hierarquia e os controles em cartões com espaço
+  para edição, criação de links e mudança de nível. A página de adição informa
+  quando todas as páginas já estão no menu.
+- O editor em tela cheia tem um botão para voltar à página em edição na mesma aba.
+
 ## 0.2.4
 
 - O ícone da estação no Console acompanha a estação informada pelo Seasonality,

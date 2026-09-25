@@ -62,7 +62,7 @@
   </section>
 
   <section class="aba" data-aba="menu">
-    <p class="dica">Organize as páginas no menu principal ou dentro de outro link. Links filhos aparecem ao passar o mouse, usar Tab ou tocar na seta. Salvar publica imediatamente.</p>
+    <p class="dica">Os cartões sem recuo são links principais. Os recuados aparecem no submenu do link acima. As setas mudam a ordem dentro do mesmo nível; use <strong>Mover</strong> para trocar de nível.</p>
     <label class="menu-estilo">Visual do menu<select id="menu-estilo"><option value="discreto">Discreto</option><option value="destaque">Destaque dourado</option><option value="personalizado">Cores próprias</option></select></label>
     <div class="menu-cores" id="menu-cores" hidden>
       <label>Fundo<input type="color" data-cor="background"></label>
@@ -71,7 +71,13 @@
       <p class="dica">Confira o contraste das cores na página publicada, também no celular.</p>
     </div>
     <div id="menu-links" class="menu-links"></div>
-    <div class="menu-adicionar"><label>Adicionar página<select id="menu-nova-pagina"></select></label><label>Posição<select id="menu-novo-destino"></select></label><button class="jarl-btn" id="menu-adicionar" type="button">Adicionar</button></div>
+    <div class="menu-adicionar">
+      <h3>Adicionar página</h3>
+      <p class="dica" id="menu-sem-paginas" hidden>Todas as páginas já estão no menu. Para criar um submenu, use <strong>Mover</strong> no cartão da página.</p>
+      <label id="menu-pagina-campo">Página<select id="menu-nova-pagina"></select></label>
+      <label id="menu-destino-campo">Onde aparece<select id="menu-novo-destino"></select></label>
+      <button class="jarl-btn" id="menu-adicionar" type="button">Adicionar ao menu</button>
+    </div>
     <button class="jarl-btn jarl-primary" id="menu-salvar" type="button">Salvar menu</button>
   </section>
 
@@ -87,7 +93,7 @@
       <button data-largura="820" title="Tablet">▯</button>
       <button data-largura="390" title="Celular">▮</button>
     </div>
-    <a class="jarl-btn" id="b-ver" target="_blank" rel="noopener">Ver página</a>
+    <a class="jarl-btn" id="b-ver">← Sair para a página</a>
     <a class="jarl-btn" href="{{ raiz }}/site">Editor de layout</a>
   </footer>
 </aside>
@@ -248,18 +254,20 @@ function menuUsados() {
 function menuDestinos(select, atual, comFilhos, atualParent = null) {
   select.replaceChildren();
   const principal = document.createElement('option');principal.value = '';
-  principal.textContent = 'Menu principal';select.append(principal);
+  principal.textContent = 'No menu principal';select.append(principal);
   for (const parent of menuConfig.links) {
     if (parent === atual || comFilhos ||
         (parent.children.length >= 12 && parent !== atualParent)) continue;
     const option = document.createElement('option');option.value = parent.id;
-    option.textContent = `Dentro de ${parent.label}`;select.append(option);
+    option.textContent = `Como filho de ${parent.label}`;select.append(option);
   }
 }
 function desenhaLink(link, siblings, index, parent) {
   const row = document.createElement('div');row.className = 'menu-link';
   if (parent) row.classList.add('menu-filho');
-  const title = document.createElement('label');title.textContent = parent ? 'Link filho' : 'Nome no menu';
+  const level = document.createElement('strong');level.className = 'menu-nivel';
+  level.textContent = parent ? `↳ Filho de ${parent.label}` : 'Link principal';
+  const title = document.createElement('label');title.textContent = 'Texto do link';
   const input = document.createElement('input');input.value = link.label;input.maxLength = 28;
   input.setAttribute('aria-label', `Nome da página ${link.id}`);
   input.addEventListener('input', () => { link.label = input.value; });title.append(input);
@@ -267,32 +275,41 @@ function desenhaLink(link, siblings, index, parent) {
   const switcher = document.createElement('input');switcher.type = 'checkbox';switcher.checked = link.visible;
   switcher.addEventListener('change', () => { link.visible = switcher.checked; });
   visible.append(switcher,document.createTextNode('Mostrar'));
-  const up = document.createElement('button');up.type = 'button';up.className = 'jarl-btn';up.textContent = '↑';up.title = 'Mover para cima';up.disabled = index === 0;
+  const up = document.createElement('button');up.type = 'button';up.className = 'jarl-btn';up.textContent = '↑';up.title = 'Subir neste nível';up.setAttribute('aria-label', `Subir ${link.label} neste nível`);up.disabled = index === 0;
   up.addEventListener('click', () => { [siblings[index - 1],siblings[index]] = [siblings[index],siblings[index - 1]];desenhaMenu(); });
-  const down = document.createElement('button');down.type = 'button';down.className = 'jarl-btn';down.textContent = '↓';down.title = 'Mover para baixo';down.disabled = index === siblings.length - 1;
+  const down = document.createElement('button');down.type = 'button';down.className = 'jarl-btn';down.textContent = '↓';down.title = 'Descer neste nível';down.setAttribute('aria-label', `Descer ${link.label} neste nível`);down.disabled = index === siblings.length - 1;
   down.addEventListener('click', () => { [siblings[index + 1],siblings[index]] = [siblings[index],siblings[index + 1]];desenhaMenu(); });
   const remove = document.createElement('button');remove.type='button';remove.className='jarl-btn';
   remove.textContent='×';remove.title='Remover link do menu';remove.setAttribute('aria-label', `Remover ${link.label} do menu`);
   remove.addEventListener('click', () => {
     const children = link.children || [];
     siblings.splice(index, 1, ...children.map(child => ({...child, children: []})));
+    if (children.length) aviso('Os links filhos foram mantidos no menu principal. Salve para publicar.');
     desenhaMenu();
   });
-  const location = document.createElement('label');location.className = 'menu-posicao';
-  location.textContent = 'Posição';
-  const select = document.createElement('select');menuDestinos(select, link, !!link.children?.length, parent);
-  select.value = parent?.id || '';
-  select.disabled = !parent && !!link.children?.length;
-  select.title = select.disabled ? 'Mova os links filhos antes de mover este link' : '';
-  select.addEventListener('change', () => {
-    const target = menuConfig.links.find(item => item.id === select.value);
-    siblings.splice(index, 1);
-    if (target) target.children.push({id:link.id,label:link.label,visible:link.visible});
-    else menuConfig.links.push({...link,children:[]});
-    desenhaMenu();
-  });
-  location.append(select);
-  row.append(title,visible,up,down,remove,location);
+  const location = document.createElement('div');location.className = 'menu-posicao';
+  if (!parent && link.children.length) {
+    const note = document.createElement('small');
+    note.textContent = 'Para mover este link para outro submenu, mova primeiro os filhos abaixo.';
+    location.append(note);
+  } else {
+    const label = document.createElement('label');label.textContent = 'Mover para';
+    const select = document.createElement('select');menuDestinos(select, link, false, parent);
+    select.value = parent?.id || '';
+    label.append(select);
+    const move = document.createElement('button');move.type = 'button';move.className = 'jarl-btn';
+    move.textContent = 'Mover';move.disabled = true;
+    select.addEventListener('change', () => { move.disabled = select.value === (parent?.id || ''); });
+    move.addEventListener('click', () => {
+      const target = menuConfig.links.find(item => item.id === select.value);
+      siblings.splice(index, 1);
+      if (target) target.children.push({id:link.id,label:link.label,visible:link.visible});
+      else menuConfig.links.push({...link,children:[]});
+      desenhaMenu();
+    });
+    location.append(label,move);
+  }
+  row.append(level,title,visible,up,down,remove,location);
   return row;
 }
 async function desenhaMenu() {
@@ -318,7 +335,11 @@ async function desenhaMenu() {
     const option=document.createElement('option');option.value=page.id;option.textContent=page.titulo;selector.append(option);
   }
   menuDestinos($('#menu-novo-destino'),null,false);
-  $('#menu-adicionar').disabled=!selector.options.length;
+  const canAdd = !!selector.options.length;
+  $('#menu-sem-paginas').hidden = canAdd;
+  $('#menu-pagina-campo').hidden = !canAdd;
+  $('#menu-destino-campo').hidden = !canAdd;
+  $('#menu-adicionar').hidden = !canAdd;
 }
 $('#menu-adicionar').addEventListener('click',()=>{
   const page=menuPaginas.find(item=>item.id===$('#menu-nova-pagina').value);
