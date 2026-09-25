@@ -12,18 +12,36 @@ using UnityEngine;
 
 namespace Heimdall.Sagas.Mod
 {
-    [BepInPlugin("gg.heimdall.sagas.client", "Heimdall Sagas Client", "0.1.5")]
+    [BepInPlugin("gg.heimdall.sagas.client", "Heimdall Sagas Client", "0.2.0")]
     public sealed class ClientPlugin : BaseUnityPlugin
     {
         private const string Rpc = "Heimdall.Sagas.V1";
         private const string Hello = "Heimdall.Sagas.Hello.V1";
         private const string Probe = "Heimdall.Sagas.Probe.V1";
         private const string Ack = "Heimdall.Sagas.Ack.V1";
+        private const string MediaRpc = "Heimdall.Sagas.Media.V1";
+        private const string MediaAck = "Heimdall.Sagas.MediaAck.V1";
         private static ClientPlugin current;
         private ConfigEntry<bool> shareProfile;
         private ConfigEntry<bool> shareMap;
         private ConfigEntry<bool> sharePosition;
         private ConfigEntry<bool> shareStories;
+        private ConfigEntry<bool> portraitEnabled;
+        private ConfigEntry<KeyboardShortcut> portraitKey;
+        private ConfigEntry<float> portraitAmbient, portraitKeyLight, portraitFill, portraitReflection,
+                                   portraitFieldOfView, portraitAngle;
+        private RuntimeArt art;
+        private bool bridgeMedia;
+        private string currentWorld = "";
+        private float nextWorldCheck;
+        // Item icons and the portrait wait here until the bridge confirms them;
+        // only confirmed ids are named in presence packets.
+        private readonly Dictionary<string, (string Kind, byte[] Png)> media =
+            new Dictionary<string, (string, byte[])>();
+        private readonly HashSet<string> mediaStored = new HashSet<string>();
+        private string mediaSending = "";
+        private int mediaCursor;
+        private float mediaWaitUntil, nextMediaPump;
         private Harmony harmony;
         private float nextPresence;
         private float bridgeUntil;
@@ -51,6 +69,30 @@ namespace Heimdall.Sagas.Mod
                 "Allow a live marker when Valheim's own map visibility is also enabled.");
             shareStories = Config.Bind("Privacy", "ShareStories", false,
                 "Allow your Viking name and selected shared events to be sent to the AI provider chosen by the server admin (OpenRouter, OpenAI, Anthropic or Google Gemini) to write public AI stories. Requires ShareProfile.");
+            portraitEnabled = Config.Bind("Portrait", "Enabled", true,
+                "Show a picture of your Viking and equipment on the profile page. Requires ShareProfile.");
+            portraitKey = Config.Bind("Portrait", "RefreshKey", new KeyboardShortcut(KeyCode.F9),
+                "Take the portrait again now, for example after changing the values below.");
+            portraitAmbient = Config.Bind("Portrait", "Ambient", .62f,
+                new ConfigDescription("Soft light over the whole Viking.", new AcceptableValueRange<float>(0f, 1.5f)));
+            portraitKeyLight = Config.Bind("Portrait", "KeyLight", .8f,
+                new ConfigDescription("Main light from the front and above.", new AcceptableValueRange<float>(0f, 3f)));
+            portraitFill = Config.Bind("Portrait", "FillLight", .35f,
+                new ConfigDescription("Light from the other side, softening shadows.", new AcceptableValueRange<float>(0f, 3f)));
+            portraitReflection = Config.Bind("Portrait", "Reflection", .65f,
+                new ConfigDescription("Shine on metal armor.", new AcceptableValueRange<float>(0f, 2f)));
+            portraitFieldOfView = Config.Bind("Portrait", "FieldOfView", 12f,
+                new ConfigDescription("Camera lens; lower looks flatter.", new AcceptableValueRange<float>(6f, 40f)));
+            portraitAngle = Config.Bind("Portrait", "CameraAngle", .2f,
+                new ConfigDescription("Turn of the camera around the Viking; 0 is straight ahead.", new AcceptableValueRange<float>(-1f, 1f)));
+            art = new RuntimeArt((what, error) => Logger.LogWarning("Heimdall Sagas " + what + ": " + error.Message)) {
+                World = () => currentWorld
+            };
+            ApplyPortraitStyle();
+            // Any studio change retakes the portrait at once: no rebuild to see it.
+            foreach (var entry in new[] { portraitAmbient, portraitKeyLight, portraitFill, portraitReflection,
+                                          portraitFieldOfView, portraitAngle })
+                entry.SettingChanged += (_, __) => { ApplyPortraitStyle(); art.ForceRefresh(); };
             lastProfile = shareProfile.Value;
             lastMap = shareMap.Value;
             lastPosition = sharePosition.Value;
@@ -74,7 +116,81 @@ namespace Heimdall.Sagas.Mod
             harmony.PatchAll();
         }
 
-        private void OnDestroy() { harmony?.UnpatchSelf(); if (current == this) current = null; }
+        private void OnDestroy()
+        {
+            art?.Clear();
+            harmony?.UnpatchSelf();
+            if (current == this) current = null;
+        }
+
+        private void ApplyPortraitStyle()
+        {
+            art.Style = new PortraitStyle {
+                Ambient = portraitAmbient.Value, Key = portraitKeyLight.Value, Fill = portraitFill.Value,
+                Reflection = portraitReflection.Value, FieldOfView = portraitFieldOfView.Value,
+                SideAngle = portraitAngle.Value
+            };
+        }
+
+        private bool ArtAllowed => shareProfile.Value && bridgeMedia && Time.unscaledTime < bridgeUntil;
+
+        private void ClearMedia()
+        {
+            media.Clear();
+            mediaStored.Clear();
+            mediaSending = "";
+            mediaCursor = 0;
+            art?.Clear();
+        }
+
+        // Returns the id to name in a presence packet: only once the bridge has it.
+        private string Queue(RuntimeArt.Image image)
+        {
+            if (image == null || !MediaLimits.Valid(image.Kind, image.Id, image.Png)) return "";
+            if (mediaStored.Contains(image.Id)) return image.Id;
+            if (image.Kind == "portrait")
+                foreach (var old in media.Where(m => m.Value.Kind == "portrait" && m.Key != image.Id)
+                                         .Select(m => m.Key).ToArray()) {
+                    media.Remove(old);
+                    if (mediaSending == old) mediaSending = "";
+                }
+            if (!media.ContainsKey(image.Id) && media.Count < 64) media[image.Id] = (image.Kind, image.Png);
+            return "";
+        }
+
+        private void PumpMedia(ZNetPeer server)
+        {
+            if (!ArtAllowed || Time.unscaledTime < nextMediaPump) return;
+            nextMediaPump = Time.unscaledTime + .1f;
+            if (mediaSending == "" || !media.ContainsKey(mediaSending)) {
+                // Icons first: they are small and make the page useful quickly.
+                mediaSending = media.OrderBy(m => m.Value.Kind == "portrait" ? 1 : 0).Select(m => m.Key)
+                                    .FirstOrDefault() ?? "";
+                mediaCursor = 0;
+                mediaWaitUntil = 0;
+            }
+            if (mediaSending == "") return;
+            var (kind, png) = media[mediaSending];
+            var chunks = (png.Length + MediaLimits.ChunkBytes - 1) / MediaLimits.ChunkBytes;
+            if (mediaCursor >= chunks) {
+                // Everything was sent: wait for the bridge, then start over.
+                if (Time.unscaledTime < mediaWaitUntil) return;
+                mediaCursor = 0;
+            }
+            for (int sent = 0; sent < 2 && mediaCursor < chunks; sent++, mediaCursor++) {
+                var length = Math.Min(MediaLimits.ChunkBytes, png.Length - mediaCursor * MediaLimits.ChunkBytes);
+                var data = new byte[length];
+                Array.Copy(png, mediaCursor * MediaLimits.ChunkBytes, data, 0, length);
+                var package = new ZPackage();
+                package.Write(kind);
+                package.Write(mediaSending);
+                package.Write(png.Length);
+                package.Write(mediaCursor);
+                package.Write(data);
+                server.m_rpc.Invoke(MediaRpc, package);
+            }
+            if (mediaCursor >= chunks) mediaWaitUntil = Time.unscaledTime + 20f;
+        }
 
         private void Update()
         {
@@ -91,6 +207,7 @@ namespace Heimdall.Sagas.Mod
             if (!shareProfile.Value && pending.Count != 0) {
                 ClearPending();
             }
+            if (!shareProfile.Value && (media.Count != 0 || mediaStored.Count != 0)) ClearMedia();
             if (!shareMap.Value) {
                 foreach (var packet in pending.Values.Where(p => p.has_location)) {
                     packet.has_location = false;
@@ -101,7 +218,8 @@ namespace Heimdall.Sagas.Mod
             }
             var server = ZNet.instance?.GetServerPeer();
             if (server == null || !server.IsReady()) {
-                registeredServer = null; bridgeUntil = 0; bridgeGear = bridgeEvents = false;
+                if (registeredServer != null) ClearMedia();
+                registeredServer = null; bridgeUntil = 0; bridgeGear = bridgeEvents = bridgeMedia = false;
                 bridgeKillMode = "all";
                 sentPresence = false; return;
             }
@@ -109,15 +227,17 @@ namespace Heimdall.Sagas.Mod
                 registeredServer = server.m_rpc;
                 sentPresence = false;
                 bridgeUntil = 0;
-                bridgeGear = bridgeEvents = false;
+                bridgeGear = bridgeEvents = bridgeMedia = false;
                 bridgeKillMode = "all";
                 nextProbe = 0;
+                ClearMedia();
                 registeredServer.Register<string>(Hello, (rpc, version) => {
                     if (rpc == registeredServer && version != null && version.StartsWith("1:",
                         StringComparison.Ordinal)) {
                         bridgeUntil = Time.unscaledTime + 45f;
                         bridgeGear = version.IndexOf('g') >= 0;
                         bridgeEvents = version.IndexOf('e') >= 0;
+                        bridgeMedia = bridgeGear && version.IndexOf('m') >= 0;
                         var separator = version.LastIndexOf(':');
                         bridgeKillMode = separator < 0 ? "all" :
                             version.Substring(separator + 1) == "n" ? "notable" :
@@ -126,6 +246,15 @@ namespace Heimdall.Sagas.Mod
                         else RemoveFilteredPending();
                         nextPresence = 0;
                     }
+                });
+                registeredServer.Register<string>(MediaAck, (rpc, id) => {
+                    if (rpc != registeredServer || id == null || !media.TryGetValue(id, out var stored)) return;
+                    media.Remove(id);
+                    if (mediaStored.Count >= 256) mediaStored.Clear();
+                    mediaStored.Add(id);
+                    if (mediaSending == id) mediaSending = "";
+                    // A new portrait appears on the site without waiting half a minute.
+                    if (stored.Kind == "portrait") nextPresence = Math.Min(nextPresence, Time.unscaledTime + 1f);
                 });
                 registeredServer.Register<string>(Ack, (rpc, id) => {
                     if (rpc != registeredServer || !pending.Remove(id)) return;
@@ -148,6 +277,18 @@ namespace Heimdall.Sagas.Mod
                     Send(packet);
                 }
             }
+            if (Time.unscaledTime >= nextWorldCheck) {
+                nextWorldCheck = Time.unscaledTime + 3f;
+                currentWorld = WorldId();
+            }
+            var local = Player.m_localPlayer;
+            art.PumpPortrait(local, ArtAllowed && portraitEnabled.Value, currentWorld);
+            art.PumpIcons(ArtAllowed);
+            if (local != null && portraitKey.Value.IsDown() && ArtAllowed && portraitEnabled.Value) {
+                art.ForceRefresh();
+                local.Message(MessageHud.MessageType.TopLeft, "Heimdall: retrato sendo refeito");
+            }
+            PumpMedia(server);
             if (Time.unscaledTime < nextPresence) return;
             nextPresence = Time.unscaledTime + (consentRepeats > 0 ? 5f : 30f);
             var player = Player.m_localPlayer;
@@ -155,6 +296,8 @@ namespace Heimdall.Sagas.Mod
                 Time.unscaledTime >= bridgeUntil) return;
             var visible = sharePosition.Value && ZNet.instance.IsReferencePositionPublic();
             var optedOut = !shareProfile.Value && !shareMap.Value && !sharePosition.Value;
+            var profile = shareProfile.Value && bridgeGear;
+            string Icon(ItemDrop.ItemData item) => ArtAllowed ? Queue(art.TryIcon(item)) : "";
             Send(new WirePacket {
                 type = optedOut ? "withdraw" : "presence",
                 name = optedOut ? "" : player.GetPlayerName(), online = !optedOut,
@@ -162,27 +305,48 @@ namespace Heimdall.Sagas.Mod
                 share_stories = shareProfile.Value && shareStories.Value,
                 share_position = visible, x = visible ? player.transform.position.x : 0,
                 z = visible ? player.transform.position.z : 0,
-                gear = shareProfile.Value && bridgeGear ? Equipped(player) : Array.Empty<GearItem>()
+                gear = profile ? (bridgeMedia ? Equipped(player, Icon) : Legacy(Equipped(player, Icon)))
+                               : Array.Empty<GearItem>(),
+                hotbar = profile && bridgeMedia ? Hotbar(player, Icon) : Array.Empty<GearItem>(),
+                portrait = profile && ArtAllowed && portraitEnabled.Value
+                    ? Queue(art.TryPortrait(player, !media.Values.Any(m => m.Kind == "portrait"))) : "",
+                vitals = profile && bridgeMedia ? Vitals(player) : Array.Empty<Stat>()
             });
             if (consentRepeats > 0) consentRepeats--;
             sentPresence = true;
         }
 
-        private static GearItem[] Equipped(Player player)
+        private GearItem[] Equipped(Player player, Func<ItemDrop.ItemData, string> icon)
         {
             try {
-                return player.GetInventory().GetAllItems()
-                    .Where(item => item != null && item.m_equipped && item.m_shared != null)
-                    .Take(32)
-                    .Select(item => new GearItem {
-                        name = CleanText(Localization.instance == null ? item.m_shared.m_name :
-                            Localization.instance.Localize(item.m_shared.m_name), 120),
-                        slot = CleanText(item.m_shared.m_itemType.ToString(), 40),
-                        quality = Math.Max(1, Math.Min(1000, item.m_quality)),
-                        durability = Math.Max(0, Math.Min(10000, item.m_durability))
-                    }).ToArray();
-            } catch { return Array.Empty<GearItem>(); }
+                return JewelcraftingAdapter.Equipped(player).Where(item => item != null && item.m_shared != null)
+                    .Take(24).Select(item => GearReader.Read(item, player, icon)).ToArray();
+            } catch (Exception error) {
+                Logger.LogWarning("Heimdall Sagas could not read equipment: " + error.Message);
+                return Array.Empty<GearItem>();
+            }
         }
+
+        // Bridges before 0.2.0 drop presence packets over 8 KiB: send them only
+        // what they knew (name, slot, quality, durability).
+        private static GearItem[] Legacy(GearItem[] items) => items.Select(g => new GearItem {
+            name = g.name, slot = g.slot, quality = g.quality, durability = g.durability }).ToArray();
+
+        private GearItem[] Hotbar(Player player, Func<ItemDrop.ItemData, string> icon)
+        {
+            try { return GearReader.Hotbar(player, icon); }
+            catch (Exception error) {
+                Logger.LogWarning("Heimdall Sagas could not read the hotbar: " + error.Message);
+                return Array.Empty<GearItem>();
+            }
+        }
+
+        private static Stat[] Vitals(Player player) => new[] {
+            new Stat { name = "Health", value = player.GetMaxHealth() },
+            new Stat { name = "Stamina", value = player.GetMaxStamina() },
+            new Stat { name = "Eitr", value = player.GetMaxEitr() },
+            new Stat { name = "Armor", value = player.GetBodyArmor() }
+        }.Where(v => !float.IsNaN(v.value) && !float.IsInfinity(v.value)).ToArray();
 
         private static string CleanText(string value, int length) =>
             new string((value ?? "").Where(c => !char.IsControl(c)).Take(length).ToArray());

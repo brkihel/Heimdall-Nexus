@@ -155,14 +155,24 @@ if 'location = /api/sagas/v1/overview' not in text:
     backup.write_text(text)
     path.write_text(text.replace(marker, route + marker, 1))
     text = path.read_text()
-if 'location ^~ /api/sagas/v1/atlas/' not in text:
-    marker = '    location = /api/sagas/v1/overview {'
-    if marker not in text:
-        raise SystemExit('The Nexus Nginx configuration has an unexpected layout.')
-    backup = path.with_suffix('.pre-sagas')
-    if not backup.exists():
-        backup.write_text(text)
-    path.write_text(text.replace(marker, atlas_route + marker, 1))
+profile_route = '''    location ^~ /api/sagas/v1/vikings/ {
+        limit_except GET { deny all; }
+        proxy_pass http://127.0.0.1:8791;
+        proxy_set_header Host $host;
+    }
+
+'''
+for needle, block in (('location ^~ /api/sagas/v1/atlas/', atlas_route),
+                      ('location ^~ /api/sagas/v1/vikings/', profile_route)):
+    if needle not in text:
+        marker = '    location = /api/sagas/v1/overview {'
+        if marker not in text:
+            raise SystemExit('The Nexus Nginx configuration has an unexpected layout.')
+        backup = path.with_suffix('.pre-sagas')
+        if not backup.exists():
+            backup.write_text(text)
+        text = text.replace(marker, block + marker, 1)
+        path.write_text(text)
 PY
 if ! nginx -t; then
   if [[ -f /etc/nginx/sites-available/heimdall-nexus.pre-sagas ]]; then

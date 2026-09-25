@@ -1,5 +1,18 @@
 # Heimdall Nexus — versões
 
+## Em desenvolvimento
+
+- **Armaria** virou a página de perfil de cada Viking: equipamento com os
+  ícones do jogo em volta de um retrato do personagem, barra rápida 1–8 com o
+  item em uso, vida, vigor, eitr e armadura, detalhes de cada item ao passar o
+  mouse (atributos, efeitos, engastes do Jewelcrafting) e a aba Saga com os
+  feitos do Viking. O cenário acompanha o bioma do último feito compartilhado.
+- Heimdall Sagas Client e Bridge 0.2.0 enviam os ícones e o retrato. O retrato
+  é tirado pelo jogo quando o visual muda; a seção `[Portrait]` do cliente
+  liga, desliga e ajusta luz e câmera, e F9 refaz na hora. Tudo segue o
+  `ShareProfile` do jogador e a opção de equipamento do admin.
+- A captura de ícones e retrato é adaptada do Valheim Sagas (MIT).
+
 ## 0.2.6
 
 - No site, quem está logado no Jarl vê os atalhos **Jarl** e **Layout Editor**

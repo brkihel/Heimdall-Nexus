@@ -48,7 +48,7 @@ também precisa de BepInEx e da DLL Client.
    importação e a rota pública; o reinício carrega a DLL no Valheim.
 4. No computador do jogador, instale o pacote `HeimdallSagasClient` pelo
    gerenciador de mods (Gale ou r2modman), ou importe
-   `dist/sagas/HeimdallSagas.Client-0.1.5.zip` nele. Manualmente, copie a
+   `dist/sagas/HeimdallSagas.Client-0.2.0.zip` nele. Manualmente, copie a
    pasta `plugins/HeimdallSagas` do ZIP para `BepInEx/plugins/`. Não instale
    a Bridge no cliente.
 5. Abra o jogo uma vez para gerar

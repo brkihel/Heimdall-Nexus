@@ -24,8 +24,9 @@ root = Path(sys.argv[1])
 artifacts = root / 'artifacts/sagas'
 artifacts.mkdir(parents=True, exist_ok=True)
 for kind in ('Client', 'Bridge'):
-    dll = root / f'extensoes/sagas/mod/HeimdallSagas.{kind}/bin/Release/net48/HeimdallSagas.{kind}.dll'
-    version = '0.1.5' if kind == 'Client' else '0.1.7'
+    framework = 'netstandard2.1' if kind == 'Client' else 'net48'
+    dll = root / f'extensoes/sagas/mod/HeimdallSagas.{kind}/bin/Release/{framework}/HeimdallSagas.{kind}.dll'
+    version = '0.2.0'
     output = artifacts / f'HeimdallSagas.{kind}-{version}.zip'
     with ZipFile(output, 'w', ZIP_DEFLATED) as archive:
         if kind == 'Client':
@@ -34,18 +35,19 @@ for kind in ('Client', 'Bridge'):
             archive.write(root / 'extensoes/sagas/mod/README-client.md', 'README.md')
             archive.write(root / 'extensoes/sagas/mod/manifest-client.json', 'manifest.json')
             archive.write(root / 'extensoes/sagas/mod/icon.png', 'icon.png')
+            archive.write(root / 'extensoes/sagas/mod/THIRD-PARTY-NOTICES.md', 'THIRD-PARTY-NOTICES.md')
         else:
             archive.write(dll, f'BepInEx/plugins/HeimdallSagas/HeimdallSagas.{kind}.dll')
             archive.write(root / 'extensoes/sagas/mod/README.md', 'README.md')
     if kind == 'Client':
         with ZipFile(output) as archive:
-            required = {'manifest.json', 'icon.png', 'README.md',
+            required = {'manifest.json', 'icon.png', 'README.md', 'THIRD-PARTY-NOTICES.md',
                         'plugins/HeimdallSagas/HeimdallSagas.Client.dll'}
             if not required.issubset(archive.namelist()):
                 raise SystemExit('Client package is missing required Hexium files.')
             manifest = json.loads(archive.read('manifest.json'))
             if manifest.get('name') != 'HeimdallSagasClient' or \
-                    manifest.get('version_number') != '0.1.5':
+                    manifest.get('version_number') != '0.2.0':
                 raise SystemExit('Client package has an unexpected identity.')
             icon = archive.read('icon.png')
             if icon[:8] != b'\x89PNG\r\n\x1a\n' or \

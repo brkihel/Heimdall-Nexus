@@ -32,6 +32,25 @@ feitos e os momentos no mapa, **somente se você ligar cada opção**.
 As histórias são marcadas no site como ficção criada por IA. Coordenadas, IDs
 internos, equipamento e mapa **não** são enviados ao provedor de IA.
 
+## Armaria: ícones e retrato
+
+Com `ShareProfile` ligado, a Armaria do site mostra o seu equipamento com os
+ícones do jogo, a barra rápida (posições 1 a 8) e um **retrato** do seu Viking
+vestido como está agora. O retrato é tirado pelo próprio jogo, uma vez, quando
+o visual muda e você está de pé; ele não pesa na partida.
+
+Na seção `[Portrait]`:
+
+| Opção | Para que serve |
+|---|---|
+| `Enabled` | `false` desliga o retrato; ícones e equipamento continuam. |
+| `RefreshKey` | Tecla que tira o retrato de novo na hora (padrão **F9**). |
+| `Ambient`, `KeyLight`, `FillLight`, `Reflection` | Luz do estúdio: geral, principal, de preenchimento e brilho do metal. |
+| `FieldOfView`, `CameraAngle` | Lente e giro da câmera em volta do Viking. |
+
+Mudou um valor pelo Configuration Manager (F1)? O retrato é refeito na hora,
+sem reiniciar o jogo.
+
 ## Retirar a permissão
 
 Volte a opção para `false`:
@@ -58,3 +77,11 @@ map moments with the server's website, **only for the options you turn on**.
   Gemini) for public, AI-labelled stories. Coordinates, internal IDs, equipment
   and map data are never sent to the provider.
 - Turning an option back off deletes the matching stored data from the site.
+- With `ShareProfile`, the site's Armory shows your equipment with game icons,
+  your hotbar (slots 1–8) and a portrait of your Viking, rendered by the game
+  when your appearance changes. The `[Portrait]` section turns it off, sets the
+  refresh key (F9) and tunes the studio light and camera; any change retakes
+  the portrait at once.
+
+The item icon and portrait capture is adapted from Valheim Sagas (MIT); see
+THIRD-PARTY-NOTICES.md.

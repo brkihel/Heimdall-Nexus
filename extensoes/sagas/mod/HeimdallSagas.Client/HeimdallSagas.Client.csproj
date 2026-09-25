@@ -1,22 +1,28 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net48</TargetFramework>
-    <LangVersion>10</LangVersion>
+    <!-- netstandard2.1 (supported by the game's Unity runtime) provides Span<T>
+         for the portrait's pixel processing. -->
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>annotations</Nullable>
     <AssemblyName>HeimdallSagas.Client</AssemblyName>
     <GameRefDir Condition="'$(GameRefDir)' == ''">../ref/game</GameRefDir>
     <BepInExRefDir Condition="'$(BepInExRefDir)' == ''">../ref/bepinex</BepInExRefDir>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="all" />
     <Compile Include="../WirePacket.cs" Link="WirePacket.cs" />
     <Compile Include="../KillFilter.cs" Link="KillFilter.cs" />
     <Compile Include="../BiomeTag.cs" Link="BiomeTag.cs" />
+    <Compile Include="../MediaLimits.cs" Link="MediaLimits.cs" />
     <Reference Include="BepInEx"><HintPath>$(BepInExRefDir)/BepInEx.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="0Harmony"><HintPath>$(BepInExRefDir)/0Harmony.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="assembly_valheim"><HintPath>$(GameRefDir)/assembly_valheim.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine"><HintPath>$(GameRefDir)/UnityEngine.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(GameRefDir)/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.JSONSerializeModule"><HintPath>$(GameRefDir)/UnityEngine.JSONSerializeModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ImageConversionModule"><HintPath>$(GameRefDir)/UnityEngine.ImageConversionModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ParticleSystemModule"><HintPath>$(GameRefDir)/UnityEngine.ParticleSystemModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(GameRefDir)/UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="assembly_utils"><HintPath>$(GameRefDir)/assembly_utils.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="assembly_guiutils"><HintPath>$(GameRefDir)/assembly_guiutils.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>

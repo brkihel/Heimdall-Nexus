@@ -164,7 +164,7 @@ function sagasShow(d){
     [recent,'Ponte enviando dados',recent?'Último dado há '+ago+' min.':(d.last_data_at?'Último dado há '+ago+' min. ':'Nenhum dado recebido ainda. ')+
       'Confira se o servidor Valheim está ligado. No log do servidor deve aparecer “Heimdall Sagas”: sudo journalctl -u heimdall-valheim | grep "Heimdall Sagas"'],
     [d.profiles>0,'Pelo menos um jogador compartilhando',d.profiles>0?d.profiles+' Viking(s) compartilham o perfil.':
-      'Cada jogador instala o Heimdall Sagas Client (pacote HeimdallSagasClient do modpack, ou o arquivo dist/sagas/HeimdallSagas.Client-0.1.5.zip do Nexus arrastado no Gale/r2modman), abre o jogo uma vez e, em BepInEx/config/gg.heimdall.sagas.client.cfg, muda ShareProfile para true.'],
+      'Cada jogador instala o Heimdall Sagas Client (pacote HeimdallSagasClient do modpack, ou o arquivo dist/sagas/HeimdallSagas.Client-0.2.0.zip do Nexus arrastado no Gale/r2modman), abre o jogo uma vez e, em BepInEx/config/gg.heimdall.sagas.client.cfg, muda ShareProfile para true.'],
   ]);
   requirements('req-mapa',[
     [d.settings.enabled,'Extensão ligada',d.settings.enabled?'':'Ligue “Extensão ativa” em Módulos.'],

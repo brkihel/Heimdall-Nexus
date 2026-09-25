@@ -1,16 +1,19 @@
 # Heimdall Sagas extension
 
-Status: **optional preview introduced in Heimdall Nexus 0.2.0** (bridge 0.1.7 since 0.2.1,
-client 0.1.5). The extension is opt-in and separate
+Status: **optional preview introduced in Heimdall Nexus 0.2.0** (bridge and
+client 0.2.0 add the Armory profile). The extension is opt-in and separate
 from the existing `saga.json` skill ranking. It has not been installed on a live
 server or published to Hexium.
 
 ## Ownership and design
 
-The implementation in this repository was written for Heimdall Nexus. No
-ValheimSagas source file, web asset, stylesheet, illustration, or binary was
-copied into it. [ValheimSagas](https://github.com/pendulumgames/ValheimSagas)
-was used to inventory desired behavior and study the presentation. Heimdall's
+The implementation in this repository was written for Heimdall Nexus.
+[ValheimSagas](https://github.com/pendulumgames/ValheimSagas) was used to
+inventory desired behavior and study the presentation. One part is adapted from
+its MIT-licensed source: the client's item icon and character portrait capture
+(`extensoes/sagas/mod/HeimdallSagas.Client/Art/`), credited with its license in
+`extensoes/sagas/mod/THIRD-PARTY-NOTICES.md`. No ValheimSagas web asset,
+stylesheet, illustration, or binary was copied. Heimdall's
 site, panel, theme, permissions, and
 deployment remain authoritative.
 
@@ -67,6 +70,33 @@ request, including failed attempts. `openrouter/free` is the default; a paid
 model requires an explicit admin opt-in. Stories are labeled as AI fiction and
 retain visible event references. Opting out of `ShareStories` deletes chapters
 that reference that Viking while keeping ordinary shared events.
+
+## Armory profiles
+
+With `ShareProfile` on, client 0.2.0 sends each equipped item's type, quality,
+durability, stats, effects and Jewelcrafting sockets, the hotbar (slots 1–8),
+and maximum health, stamina, eitr and armor. Item icons and a transparent
+portrait are PNG files sent separately in 60 KiB pieces over a dedicated RPC,
+only after the bridge announces the `m` capability (tied to the admin's
+equipment option). The bridge rebuilds each file, accepts it only if its
+SHA-256 matches its name and its size and dimensions fit (icons up to 128 px
+and 48 KiB, portraits up to 1024×1536 and 1 MiB, at most 6 MiB per player per
+minute), writes it to the spool and confirms. A presence names an image only
+after that confirmation.
+
+The importer checks every PNG chunk and checksum, accepts only 8-bit RGB/RGBA
+non-interlaced pictures whose data inflates to exactly the promised size, and
+keeps a copy with only the picture chunks in private storage. The public
+`/api/sagas/v1/vikings/<id>` profile and its `/media/<hash>.png` files are read
+with current consent on every request: a picture is served only while the
+Viking shares a profile that shows it and the admin keeps equipment on.
+Pictures no profile shows are removed after 14 days; at most 4,000 are kept.
+
+The portrait is rendered by the game from a frozen copy of the Viking on an
+isolated layer, in a neutral studio, only when the appearance changed and the
+Viking is standing, with the work spread over frames. The `[Portrait]` client
+section turns it off, sets a refresh key (F9) and tunes light and camera; a
+changed value retakes the portrait at once.
 
 ## Discoveries and world map
 
@@ -156,7 +186,7 @@ without replacing its home, Wiki, appearance, or other custom pages.
 | Advanced boss credit, drops, rarity, bounty | Planned | Server-authoritative provenance and deduplication tests |
 | Birds Eye map with consent-filtered known-lands fog and discovery pins | Implemented in preview | Real-world orientation and performance check |
 | Client exploration fog, custom pins, activity layers | Planned | Consent-preserving capture, bounded transport, large-map tests |
-| Portraits, icons, effects, resistances | Planned | Frame-budgeted capture and media validation |
+| Armory profile: item icons, hotbar, portrait, item details, Jewelcrafting sockets | Implemented in preview | One-client portrait playtest; Epic Loot and Nemesis adapters |
 | Rankings, comparisons, trophy hall | Planned | Credited fact ledger and time-window rules |
 | SLS, Epic Loot, Jewelcrafting | Planned | Independent soft adapters and absent-mod tests |
 | Personal login and player settings | Planned | One-time challenge, owner verification, revocation |
