@@ -6,12 +6,15 @@ never imports a game assembly or accepts telemetry over HTTP.
 from __future__ import annotations
 
 import json
+import hashlib
 import math
 import os
 import re
 import shutil
 import sqlite3
 import stat
+import struct
+import tempfile
 import time
 from contextlib import nullcontext
 from datetime import datetime, timezone
@@ -22,6 +25,7 @@ INBOX = STATE / 'inbox'
 REJECTED = STATE / 'rejected'
 DATABASE = STATE / 'sagas.sqlite3'
 SETTINGS = STATE / 'settings.json'
+CURRENT_WORLD = 'current-world.json'
 IDENTIFIER = re.compile(r'^[a-f0-9]{24,64}$')
 EVENT_ID = re.compile(r'^[A-Za-z0-9_-]{8,96}$')
 BIOME = re.compile(r'^[A-Za-z][A-Za-z0-9_]{0,39}$')
@@ -39,6 +43,71 @@ DEFAULT_SETTINGS = {'version': 1, 'enabled': False, 'gear': True,
 
 class InvalidPacket(ValueError):
     pass
+
+
+def current_world(state: Path = STATE) -> str | None:
+    """Return the configured game's world digest, or None before the first sync."""
+    path = state / CURRENT_WORLD
+    try:
+        if path.is_symlink() or path.stat().st_size > 1024:
+            return None
+        value = json.loads(path.read_text(encoding='utf-8'))
+        world = value['world']
+        if value.get('version') == 1 and (world == '' or
+                                          isinstance(world, str) and re.fullmatch(r'[a-f0-9]{64}', world)):
+            return world
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    return None
+
+
+def write_current_world(state: Path, world: str) -> None:
+    if world and not re.fullmatch(r'[a-f0-9]{64}', world):
+        raise ValueError('invalid world digest')
+    descriptor, temporary = tempfile.mkstemp(prefix='.current-world-', dir=state)
+    try:
+        with os.fdopen(descriptor, 'w', encoding='utf-8') as output:
+            json.dump({'version': 1, 'world': world}, output)
+            output.write('\n')
+            output.flush()
+            os.fsync(output.fileno())
+        os.chmod(temporary, 0o644)
+        os.replace(temporary, state / CURRENT_WORLD)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
+
+
+def refresh_current_world(game: Path, state: Path = STATE) -> str | None:
+    """Publish only the UID digest from the save selected by VH_WORLD."""
+    if not state.is_dir():
+        return None
+    world = ''
+    try:
+        lines = (game / 'server.env').read_text(encoding='utf-8').splitlines()
+        raw = next(line.split('=', 1)[1].strip() for line in lines if line.startswith('VH_WORLD='))
+        name = json.loads(raw) if raw.startswith('"') else raw.strip("'")
+        if not isinstance(name, str) or not re.fullmatch(r'[A-Za-z0-9_ -]{1,40}', name):
+            raise ValueError('invalid world name')
+        folder = game / 'saves/worlds_local' / name
+        if folder.is_symlink():
+            raise ValueError('invalid world folder')
+        files = sorted((path for path in folder.glob('_main.*.fwl2')
+                        if re.fullmatch(r'_main\.\d+\.fwl2', path.name)),
+                       key=lambda path: int(path.name.split('.')[1]), reverse=True)
+        if files:
+            path = files[0]
+            if path.is_symlink() or path.stat().st_size > 1024 * 1024:
+                raise ValueError('invalid world metadata')
+            import fwl
+            info = fwl.Fwl(path.read_bytes())
+            if info.nome != name or not info.uid:
+                raise ValueError('world metadata does not match configuration')
+            world = hashlib.sha256(str(info.uid).encode('ascii')).hexdigest()
+    except (OSError, ValueError, StopIteration, struct.error):
+        pass
+    if current_world(state) != world:
+        write_current_world(state, world)
+    return world
 
 
 def load_settings(state: Path = STATE) -> dict:
@@ -448,7 +517,8 @@ def process_inbox(state: Path = STATE, limit: int = MAX_BATCH) -> dict:
     return counts
 
 
-def public_view(path: Path = DATABASE, world: str = '', limit: int = 50) -> dict:
+def public_view(path: Path = DATABASE, world: str = '', limit: int = 50,
+                strict_world: bool = False) -> dict:
     """Read-only response; a withdrawn profile is hidden immediately."""
     settings = load_settings(path.parent)
     if not path.is_file() or not settings['enabled']:
@@ -460,7 +530,11 @@ def public_view(path: Path = DATABASE, world: str = '', limit: int = 50) -> dict
             'SELECT id, name, day, fraction, clock_at FROM worlds ORDER BY clock_at DESC, id')]
         if not worlds:
             return {'available': True, 'worlds': [], 'players': [], 'events': []}
+        if strict_world and not any(entry['id'] == world for entry in worlds):
+            return {'available': True, 'worlds': [], 'players': [], 'events': [], 'world': ''}
         selected = world if any(w['id'] == world for w in worlds) else worlds[0]['id']
+        if strict_world:
+            worlds = [entry for entry in worlds if entry['id'] == selected]
         players = []
         for row in db.execute('''SELECT id, name, online, share_position, x, z, seen_at, gear_json
                                  FROM players WHERE world=? AND share_profile=1

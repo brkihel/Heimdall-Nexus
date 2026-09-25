@@ -26,6 +26,10 @@
   <div class="nota" id="nota-personagens">
     Mantendo os personagens, todo mundo entra no mundo novo com o personagem de sempre.
   </div>
+  <div class="linha-campos" id="linha-nome">
+    <label>Nome do novo mundo <small>pode manter o nome atual ou escolher outro</small>
+      <input type="text" id="w-nome" maxlength="40" autocomplete="off"></label>
+  </div>
   <div class="linha-campos" id="linha-seed">
     <label>Seed <small>vazio = o servidor sorteia</small>
       <input type="text" id="w-seed" maxlength="32" placeholder="ex.: HkQ7dPz2Lx" autocomplete="off"></label>
@@ -126,6 +130,7 @@ async function ler(){
   const d = await post({verbo:'mundo.estado'});
   if (!d) return;
   MUNDO = d.mundo;
+  document.getElementById('w-nome').value = MUNDO;
   modificadoresSuportados = !!d.modificadores_suportados;
   const mods = d.modificadores || {gerenciar:false, valores:{}, chaves:[]};
   document.getElementById('w-gerenciar').checked = true;
@@ -168,6 +173,8 @@ async function ler(){
 function confere(){
   const mundo = document.getElementById('w-mundo').checked;
   const pers = document.getElementById('w-personagens').checked;
+  document.getElementById('linha-nome').style.opacity = mundo ? 1 : .4;
+  document.getElementById('w-nome').disabled = !mundo;
   document.getElementById('linha-seed').style.opacity = mundo ? 1 : .4;
   document.getElementById('w-seed').disabled = !mundo;
   document.getElementById('btn-sortear').disabled = !mundo;
@@ -178,12 +185,13 @@ function confere(){
     ? 'Apagando os personagens, todo mundo precisa criar um personagem novo: o ServerCharacters recusa qualquer personagem que já tenha entrado em outro mundo.'
     : 'Mantendo os personagens, todo mundo entra no mundo novo com o personagem de sempre.';
   document.getElementById('btn-wipe').disabled =
-    !(mundo || pers) || document.getElementById('w-confirmar').value.trim() !== MUNDO;
+    !(mundo || pers) || (mundo && !/^[A-Za-z0-9_ -]{1,40}$/.test(document.getElementById('w-nome').value.trim())) ||
+    document.getElementById('w-confirmar').value.trim() !== MUNDO;
   document.getElementById('btn-enviar').disabled =
     !document.getElementById('m-arquivo').files.length ||
     document.getElementById('m-confirmar').value.trim() !== MUNDO;
 }
-['w-mundo','w-personagens','w-confirmar','m-confirmar','m-arquivo'].forEach(id => {
+['w-mundo','w-personagens','w-nome','w-confirmar','m-confirmar','m-arquivo'].forEach(id => {
   document.getElementById(id).addEventListener('input', confere);
   document.getElementById(id).addEventListener('change', confere);
 });
@@ -225,6 +233,7 @@ function acompanha(id){
 document.getElementById('btn-wipe').onclick = async () => {
   const mundo = document.getElementById('w-mundo').checked;
   const personagens = document.getElementById('w-personagens').checked;
+  const novoNome = document.getElementById('w-nome').value.trim();
   const seed = document.getElementById('w-seed').value.trim();
   const gerenciar = document.getElementById('w-gerenciar').checked;
   const modificadores = mundo && modificadoresSuportados ? {
@@ -235,9 +244,9 @@ document.getElementById('btn-wipe').onclick = async () => {
   } : null;
   const o_que = [mundo && 'o MUNDO', personagens && 'os PERSONAGENS'].filter(Boolean).join(' e ');
   if (!confirm(`Wipe de ${o_que} de ${MUNDO}.\n\nO servidor vai parar, fazer backup e permanecer desligado. ` +
-               (mundo ? (seed ? `Seed: ${seed}.` : 'A seed será sorteada ao iniciar.') : 'O mundo será mantido.') +
+               (mundo ? `Novo mundo: ${novoNome}. ` + (seed ? `Seed: ${seed}.` : 'A seed será sorteada ao iniciar.') : 'O mundo será mantido.') +
                '\n\nContinuar?')) return;
-  const d = await post({verbo:'mundo.wipe', dados:{mundo, personagens, seed, modificadores,
+  const d = await post({verbo:'mundo.wipe', dados:{mundo, personagens, novo_nome:novoNome, seed, modificadores,
     confirmar: document.getElementById('w-confirmar').value.trim()}});
   if (d && d.tarefa){ document.getElementById('w-confirmar').value = ''; confere(); acompanha(d.tarefa); }
 };

@@ -1,5 +1,16 @@
 # Heimdall Nexus — versões
 
+## 0.2.3
+
+- O editor do menu organiza páginas em um nível de links filhos. No site,
+  o submenu abre ao passar o mouse, com o teclado ou pela seta no celular;
+  o link pai continua clicável.
+- O wipe permite escolher o nome do novo mundo junto da seed e dos
+  modificadores, sem iniciar o jogo automaticamente.
+- O mapa público mostra apenas o mundo configurado no servidor, sem seletor.
+  Após trocar ou apagar o mundo, dados e tiles antigos ficam indisponíveis
+  enquanto o novo mundo não é gerado e registrado.
+
 ## 0.2.2
 
 - O wipe de mundo permite definir os modificadores que serão aplicados no

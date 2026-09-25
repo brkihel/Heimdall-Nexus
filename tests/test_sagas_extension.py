@@ -6,6 +6,7 @@ import json
 import sqlite3
 import sys
 import tempfile
+import types
 import unittest
 from unittest.mock import patch
 from pathlib import Path
@@ -44,6 +45,31 @@ def event(**changes):
 
 
 class SagasContractTests(unittest.TestCase):
+    def test_current_world_tracks_server_config_and_hides_old_world(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            state, game = root / 'state', root / 'game'
+            state.mkdir(); game.mkdir()
+            (game / 'server.env').write_text('VH_WORLD="Old"\n')
+            old = game / 'saves/worlds_local/Old/_main.0.fwl2'
+            old.parent.mkdir(parents=True)
+            old.write_bytes(b'Old')
+            fake = types.SimpleNamespace(Fwl=lambda raw: types.SimpleNamespace(
+                nome=raw.decode(), uid=123 if raw == b'Old' else 456))
+            with patch.dict(sys.modules, {'fwl': fake}):
+                first = sagas.refresh_current_world(game, state)
+                self.assertEqual(first, hashlib.sha256(b'123').hexdigest())
+                self.assertEqual(sagas.current_world(state), first)
+                (game / 'server.env').write_text('VH_WORLD="New"\n')
+                self.assertEqual(sagas.refresh_current_world(game, state), '')
+                self.assertEqual(sagas.current_world(state), '')
+                new = game / 'saves/worlds_local/New/_main.0.fwl2'
+                new.parent.mkdir(parents=True)
+                new.write_bytes(b'New')
+                second = sagas.refresh_current_world(game, state)
+                self.assertEqual(second, hashlib.sha256(b'456').hexdigest())
+                self.assertNotEqual(second, first)
+
     def test_public_map_defaults_to_most_recent_world(self):
         with tempfile.TemporaryDirectory() as temporary:
             state = Path(temporary)
@@ -57,6 +83,9 @@ class SagasContractTests(unittest.TestCase):
             view = sagas.public_view(dbfile)
             self.assertEqual(view['world'], '2' * 64)
             self.assertEqual(sagas.public_view(dbfile, world='1' * 64)['world'], '1' * 64)
+            strict = sagas.public_view(dbfile, world='1' * 64, strict_world=True)
+            self.assertEqual([entry['id'] for entry in strict['worlds']], ['1' * 64])
+            self.assertEqual(sagas.public_view(dbfile, world='', strict_world=True)['worlds'], [])
 
     def test_external_atlas_styles_follow_world_and_consent(self):
         atlas_spec = importlib.util.spec_from_file_location('heimdall_atlas', ROOT / 'servicos/painel/atlas.py')
@@ -82,6 +111,7 @@ class SagasContractTests(unittest.TestCase):
                 Image.new('RGB', (256, 256), (255, 0, 0)).save(target, 'WEBP')
             with sagas.connect(state / 'sagas.sqlite3') as db:
                 db.execute('INSERT INTO worlds (id, name) VALUES (?, ?)', (world, 'World'))
+            sagas.write_current_world(state, world)
             with patch.object(atlas, 'LEGACY_WEB_ROOT', root), \
                     patch.dict('os.environ', {'HEIMDALL_EXTERNAL_ATLAS_DIR': ''}):
                 legacy = root / 'old-web' / 'mapa'
@@ -94,6 +124,9 @@ class SagasContractTests(unittest.TestCase):
                 self.assertEqual(info['maxNativeZoom'], 5)
                 self.assertEqual(len(info['styles']), 3)
                 self.assertIsNone(atlas.summary(state, 'a' * 64))
+                sagas.write_current_world(state, 'b' * 64)
+                self.assertIsNone(atlas.summary(state, world))
+                sagas.write_current_world(state, world)
                 self.assertIsNone(atlas.tile(state, world, rev, 0, 0, 0, 'unknown'))
                 self.assertIsNone(atlas.tile(state, world, '2' * 12, 0, 0, 0, 'vanilla'))
                 hidden = Image.open(io.BytesIO(atlas.tile(state, world, rev, 0, 0, 0, 'vanilla')))
@@ -140,6 +173,7 @@ class SagasContractTests(unittest.TestCase):
             self.assertEqual(list((state / 'inbox').glob('cartography-*')), [])
             rev = '1' * 16
             (folder / 'published.json').write_text(json.dumps({'revision': rev}))
+            sagas.write_current_world(state, world)
             tile_path = folder / 'tiles' / rev / '0' / '0' / '0.webp'
             tile_path.parent.mkdir(parents=True)
             Image.new('RGB', (256, 256), (255, 0, 0)).save(tile_path, 'WEBP')

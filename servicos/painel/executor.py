@@ -1191,6 +1191,16 @@ def v_mundo_wipe(dados):
     mundo, personagens = bool(dados.get('mundo')), bool(dados.get('personagens'))
     if not (mundo or personagens):
         raise Recusa('marque o mundo, os personagens ou os dois')
+    requested_name = dados.get('novo_nome', nome)
+    if not isinstance(requested_name, str):
+        raise Recusa('nome do novo mundo inválido')
+    novo_nome = requested_name.strip()
+    if not operacoes.WORLD.fullmatch(novo_nome):
+        raise Recusa('nome do novo mundo: até 40 letras, números, espaços, _ ou -')
+    if novo_nome != nome and not mundo:
+        raise Recusa('o nome só pode mudar ao apagar o mundo')
+    if novo_nome != nome and (MUNDOS / novo_nome).exists():
+        raise Recusa('já existe um mundo com esse nome; escolha outro')
     seed = (dados.get('seed') or '').strip()
     if seed and not mundo:
         raise Recusa('seed só faz sentido apagando o mundo')
@@ -1211,24 +1221,32 @@ def v_mundo_wipe(dados):
         _roda(['/usr/bin/python3', str(BACKUP)], anota)
         trava = open(TRAVA_MANUTENCAO, 'w')
         fcntl.flock(trava, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        caixa = _abre_caixa('wipe', mundo=mundo, personagens=personagens,
-                            seed_pedida=seed or None)
         try:
+            if novo_nome != nome and (MUNDOS / novo_nome).exists():
+                raise Recusa('já existe um mundo com esse nome; escolha outro')
+            caixa = _abre_caixa('wipe', mundo=mundo, personagens=personagens,
+                                nome_novo=novo_nome, seed_pedida=seed or None)
             anterior = {}
             if mundo:
                 modelo = _modelo_fwl(caixa, nome) if seed else None
                 anterior = _arquiva_mundo(nome, caixa, anota)
                 if seed:
-                    _cria_mundo_com_seed(nome, seed, modelo, anota)
+                    _cria_mundo_com_seed(novo_nome, seed, modelo, anota)
                 else:
                     anota('sem seed: o servidor sorteia uma ao ligar')
             if personagens:
                 _arquiva_personagens(caixa, anota)
                 anota('personagens arquivados: todo mundo entra com personagem novo '
                       '(o ServerCharacters recusa personagem que já pisou em outro mundo)')
+            changes = {}
+            if novo_nome != nome:
+                changes['mundo'] = novo_nome
             if modifiers is not None:
-                _operacao(operacoes.server_save, {'modificadores': modifiers})
-                anota('modificadores de mundo preparados para o próximo início')
+                changes['modificadores'] = modifiers
+            if changes:
+                _operacao(operacoes.server_save, changes)
+                anota('nome e modificadores preparados para o próximo início')
+            sagas.refresh_current_world(VALHEIM)
             _fecha_caixa(caixa, mundo_anterior=anterior, concluido=agora())
         finally:
             trava.close()
@@ -1293,6 +1311,7 @@ def v_mundo_instalar(dados):
                 anota(f'nome interno trocado de {meta.nome} para {nome}')
             _entrega_ao_dono(pasta, *_dono_da_pasta(MUNDOS))
             anota(f'mundo instalado: seed {meta.seed}')
+            sagas.refresh_current_world(VALHEIM)
             _fecha_caixa(caixa, mundo_anterior=anterior, concluido=agora())
         finally:
             trava.close()
@@ -2029,7 +2048,12 @@ def _operacao(call, *args):
 
 
 def v_server_config(dados):
-    return _operacao(operacoes.server_save, dados) if dados.get('gravar') else operacoes.server_read()
+    if not dados.get('gravar'):
+        return operacoes.server_read()
+    result = _operacao(operacoes.server_save, dados)
+    if 'mundo' in dados:
+        sagas.refresh_current_world(VALHEIM)
+    return result
 
 
 def v_server_acesso(dados):

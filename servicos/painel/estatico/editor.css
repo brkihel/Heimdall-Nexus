@@ -149,10 +149,15 @@ body.arrastando .moldura { outline: 2px dashed rgba(200, 164, 92, .5); outline-o
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 .menu-estilo{display:block;color:var(--texto);font-size:.85rem;margin:.8rem 0 1rem}
-.menu-estilo select,.menu-link input[type=text],.menu-link input:not([type]){display:block;width:100%;margin-top:.35rem;padding:.55rem;background:var(--carvao);color:var(--osso);border:1px solid var(--borda-viva);border-radius:3px;font:inherit}
+.menu-estilo select,.menu-link input[type=text],.menu-link input:not([type]),.menu-posicao select{display:block;width:100%;margin-top:.35rem;padding:.55rem;background:var(--carvao);color:var(--osso);border:1px solid var(--borda-viva);border-radius:3px;font:inherit}
 .menu-links{display:grid;gap:.5rem;margin-bottom:1rem}
+.menu-grupo{display:grid;gap:.35rem}
 .menu-link{display:grid;grid-template-columns:minmax(0,1fr) repeat(4,auto);align-items:end;gap:.35rem;padding:.65rem;border:1px solid var(--borda);border-radius:3px;background:var(--carvao)}
-.menu-adicionar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:.5rem;margin:0 0 1rem}
+.menu-link.menu-filho{margin-left:1rem;border-left:2px solid var(--ouro-fundo);background:var(--noite)}
+.menu-posicao{grid-column:1/-1;min-width:0;font-size:.72rem;color:var(--fraco)}
+.menu-posicao select:disabled{opacity:.6}
+.menu-adicionar{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:end;gap:.5rem;margin:0 0 1rem}
+.menu-adicionar button{grid-column:1/-1}
 .menu-adicionar label{min-width:0;font-size:.72rem;color:var(--fraco)}
 .menu-adicionar select{display:block;width:100%;margin-top:.35rem;padding:.55rem;background:var(--carvao);color:var(--osso);border:1px solid var(--borda-viva);border-radius:3px}
 @media(max-width:460px){.menu-link{grid-template-columns:minmax(0,1fr) repeat(2,auto)}.menu-link>label:first-child{grid-column:1/-1}.menu-adicionar{grid-template-columns:1fr}}

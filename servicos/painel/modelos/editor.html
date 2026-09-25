@@ -62,7 +62,7 @@
   </section>
 
   <section class="aba" data-aba="menu">
-    <p class="dica">Este menu aparece em todas as páginas públicas. Adicione ou remova links, mude nomes e ordem. Salvar publica imediatamente.</p>
+    <p class="dica">Organize as páginas no menu principal ou dentro de outro link. Links filhos aparecem ao passar o mouse, usar Tab ou tocar na seta. Salvar publica imediatamente.</p>
     <label class="menu-estilo">Visual do menu<select id="menu-estilo"><option value="discreto">Discreto</option><option value="destaque">Destaque dourado</option><option value="personalizado">Cores próprias</option></select></label>
     <div class="menu-cores" id="menu-cores" hidden>
       <label>Fundo<input type="color" data-cor="background"></label>
@@ -71,7 +71,7 @@
       <p class="dica">Confira o contraste das cores na página publicada, também no celular.</p>
     </div>
     <div id="menu-links" class="menu-links"></div>
-    <div class="menu-adicionar"><label>Adicionar página<select id="menu-nova-pagina"></select></label><button class="jarl-btn" id="menu-adicionar" type="button">Adicionar link</button></div>
+    <div class="menu-adicionar"><label>Adicionar página<select id="menu-nova-pagina"></select></label><label>Posição<select id="menu-novo-destino"></select></label><button class="jarl-btn" id="menu-adicionar" type="button">Adicionar</button></div>
     <button class="jarl-btn jarl-primary" id="menu-salvar" type="button">Salvar menu</button>
   </section>
 
@@ -242,6 +242,59 @@ function trocaAba(nome) {
 
 // ---------------------------------------------------------------- shared public navigation
 let menuConfig = null, menuPaginas = [];
+function menuUsados() {
+  return menuConfig.links.flatMap(link => [link.id, ...link.children.map(child => child.id)]);
+}
+function menuDestinos(select, atual, comFilhos, atualParent = null) {
+  select.replaceChildren();
+  const principal = document.createElement('option');principal.value = '';
+  principal.textContent = 'Menu principal';select.append(principal);
+  for (const parent of menuConfig.links) {
+    if (parent === atual || comFilhos ||
+        (parent.children.length >= 12 && parent !== atualParent)) continue;
+    const option = document.createElement('option');option.value = parent.id;
+    option.textContent = `Dentro de ${parent.label}`;select.append(option);
+  }
+}
+function desenhaLink(link, siblings, index, parent) {
+  const row = document.createElement('div');row.className = 'menu-link';
+  if (parent) row.classList.add('menu-filho');
+  const title = document.createElement('label');title.textContent = parent ? 'Link filho' : 'Nome no menu';
+  const input = document.createElement('input');input.value = link.label;input.maxLength = 28;
+  input.setAttribute('aria-label', `Nome da página ${link.id}`);
+  input.addEventListener('input', () => { link.label = input.value; });title.append(input);
+  const visible = document.createElement('label');visible.className = 'menu-visible';
+  const switcher = document.createElement('input');switcher.type = 'checkbox';switcher.checked = link.visible;
+  switcher.addEventListener('change', () => { link.visible = switcher.checked; });
+  visible.append(switcher,document.createTextNode('Mostrar'));
+  const up = document.createElement('button');up.type = 'button';up.className = 'jarl-btn';up.textContent = '↑';up.title = 'Mover para cima';up.disabled = index === 0;
+  up.addEventListener('click', () => { [siblings[index - 1],siblings[index]] = [siblings[index],siblings[index - 1]];desenhaMenu(); });
+  const down = document.createElement('button');down.type = 'button';down.className = 'jarl-btn';down.textContent = '↓';down.title = 'Mover para baixo';down.disabled = index === siblings.length - 1;
+  down.addEventListener('click', () => { [siblings[index + 1],siblings[index]] = [siblings[index],siblings[index + 1]];desenhaMenu(); });
+  const remove = document.createElement('button');remove.type='button';remove.className='jarl-btn';
+  remove.textContent='×';remove.title='Remover link do menu';remove.setAttribute('aria-label', `Remover ${link.label} do menu`);
+  remove.addEventListener('click', () => {
+    const children = link.children || [];
+    siblings.splice(index, 1, ...children.map(child => ({...child, children: []})));
+    desenhaMenu();
+  });
+  const location = document.createElement('label');location.className = 'menu-posicao';
+  location.textContent = 'Posição';
+  const select = document.createElement('select');menuDestinos(select, link, !!link.children?.length, parent);
+  select.value = parent?.id || '';
+  select.disabled = !parent && !!link.children?.length;
+  select.title = select.disabled ? 'Mova os links filhos antes de mover este link' : '';
+  select.addEventListener('change', () => {
+    const target = menuConfig.links.find(item => item.id === select.value);
+    siblings.splice(index, 1);
+    if (target) target.children.push({id:link.id,label:link.label,visible:link.visible});
+    else menuConfig.links.push({...link,children:[]});
+    desenhaMenu();
+  });
+  location.append(select);
+  row.append(title,visible,up,down,remove,location);
+  return row;
+}
 async function desenhaMenu() {
   if (!menuConfig) {
     const response = await api('/api/site/navegacao');
@@ -254,34 +307,26 @@ async function desenhaMenu() {
   $('#menu-cores').hidden = menuConfig.style !== 'personalizado';
   const box = $('#menu-links');box.replaceChildren();
   for (const [index, link] of menuConfig.links.entries()) {
-    const row = document.createElement('div');row.className = 'menu-link';
-    const title = document.createElement('label');title.textContent = 'Nome no menu';
-    const input = document.createElement('input');input.value = link.label;input.maxLength = 28;
-    input.setAttribute('aria-label', `Nome da página ${link.id}`);
-    input.addEventListener('input', () => { link.label = input.value; });title.append(input);
-    const visible = document.createElement('label');visible.className = 'menu-visible';
-    const switcher = document.createElement('input');switcher.type = 'checkbox';switcher.checked = link.visible;
-    switcher.addEventListener('change', () => { link.visible = switcher.checked; });
-    visible.append(switcher,document.createTextNode('Mostrar'));
-    const up = document.createElement('button');up.type = 'button';up.className = 'jarl-btn';up.textContent = '↑';up.title = 'Mover para cima';up.disabled = index === 0;
-    up.addEventListener('click', () => { [menuConfig.links[index - 1],menuConfig.links[index]] = [menuConfig.links[index],menuConfig.links[index - 1]];desenhaMenu(); });
-    const down = document.createElement('button');down.type = 'button';down.className = 'jarl-btn';down.textContent = '↓';down.title = 'Mover para baixo';down.disabled = index === menuConfig.links.length - 1;
-    down.addEventListener('click', () => { [menuConfig.links[index + 1],menuConfig.links[index]] = [menuConfig.links[index],menuConfig.links[index + 1]];desenhaMenu(); });
-    const remove = document.createElement('button');remove.type='button';remove.className='jarl-btn';
-    remove.textContent='×';remove.title='Remover link do menu';remove.setAttribute('aria-label', `Remover ${link.label} do menu`);
-    remove.addEventListener('click', () => { menuConfig.links.splice(index, 1);desenhaMenu(); });
-    row.append(title,visible,up,down,remove);box.append(row);
+    const group = document.createElement('div');group.className = 'menu-grupo';
+    group.append(desenhaLink(link,menuConfig.links,index,null));
+    for (const [childIndex,child] of link.children.entries())
+      group.append(desenhaLink(child,link.children,childIndex,link));
+    box.append(group);
   }
   const selector=$('#menu-nova-pagina');selector.replaceChildren();
-  for(const page of menuPaginas.filter(page=>!menuConfig.links.some(link=>link.id===page.id))){
+  for(const page of menuPaginas.filter(page=>!menuUsados().includes(page.id))){
     const option=document.createElement('option');option.value=page.id;option.textContent=page.titulo;selector.append(option);
   }
+  menuDestinos($('#menu-novo-destino'),null,false);
   $('#menu-adicionar').disabled=!selector.options.length;
 }
 $('#menu-adicionar').addEventListener('click',()=>{
   const page=menuPaginas.find(item=>item.id===$('#menu-nova-pagina').value);
   if(!page)return;
-  menuConfig.links.push({id:page.id,label:page.titulo.slice(0,28),visible:true});
+  const entry={id:page.id,label:page.titulo.slice(0,28),visible:true};
+  const target=menuConfig.links.find(item=>item.id===$('#menu-novo-destino').value);
+  if(target)target.children.push(entry);
+  else menuConfig.links.push({...entry,children:[]});
   desenhaMenu();
 });
 $('#menu-estilo').addEventListener('change', event => {

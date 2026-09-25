@@ -70,11 +70,70 @@ class NavigationTests(unittest.TestCase):
             config = navegacao.defaults(self.manifest)
             config.pop('known')
             config['version'] = 1
+            for link in config['links']:
+                del link['children']
             config['links'].reverse()
             (base / navegacao.FILE).write_text(json.dumps(config))
             loaded = navegacao.load(base, self.manifest)
-            self.assertEqual(loaded['version'], 2)
+            self.assertEqual(loaded['version'], 3)
             self.assertEqual(loaded['links'][0]['id'], config['links'][0]['id'])
+
+    def test_existing_v2_menu_migrates_without_changing_links(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            config = navegacao.defaults(self.manifest)
+            config['version'] = 2
+            for link in config['links']:
+                del link['children']
+            (base / navegacao.FILE).write_text(json.dumps(config))
+            loaded = navegacao.load(base, self.manifest)
+            self.assertEqual(loaded['version'], 3)
+            self.assertEqual([link['id'] for link in loaded['links']],
+                             [link['id'] for link in config['links']])
+            self.assertTrue(all(link['children'] == [] for link in loaded['links']))
+
+    def test_child_links_publish_and_keep_their_place(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            config = navegacao.defaults(self.manifest)
+            child = config['links'].pop(1)
+            config['links'][0]['children'].append({key: child[key] for key in ('id', 'label', 'visible')})
+            clean = navegacao.validate(config, self.manifest)
+            public = navegacao.public(clean, self.manifest)
+            self.assertEqual(public['links'][0]['children'][0]['url'], '/wiki/')
+            self.assertNotIn('/wiki/', [link['url'] for link in public['links']])
+            (base / navegacao.FILE).write_text(json.dumps(clean))
+            self.assertEqual(navegacao.load(base, self.manifest)['links'][0]['children'],
+                             clean['links'][0]['children'])
+            clean['links'][0]['visible'] = False
+            self.assertNotIn('/wiki/', [child['url'] for link in navegacao.public(clean, self.manifest)['links']
+                                            for child in link['children']])
+
+    def test_child_links_reject_duplicates_and_nested_menus(self):
+        config = navegacao.defaults(self.manifest)
+        config['links'][0]['children'].append({'id': 'wiki', 'label': 'Wiki', 'visible': True})
+        with self.assertRaises(ValueError):
+            navegacao.validate(config, self.manifest)
+        config['links'].pop(1)
+        config['links'][0]['children'][0]['children'] = []
+        with self.assertRaises(ValueError):
+            navegacao.validate(config, self.manifest)
+        del config['links'][0]['children'][0]['children']
+        config['links'][0]['children'][0]['id'] = 'https://example.test/'
+        with self.assertRaises(ValueError):
+            navegacao.validate(config, self.manifest)
+
+    def test_removed_parent_promotes_its_children(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            old = navegacao.defaults(self.manifest)
+            child = old['links'].pop(1)
+            old['links'][0]['children'].append({key: child[key] for key in ('id', 'label', 'visible')})
+            (base / navegacao.FILE).write_text(json.dumps(old))
+            newer = {'paginas': [page for page in self.manifest['paginas'] if page['id'] != 'inicio']}
+            loaded = navegacao.load(base, newer)
+            self.assertEqual(loaded['links'][0]['id'], 'wiki')
+            self.assertEqual(loaded['links'][0]['children'], [])
 
     def test_migration_keeps_custom_home_and_wiki(self):
         with tempfile.TemporaryDirectory() as temporary:

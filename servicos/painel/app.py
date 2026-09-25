@@ -54,10 +54,11 @@ portaria = nucleo.Portaria()
 
 
 @app.get('/api/sagas/v1/overview')
-async def sagas_public_overview(world: str = '', limit: int = 50, story_limit: int = 6):
+async def sagas_public_overview(limit: int = 50, story_limit: int = 6):
     """Public data is filtered again from the latest sharing choices on read."""
     try:
-        data = sagas.public_view(world=world, limit=limit)
+        data = sagas.public_view(world=sagas.current_world() or '', limit=limit,
+                                 strict_world=True)
     except (OSError, ValueError, sagas.sqlite3.Error):
         data = {'available': False, 'worlds': [], 'players': [], 'events': []}
     data['atlas'] = None

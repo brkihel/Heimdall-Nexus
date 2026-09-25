@@ -260,7 +260,8 @@ def _external_from(root: Path, world: str) -> tuple[Path, dict] | None:
 
 def summary(state: Path, world: str) -> dict | None:
     settings = sagas.load_settings(state)
-    if not settings['enabled'] or settings['map_mode'] == 'off' or not sagas.IDENTIFIER.fullmatch(world or ''):
+    if not settings['enabled'] or settings['map_mode'] == 'off' or \
+            not sagas.IDENTIFIER.fullmatch(world or '') or sagas.current_world(state) != world:
         return None
     external = _external(world)
     if external:

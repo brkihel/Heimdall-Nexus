@@ -165,6 +165,28 @@ PY
 
 step 7 restart-panel HN-UPD-108
 echo "Restarting the panel…"
+python3 - "$RUNTIME/servicos/painel" "$ENV_FILE" <<'PY'
+from pathlib import Path
+import shlex
+import sys
+
+sys.path.insert(0, sys.argv[1])
+import sagas
+
+options = {}
+for line in Path(sys.argv[2]).read_text(encoding='utf-8').splitlines():
+    key, separator, raw = line.partition('=')
+    if separator and key in {'HEIMDALL_VALHEIM_DIR', 'HEIMDALL_SAGAS_DIR'}:
+        parts = shlex.split(raw)
+        if len(parts) == 1:
+            options[key] = parts[0]
+game = Path(options.get('HEIMDALL_VALHEIM_DIR', '/srv/valheim'))
+state = Path(options.get('HEIMDALL_SAGAS_DIR', '/var/lib/heimdall-nexus/sagas'))
+try:
+    sagas.refresh_current_world(game, state)
+except OSError:
+    print('Current world will be checked by the schedule timer.')
+PY
 systemctl restart heimdall-executor.service heimdall-panel.service
 for _ in $(seq 1 20); do
   if systemctl is-active --quiet heimdall-panel.service; then break; fi

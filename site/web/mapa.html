@@ -188,7 +188,7 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
 </defs></svg>
 
 <section class="hero"><div class="shell"><div><div class="eyebrow">Heimdall Nexus · Aventuras registradas</div><h1>Atlas dos Vikings</h1><p>O mundo visto pelos relatos que os jogadores escolheram compartilhar.</p><div class="divisor" aria-hidden="true"><i></i><b></b><i></i></div></div></div></section>
-<div class="shell toolbar"><label for="world">Mundo <select id="world"></select></label><span class="toolbar-note">Atualização automática a cada 30 segundos</span></div>
+<div class="shell toolbar"><span id="world-name">Mundo atual</span><span class="toolbar-note">Atualização automática a cada 30 segundos</span></div>
 <main class="shell"><p id="status" role="status">Carregando o mapa…</p><div id="dashboard" class="dashboard" hidden>
   <section class="panel map-panel" id="map-panel"><div class="map-head"><div><div class="eyebrow">Além da fogueira</div><h2>O mundo conhecido</h2></div><div class="map-head-actions"><div class="map-styles" id="map-styles" role="group" aria-label="Estilo do terreno" hidden></div><span class="map-mode" id="map-mode">Pontos registrados</span></div></div>
   <div class="atlas" id="atlas">
@@ -293,16 +293,9 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
     $('clock-note').textContent = stale ? 'Última leitura: ' + when(current.clock_at) :
       daylight ? 'Anoitece aos 75% do ciclo' : 'Amanhece aos 25% do ciclo';
   }
-  function renderWorlds(data) {
-    const select = $('world');
-    select.replaceChildren();
-    data.worlds.forEach((entry, index) => {
-      const option = element('option', entry.name || 'Mundo ' + (index + 1));
-      option.value = entry.id;
-      option.selected = entry.id === data.world;
-      select.append(option);
-    });
-    select.disabled = data.worlds.length < 2;
+  function renderWorldName(data) {
+    const current = data.worlds.find(entry => entry.id === data.world);
+    $('world-name').textContent = 'Mundo atual: ' + (current?.name || 'sem nome');
   }
   function visibleEvents() {
     const events = payload ? payload.events : [];
@@ -676,6 +669,10 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
   })();
   function render(data) {
     data.events.forEach(friendly);
+    if (world !== data.world) {
+      chosen = '';view = null;fitted = false;visibleTiles = '';
+      $('map-tiles').replaceChildren();
+    }
     payload = data;
     if (data.atlas && data.atlas.mode === 'explored') {
       visibleTiles = '';
@@ -683,7 +680,7 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
     }
     world = data.world || '';
     renderClock(data);
-    renderWorlds(data);
+    renderWorldName(data);
     $('dashboard').hidden = false;
     renderMap();
     $('dashboard').hidden = false;
@@ -692,14 +689,22 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
   async function load() {
     const current = ++requestId;
     try {
-      const url = '/api/sagas/v1/overview?limit=100' +
-        (world ? '&world=' + encodeURIComponent(world) : '');
+      const url = '/api/sagas/v1/overview?limit=100';
       const response = await fetch(url, {cache:'no-store'});
       if (!response.ok) throw Error('HTTP ' + response.status);
       const data = await response.json();
       if (current !== requestId) return;
       if (!data.available) {
         $('status').textContent = 'O mapa ainda não está ativo neste servidor.';
+        $('status').hidden = false;
+        $('dashboard').hidden = true;
+        return;
+      }
+      if (!data.world) {
+        world = '';payload = null;visibleTiles = '';
+        $('map-tiles').replaceChildren();
+        $('world-name').textContent = 'Mundo atual';
+        $('status').textContent = 'Aguardando o mundo atual ser gerado e registrado pelo servidor.';
         $('status').hidden = false;
         $('dashboard').hidden = true;
         return;
@@ -714,13 +719,6 @@ footer{border-top:1px solid var(--borda);padding:2rem 0;color:var(--fraco);font-
       if (!payload) $('dashboard').hidden = true;
     }
   }
-  $('world').addEventListener('change', event => {
-    world = event.target.value;
-    chosen = '';
-    view = null; fitted = false; visibleTiles = '';
-    $('map-tiles').replaceChildren();
-    load();
-  });
   load();
   setInterval(load, 30000);
 })();
