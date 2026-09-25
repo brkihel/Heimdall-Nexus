@@ -27,16 +27,17 @@
     <a href="{{ raiz }}/server-config" class="{{ 'ativo' if aba == 'server-config' }}">⚙ Server Config</a>
     <a href="{{ raiz }}/configuracoes" class="{{ 'ativo' if aba == 'configuracoes' }}">◇ Mod Config</a>
     <a href="{{ raiz }}/mods" class="{{ 'ativo' if aba == 'mods' }}">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2 3 7v10l9 5 9-5V7Zm0 0v20M3 7l9 5 9-5"/></svg>Mods</a>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2 3 7v10l9 5 9-5V7Zm0 0v20M3 7l9 5 9-5"/></svg>Mod Manager</a>
 
     <div class="grupo">Administração</div>
-    <details class="lado-submenu" {{ 'open' if aba in ('site', 'aparencia') }}>
+    <details class="lado-submenu" {{ 'open' if aba in ('aparencia', 'paginas') }}>
       <summary>Aparência</summary>
-      <a href="{{ raiz }}/site" class="{{ 'ativo' if aba == 'site' }}">Editor de layout</a>
+      <a href="{{ raiz }}/editor">Layout Editor</a>
+      <a href="{{ raiz }}/paginas" class="{{ 'ativo' if aba == 'paginas' }}">Páginas</a>
       <a href="{{ raiz }}/aparencia" class="{{ 'ativo' if aba == 'aparencia' }}">Configurações Globais</a>
     </details>
     <a href="{{ raiz }}/cronica" class="{{ 'ativo' if aba == 'cronica' }}">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 19V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2Zm0 0a2 2 0 0 1 2-2h12M8 7h7M8 11h5"/></svg>Crônica</a>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 19V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2Zm0 0a2 2 0 0 1 2-2h12M8 7h7M8 11h5"/></svg>Logs</a>
     <a href="{{ raiz }}/sagas" class="{{ 'ativo' if aba == 'sagas' }}">ᛋ Sagas</a>
     <a href="{{ raiz }}/tarefas" class="{{ 'ativo' if aba == 'tarefas' }}">◷ Tarefas</a>
     <a href="{{ raiz }}/backups" class="{{ 'ativo' if aba == 'backups' }}">▣ Backups</a>

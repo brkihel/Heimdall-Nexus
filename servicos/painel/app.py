@@ -149,7 +149,7 @@ def pagina(pedido, modelo, **contexto):
     return resposta
 
 
-# Hint for the public site: tells its pages to load the admin dock. It carries no
+# Hint for the public site: its menu then asks for the admin shortcuts. It carries no
 # secret (the session cookie stays HttpOnly under /jarl); every edit is still
 # checked against the real session.
 HINT_COOKIE = 'jarl'
@@ -607,10 +607,14 @@ async def api_enviar(pedido: Request):
 
 
 # ---------------------------------------------------------------- site
-@app.get(f'{RAIZ_URL}/site', response_class=HTMLResponse)
-async def site(pedido: Request):
+@app.get(f'{RAIZ_URL}/site')
+async def site(pedido: Request, pagina: str = ''):
+    """The old in-frame editor: every edit now happens in the Layout Editor."""
     exige(pedido)
-    return pagina(pedido, 'site.html', aba='site')
+    destino = f'{RAIZ_URL}/editor'
+    if re.fullmatch(r'[a-z0-9-]{1,40}', pagina):
+        destino += f'?pagina={pagina}'
+    return RedirectResponse(destino, status_code=303)
 
 
 @app.get(f'{RAIZ_URL}/editor', response_class=HTMLResponse)
@@ -624,6 +628,12 @@ async def editor(pedido: Request):
 async def aparencia(pedido: Request):
     exige(pedido)
     return pagina(pedido, 'aparencia.html', aba='aparencia')
+
+
+@app.get(f'{RAIZ_URL}/paginas', response_class=HTMLResponse)
+async def paginas_do_site(pedido: Request):
+    exige(pedido)
+    return pagina(pedido, 'paginas.html', aba='paginas')
 
 
 @app.get(f'{RAIZ_URL}/api/site/eu')

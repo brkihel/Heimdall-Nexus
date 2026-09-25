@@ -5,7 +5,7 @@
   <h1>Configurações Globais</h1>
   <span id="estado" class="pastilha meio">lendo…</span>
   <div class="acoes">
-    <a class="btn" href="{{ raiz }}/site">Editor de layout</a>
+    <a class="btn" href="{{ raiz }}/editor">Layout Editor</a>
     <a class="btn" href="/" target="_blank" rel="noopener">Abrir o site</a>
   </div>
 </div>
@@ -43,7 +43,7 @@
 
 <section class="cartao" id="cores">
   <h2>Cores</h2>
-  <p class="dica">A paleta é publicada para todo o site. Componentes com cores próprias nas páginas personalizadas continuam com suas cores até serem editados no Editor de layout.</p>
+  <p class="dica">A paleta é publicada para todo o site. Componentes com cores próprias nas páginas personalizadas continuam com suas cores até serem editados no Layout Editor.</p>
   <div class="paletas" id="paletas"></div>
   <div class="tabela-cores" id="tabela-cores"></div>
   <div class="amostra" id="amostra">
@@ -60,19 +60,6 @@
   <span id="salvar-msg" role="status"></span>
 </div>
 
-<section class="cartao" id="paginas">
-  <h2>Páginas</h2>
-  <p class="dica">Crie páginas a partir de um modelo. Depois edite os textos na aba Site e ponha um link para elas em qualquer botão.</p>
-  <div id="lista-paginas"><div class="vazio">lendo…</div></div>
-  <h3>Nova página</h3>
-  <div class="tipos" id="tipos"></div>
-  <div class="grade-ap">
-    <label>Título<input id="nova-titulo" type="text" maxlength="60" placeholder="Regras do servidor"></label>
-    <label>Endereço<span class="endereco-campo"><span>/</span><input id="nova-endereco" type="text" maxlength="40" placeholder="regras"><span>/</span></span></label>
-  </div>
-  <label>Descrição curta<input id="nova-descricao" type="text" maxlength="200" placeholder="Aparece no topo da página e nos resultados de busca"></label>
-  <div class="acoes esquerda"><button class="btn principal" id="criar" type="button">Criar página</button><span id="criar-msg" role="status"></span></div>
-</section>
 </div>
 
 <style>
@@ -115,23 +102,13 @@
 .amostra-botao{display:inline-block; padding:.45rem 1rem; border-radius:3px; font-family:'Cinzel',serif; font-size:.7rem; letter-spacing:.14em; text-transform:uppercase}
 .salvar-barra{position:sticky; bottom:0; z-index:5; display:flex; align-items:center; gap:1rem; padding:.9rem 0 1.2rem;
   background:linear-gradient(180deg,transparent,var(--breu) 35%); margin-bottom:1.2rem}
-#salvar-msg,#criar-msg{font-size:.85rem; color:var(--fraco)}
-.lista-pag{display:grid; gap:.4rem}
-.pag{display:flex; align-items:center; gap:.8rem; padding:.6rem .8rem; border:1px solid var(--borda); border-radius:3px}
-.pag b{flex:0 0 auto}.pag code{color:var(--fraco); font-size:.8rem; flex:1}
-.pag .etiqueta{font-size:.68rem; color:var(--fraco); border:1px solid var(--borda); border-radius:999px; padding:.1rem .5rem}
-.tipos{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:.7rem; margin-bottom:1rem}
-.tipo{text-align:left; border:1px solid var(--borda); border-radius:3px; padding:.8rem 1rem; background:none; color:var(--texto); cursor:pointer; font:inherit}
-.tipo b{display:block; color:var(--osso); margin-bottom:.2rem}.tipo small{color:var(--fraco); font-size:.78rem}
-.tipo[aria-pressed=true]{border-color:var(--ouro); background:rgba(200,164,92,.08)}
-.endereco-campo{display:flex; align-items:center; gap:.3rem; color:var(--fraco)}
-.acoes.esquerda{justify-content:flex-start; align-items:center; margin:0}
+#salvar-msg{font-size:.85rem; color:var(--fraco)}
 </style>
 {% endblock %}
 {% block script %}
 <script>
 const RAIZ = {{ raiz|tojson }}, $ = id => document.getElementById(id);
-let estado = null, cores = {}, pendentes = {}, remover = {}, tipoEscolhido = 'wiki';
+let estado = null, cores = {}, pendentes = {}, remover = {};
 
 function esc(t){ const d = document.createElement('div'); d.textContent = t == null ? '' : t; return d.innerHTML; }
 async function pede(caminho, opcoes){
@@ -198,7 +175,7 @@ async function carregar(){
     aviso.hidden = !personalizadas.length;
     if (personalizadas.length) aviso.textContent = 'Páginas personalizadas: ' +
       personalizadas.map(p => p.titulo + ' (' + p.campos.join(', ') + ')').join('; ') +
-      '. Esses textos e imagens fazem parte do layout da página e devem ser editados no Editor de layout. Favicon e paleta continuam globais.';
+      '. Esses textos e imagens fazem parte do layout da página e devem ser editados no Layout Editor. Favicon e paleta continuam globais.';
     const i = estado.identidade;
     for (const k of ['nome','slogan','rodape','url']) $(k).value = i[k] || '';
     cores = {...i.cores}; pendentes = {}; remover = {};
@@ -221,61 +198,6 @@ $('salvar').onclick = async () => {
   finally { botao.disabled = false; }
 };
 
-async function carregarPaginas(){
-  try {
-    const d = await pede('/api/site/paginas');
-    const box = $('lista-paginas'); box.replaceChildren();
-    const lista = document.createElement('div'); lista.className = 'lista-pag';
-    for (const p of d.paginas){
-      const linha = document.createElement('div'); linha.className = 'pag';
-      linha.innerHTML = `<b>${esc(p.titulo)}</b><code>${esc(p.url || '')}</code>`;
-      const abrir = document.createElement('a'); abrir.className = 'btn mini'; abrir.href = p.url || '/'; abrir.target = '_blank'; abrir.rel = 'noopener'; abrir.textContent = 'Abrir';
-      linha.append(abrir);
-      if (p.url === '/') { const t = document.createElement('span'); t.className = 'etiqueta'; t.textContent = 'inicial'; linha.append(t); }
-      else {
-        const apagar = document.createElement('button'); apagar.type = 'button'; apagar.className = 'btn mini ruim'; apagar.textContent = 'Remover';
-        apagar.onclick = async () => {
-          if (!confirm(`Remover a página “${p.titulo}”? Ela sai do ar agora; uma cópia do arquivo fica guardada no servidor.`)) return;
-          try { await pede('/api/site/pagina', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({acao:'remover', dados:{pagina:p.id}})}); carregarPaginas(); }
-          catch (e) { alert(e.message); }
-        };
-        linha.append(apagar);
-      }
-      lista.append(linha);
-    }
-    box.append(lista);
-  } catch (e) { $('lista-paginas').textContent = e.message; }
-}
-function desenharTipos(){
-  const tipos = [['wiki','Formato wiki','Índice lateral, seções, caixas de destaque e tabelas.'],
-                 ['vazia','Página vazia','Só o topo, o fundo e o rodapé do site; você monta o conteúdo.']];
-  const box = $('tipos'); box.replaceChildren();
-  for (const [chave, nome, texto] of tipos){
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'tipo';
-    b.setAttribute('aria-pressed', String(chave === tipoEscolhido));
-    b.innerHTML = `<b>${nome}</b><small>${texto}</small>`;
-    b.onclick = () => { tipoEscolhido = chave; desenharTipos(); };
-    box.append(b);
-  }
-}
-$('nova-titulo').oninput = () => {
-  const e = $('nova-endereco'); if (e.dataset.mexido) return;
-  e.value = $('nova-titulo').value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
-};
-$('nova-endereco').oninput = e => { e.target.dataset.mexido = '1'; };
-$('criar').onclick = async () => {
-  const botao = $('criar'); botao.disabled = true; $('criar-msg').textContent = 'Criando…';
-  try {
-    const d = await pede('/api/site/pagina', {method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({acao:'criar', dados:{titulo:$('nova-titulo').value, endereco:$('nova-endereco').value,
-        descricao:$('nova-descricao').value, tipo:tipoEscolhido}})});
-    $('criar-msg').innerHTML = `Criada: <a href="${esc(d.pagina.url)}" target="_blank" rel="noopener">${esc(d.pagina.url)}</a> · edite os textos na aba Site.`;
-    for (const k of ['nova-titulo','nova-endereco','nova-descricao']) { $(k).value = ''; delete $(k).dataset.mexido; }
-    carregarPaginas();
-  } catch (e) { $('criar-msg').textContent = e.message; }
-  finally { botao.disabled = false; }
-};
-desenharTipos(); carregar(); carregarPaginas();
+carregar();
 </script>
 {% endblock %}

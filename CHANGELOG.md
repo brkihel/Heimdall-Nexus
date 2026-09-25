@@ -1,5 +1,22 @@
 # Heimdall Nexus — versões
 
+## Em desenvolvimento
+
+- No site, quem está logado no Jarl vê os atalhos **Jarl** e **Layout Editor**
+  no canto superior esquerdo do menu de navegação, em todas as páginas. O
+  painel flutuante no canto inferior direito e o modo edição dentro da própria
+  página saíram: editar é sempre no Layout Editor, com a barra lateral.
+- A barra lateral do Layout Editor tem quatro abas (Editar, Adicionar, Página,
+  Menu). As ferramentas de edição aparecem em grupos com nome, e a aba Editar
+  nunca abre vazia.
+- O menu do site é editado numa árvore compacta: renomear no próprio nome,
+  mostrar/ocultar pelo olho, → e ← para entrar e sair de um submenu. O botão
+  Salvar mostra quando há alterações pendentes.
+- Jarl: Mods virou **Mod Manager** e Crônica virou **Logs**. Criar e remover
+  páginas do site ficou num item próprio, **Páginas**, em Aparência.
+- Server Config: **Opções de inicialização** mostra os argumentos numa caixa
+  somente leitura, uma opção por linha.
+
 ## 0.2.5
 
 - O editor do menu mostra a hierarquia e os controles em cartões com espaço
