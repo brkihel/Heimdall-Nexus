@@ -133,7 +133,8 @@ document.querySelectorAll('[data-acao]').forEach(botao => {
     const online = parseInt(jogadores) || 0;
     let aviso = `Confirma ${nomes[acao]} o servidor?`;
     if (online > 0 && acao !== 'start') aviso += `\n\nTem ${online} viking(s) dentro do jogo agora.`;
-    if (!confirm(aviso)) return;
+    if (!await confirmar(aviso, {titulo: `${nomes[acao][0].toUpperCase()}${nomes[acao].slice(1)} o servidor`,
+                                 acao: botao.textContent.trim(), perigo: acao !== 'start'})) return;
     // O pedido leva minutos (parar salva o mundo, subir registra 81 mods). A
     // página não espera de braços cruzados: os medidores e o console continuam
     // atualizando, e uma tarja diz o que está acontecendo.

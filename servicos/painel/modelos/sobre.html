@@ -234,7 +234,7 @@ $('canal').addEventListener('change',async e=>{
 });
 $('atualizar').addEventListener('click',async()=>{
   if(!alvo)return;
-  if(!confirm('Atualizar o Heimdall Nexus para '+alvo.slice(0,7)+'? O painel reinicia; o servidor Valheim continua ligado.'))return;
+  if(!await confirmar('Atualizar o Heimdall Nexus para '+alvo.slice(0,7)+'? O painel reinicia; o servidor Valheim continua ligado.',{titulo:'Atualizar o Nexus',acao:'Atualizar'}))return;
   try{await post('atualizar',{commit:alvo});comeca(alvo);}
   catch(e){erro(e.message,'A atualização não começou');}
 });

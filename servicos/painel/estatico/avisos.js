@@ -113,4 +113,51 @@
     if (p) p.textContent = texto;
   };
   window.fecharAviso = box => { if (box && box.isConnected) fechar(box); };
+
+  // In-page confirmation. The browser's confirm() can be silenced by the user
+  // ("prevent this page from creating dialogs"), and then answers "no" without
+  // showing anything: every guarded button looks dead. Resolves true or false.
+  const ESTILO = `
+.confirma{max-width:min(460px,calc(100vw - 32px));padding:0;border:1px solid var(--borda-viva,#33475a);border-radius:3px;
+  background:linear-gradient(168deg,#152029,#080e14);color:var(--texto,#b4bec7);box-shadow:0 24px 60px rgba(0,0,0,.6);
+  font:15px/1.5 Spectral,Georgia,serif}
+.confirma::backdrop{background:rgba(3,6,9,.72);backdrop-filter:blur(2px)}
+.confirma.perigo{border-color:#9b5944}
+.confirma-corpo{padding:1.3rem 1.4rem 1rem}
+.confirma h2{margin:0 0 .6rem;font:600 .95rem Cinzel,Georgia,serif;letter-spacing:.08em;text-transform:uppercase;color:var(--osso,#e6e0d2)}
+.confirma.perigo h2{color:#e0664f}
+.confirma p{margin:0 0 .5rem;white-space:pre-line}
+.confirma-acoes{display:flex;justify-content:flex-end;gap:.6rem;padding:.8rem 1.4rem 1.2rem}
+.confirma-acoes button{min-height:40px;padding:.5rem 1.1rem;border-radius:3px;cursor:pointer;font:600 .72rem Cinzel,Georgia,serif;
+  letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--borda-viva,#33475a);background:transparent;color:var(--osso,#e6e0d2)}
+.confirma-acoes .sim{background:linear-gradient(180deg,#d8b66c,#b08c45);border-color:#c8a45c;color:#1a1206}
+.confirma.perigo .confirma-acoes .sim{background:#7a2e22;border-color:#c0392b;color:#fbe9e5}
+.confirma-acoes button:focus-visible{outline:2px solid var(--ouro-claro,#eeddb0);outline-offset:2px}`;
+  let estilo = false;
+  window.confirmar = function confirmar(texto, opcoes = {}) {
+    if (!estilo) {
+      const tag = el('style'); tag.textContent = ESTILO; document.head.append(tag); estilo = true;
+    }
+    return new Promise(resolve => {
+      const caixa = el('dialog', 'confirma' + (opcoes.perigo ? ' perigo' : ''));
+      caixa.setAttribute('aria-modal', 'true');
+      const corpo = el('div', 'confirma-corpo');
+      corpo.append(el('h2', null, opcoes.titulo || 'Confirmar'));
+      for (const parte of String(texto).split(/\n{2,}/)) corpo.append(el('p', null, parte));
+      const acoes = el('div', 'confirma-acoes');
+      const nao = el('button', 'nao', opcoes.cancelar || 'Cancelar');
+      const sim = el('button', 'sim', opcoes.acao || 'Confirmar');
+      nao.type = sim.type = 'button';
+      acoes.append(nao, sim);
+      caixa.append(corpo, acoes);
+      let resposta = false;
+      nao.addEventListener('click', () => caixa.close());
+      sim.addEventListener('click', () => { resposta = true; caixa.close(); });
+      caixa.addEventListener('close', () => { caixa.remove(); resolve(resposta); });
+      document.body.append(caixa);
+      caixa.showModal();
+      // A risky action starts on "Cancelar": Enter alone never destroys anything.
+      (opcoes.perigo ? nao : sim).focus();
+    });
+  };
 })();

@@ -1,5 +1,13 @@
 # Heimdall Nexus — versões
 
+## 0.2.9
+
+- As confirmações do Jarl (ligar, reiniciar, apagar, wipe, restaurar…) usam
+  uma caixa do próprio painel em vez da janela do navegador. Antes, quem
+  marcava "impedir esta página de criar caixas de diálogo" via os botões
+  pararem sem aviso, porque o navegador passava a responder "não". Ações
+  perigosas aparecem em vermelho e começam com o foco em Cancelar.
+
 ## 0.2.8
 
 - **Aparência › Modpack**: compara a lista de mods do site com o modpack

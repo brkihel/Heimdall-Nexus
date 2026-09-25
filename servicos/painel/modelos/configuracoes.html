@@ -188,7 +188,8 @@ document.getElementById('copias').addEventListener('change', lista);
 // ---------------------------------------------------------------- abrir e gravar
 async function abre(caminho){
   if (aberto && editor.getValue(separador) !== original &&
-      !confirm('Tem alteração não gravada neste arquivo. Descartar e abrir outro?')) return;
+      !await confirmar('Tem alteração não gravada neste arquivo. Descartar e abrir outro?',
+                       {titulo: 'Alteração não gravada', acao: 'Descartar e abrir', perigo: true})) return;
   const d = await peca('arquivo.ler', {caminho});
   if (!d) return;
   if (d.binario) { recado('Esse arquivo não é texto.', 'ruim'); return; }
@@ -222,7 +223,10 @@ async function grava(){
   if (!aberto || editor.getValue(separador) === original) return;
   if (/\.json$/i.test(aberto)) {
     try { JSON.parse(editor.getValue()); }
-    catch (erro) { if (!confirm(`O JSON não é válido (${erro.message}).\n\nGravar mesmo assim?`)) return; }
+    catch (erro) {
+      if (!await confirmar(`O JSON não é válido (${erro.message}).\n\nGravar mesmo assim?`,
+                           {titulo: 'JSON inválido', acao: 'Gravar mesmo assim', perigo: true})) return;
+    }
   }
   const d = await peca('arquivo.gravar', {caminho: aberto, texto: editor.getValue(separador)});
   if (!d) return;
@@ -233,8 +237,10 @@ async function grava(){
   if (item) item.modificado = Math.floor(Date.now() / 1000);
 }
 document.getElementById('btn-gravar').onclick = grava;
-document.getElementById('btn-descartar').onclick = () => {
-  if (confirm('Descartar as alterações deste arquivo?')) { editor.setValue(original); marcaSujo(); }
+document.getElementById('btn-descartar').onclick = async () => {
+  if (await confirmar('Descartar as alterações deste arquivo?', {titulo: 'Descartar alterações', acao: 'Descartar', perigo: true})) {
+    editor.setValue(original); marcaSujo();
+  }
 };
 document.getElementById('btn-buscar').onclick = () => editor.execCommand('find');
 document.getElementById('btn-formatar').onclick = () => {
@@ -255,8 +261,10 @@ async function estado(){
 }
 document.getElementById('btn-reiniciar').onclick = async () => {
   if (aberto && editor.getValue(separador) !== original &&
-      !confirm('Tem alteração NÃO gravada. Reiniciar mesmo assim (ela não vai valer)?')) return;
-  if (!confirm('Reiniciar o servidor agora? Quem estiver online cai por um ou dois minutos.')) return;
+      !await confirmar('Tem alteração NÃO gravada. Reiniciar mesmo assim (ela não vai valer)?',
+                       {titulo: 'Alteração não gravada', acao: 'Reiniciar assim', perigo: true})) return;
+  if (!await confirmar('Reiniciar o servidor agora? Quem estiver online cai por um ou dois minutos.',
+                       {titulo: 'Reiniciar o servidor', acao: 'Reiniciar', perigo: true})) return;
   const r = await fetch(`${RAIZ}/api/servico`, {method:'POST', credentials:'same-origin',
     headers:{'Content-Type':'application/json'}, body: JSON.stringify({servico:'game', acao:'restart'})});
   const d = await r.json();

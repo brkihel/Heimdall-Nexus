@@ -871,18 +871,22 @@
     el.scrollIntoView({block: 'nearest', behavior: 'smooth'});
   }
 
+  // The sidebar's own dialog: the browser's confirm() can be silenced by the user.
+  const ask = (text, options) => window.parent.confirmar ? window.parent.confirmar(text, options)
+                                                         : Promise.resolve(confirm(text));
+
   function confirmForce(info, what) {
-    return confirm(`Atenção: esse bloco ${info.protegido}.\n\n${what} pode fazer esses valores ` +
-                   'pararem de atualizar ou quebrar essa parte da página. Dá para desfazer antes de ' +
-                   'salvar (Ctrl+Z).\n\nContinuar mesmo assim?');
+    return ask(`Atenção: esse bloco ${info.protegido}.\n\n${what} pode fazer esses valores ` +
+               'pararem de atualizar ou quebrar essa parte da página. Dá para desfazer antes de ' +
+               'salvar (Ctrl+Z).\n\nContinuar mesmo assim?', {titulo: 'Bloco protegido', acao: what, perigo: true});
   }
 
-  function removeBlock(el) {
+  function removeBlock(el, {forced} = {}) {
     const info = blockInfo(el);
     let force = false;
     if (info.protegido) {
       if (!info.forcavel) { toast(`Esse bloco não pode ser removido: ${info.protegido}.`, 'erro'); return; }
-      if (!confirmForce(info, 'Remover')) return;
+      if (!forced) { confirmForce(info, 'Remover').then(ok => { if (ok) removeBlock(el, {forced: true}); }); return; }
       force = true;
     }
     const parent = el.parentNode, next = el.nextSibling;
@@ -919,7 +923,7 @@
       x.classList.remove('jarl-active', 'jarl-sel', 'jarl-changed'));
   }
 
-  function duplicateBlock(el, {quiet} = {}) {
+  function duplicateBlock(el, {quiet, forced} = {}) {
     const info = blockInfo(el);
     let force = false;
     if (!info.duplicavel) {
@@ -927,7 +931,10 @@
         toast(`Esse bloco não pode ser duplicado: ${info.protegido || 'tem elementos com nome próprio'}.`, 'erro');
         return;
       }
-      if (!confirmForce(info, 'Duplicar')) return;
+      if (!forced) {
+        confirmForce(info, 'Duplicar').then(ok => { if (ok) duplicateBlock(el, {quiet, forced: true}); });
+        return;
+      }
       force = true;
     }
     // The copy must carry the source form (tags as chips), not the printed values.
@@ -1442,7 +1449,8 @@
     if (!on) {
       const n = pendingCount();
       if (n) {
-        if (!confirm(`Há ${n} ${n === 1 ? 'alteração não salva' : 'alterações não salvas'}. Sair e descartar?`)) return;
+        if (!await ask(`Há ${n} ${n === 1 ? 'alteração não salva' : 'alterações não salvas'}. Sair e descartar?`,
+                       {titulo: 'Alterações não salvas', acao: 'Sair e descartar', perigo: true})) return;
         reloadKeepingMode(false);
         return;
       }
@@ -1479,9 +1487,10 @@
             'ao lado; ← Voltar retorna à lista de seções.');
   }
 
-  function discardAll() {
+  async function discardAll() {
     const n = pendingCount();
-    if (!n || !confirm(`Descartar ${n} ${n === 1 ? 'alteração' : 'alterações'}?`)) return;
+    if (!n || !await ask(`Descartar ${n} ${n === 1 ? 'alteração' : 'alterações'}?`,
+                         {titulo: 'Descartar alterações', acao: 'Descartar', perigo: true})) return;
     reloadKeepingMode(true);
   }
 
@@ -1753,7 +1762,7 @@
 
   document.addEventListener('contextmenu', contextMenu, true);
   document.addEventListener('selectionchange', rememberSelection);
-  addEventListener('scroll', () => { if (!ui.menu.hidden) closeMenus(); }, {passive: true});
+  addEventListener('scroll', () => { if (ui.menu && !ui.menu.hidden) closeMenus(); }, {passive: true});
 
   function handleKey(e) {
     if (!S.editing) return false;

@@ -85,7 +85,7 @@ async function load(){try{
     const actions=document.createElement('div');actions.className='acoes';
     actions.append(button('Editar',()=>open(item)),
       button(item.ativo?'Desativar':'Ativar',async()=>{try{await api({acao:'gravar',rotina:{...item,ativo:!item.ativo}});load()}catch(e){$('mensagem').textContent=e.message}}),
-      button('Apagar',async()=>{if(!confirm('Apagar esta rotina?'))return;try{await api({acao:'apagar',id:item.id});load()}catch(e){$('mensagem').textContent=e.message}},'btn ruim mini'));
+      button('Apagar',async()=>{if(!await confirmar('Apagar esta rotina?',{titulo:'Apagar rotina',acao:'Apagar',perigo:true}))return;try{await api({acao:'apagar',id:item.id});load()}catch(e){$('mensagem').textContent=e.message}},'btn ruim mini'));
     row.append(name,info,steps,actions);box.append(row);
   }}catch(e){$('mensagem').textContent=e.message}}
 $('novo').onclick=()=>open(null);$('adicionar').onclick=()=>task();$('cancelar').onclick=()=>$('formulario').hidden=true;

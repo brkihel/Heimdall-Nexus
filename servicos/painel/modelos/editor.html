@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="{{ raiz }}/estatico/fontes/fontes.css?v={{ v }}">
 <link rel="stylesheet" href="{{ raiz }}/estatico/site-admin.css?v={{ v }}">
 <link rel="stylesheet" href="{{ raiz }}/estatico/editor.css?v={{ v }}">
+<script src="{{ raiz }}/estatico/avisos.js?v={{ v }}"></script>
 </head>
 <body class="jarl-shell">
 <aside class="lateral" data-jarl-ui>
@@ -534,8 +535,9 @@ async function desenhaVersoes() {
     </div>`).join('');
   alvo.querySelectorAll('[data-restaurar]').forEach(b => b.onclick = async () => {
     const pendentes = ultimo && ultimo.pending;
-    if (!confirm((pendentes ? `Há ${pendentes} alteração(ões) não salvas, que serão descartadas.\n\n` : '') +
-                 'Voltar a página para esta versão e publicar agora?')) return;
+    if (!await confirmar((pendentes ? `Há ${pendentes} alteração(ões) não salvas, que serão descartadas.\n\n` : '') +
+                 'Voltar a página para esta versão e publicar agora?',
+                 {titulo: 'Restaurar versão', acao: 'Restaurar e publicar', perigo: true})) return;
     b.disabled = true;
     const r = await api('/api/site/restaurar', {pagina: atual.id, versao: b.dataset.restaurar});
     if (!r) { b.disabled = false; return; }
@@ -580,10 +582,11 @@ function abrePagina(pagina) {
   quadro.src = pagina.url + '?jarl=editar';
   abreVista('inicio');
 }
-$('#pagina').onchange = () => {
+$('#pagina').onchange = async () => {
   const nova = paginas.find(p => p.id === $('#pagina').value);
   if (ultimo && ultimo.pending &&
-      !confirm(`Há ${ultimo.pending} alteração(ões) não salvas. Trocar de página e descartar?`)) {
+      !await confirmar(`Há ${ultimo.pending} alteração(ões) não salvas. Trocar de página e descartar?`,
+                       {titulo: 'Alterações não salvas', acao: 'Trocar e descartar', perigo: true})) {
     $('#pagina').value = atual.id; return;
   }
   ultimo = null;

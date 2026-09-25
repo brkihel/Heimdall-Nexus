@@ -130,7 +130,7 @@ document.getElementById('btn-gravar').addEventListener('click', async () => {
   const ehConfig = /\.cfg$|\.yml$|\.yaml$|\.json$/.test(abertoAgora);
   let aviso = `Gravar ${abertoAgora}?`;
   if (ehConfig) aviso += '\n\nSe o servidor estiver de pé, ele pode gravar a memória por cima e desfazer isto.';
-  if (!confirm(aviso)) return;
+  if (!await confirmar(aviso, {titulo: 'Gravar arquivo', acao: 'Gravar'})) return;
   const d = await peca('arquivo.gravar',
     {caminho: abertoAgora, texto: document.getElementById('editor-texto').value});
   if (d) document.getElementById('editor-aviso').textContent =
@@ -144,9 +144,10 @@ document.getElementById('btn-fechar').addEventListener('click', () => {
 document.querySelectorAll('[data-apagar]').forEach(botao => {
   botao.addEventListener('click', async () => {
     const caminho = botao.dataset.apagar;
-    if (!confirm(`Apagar ${caminho}?`)) return;
+    if (!await confirmar(`Apagar ${caminho}?`, {titulo: 'Apagar', acao: 'Apagar', perigo: true})) return;
     if (/\/saves\/|\/backups\//.test(caminho) &&
-        !confirm('ISSO É MUNDO OU BACKUP.\n\nEscreveu certo? Confirma de novo.')) return;
+        !await confirmar('ISSO É MUNDO OU BACKUP.\n\nEscreveu certo? Confirma de novo.',
+                         {titulo: 'Mundo ou backup', acao: 'Apagar mesmo', perigo: true})) return;
     if (await peca('arquivo.apagar', {caminho})) location.reload();
   });
 });
@@ -236,12 +237,13 @@ function envia(arquivos, i=0){
       barra.querySelector('div').style.width = p + '%';
       barra.querySelector('span').textContent = `${arquivo.name} — ${p}%`;
     };
-    xhr.onload = () => {
+    xhr.onload = async () => {
       barra.hidden = true;
       if (xhr.status === 401) { location.href = `${RAIZ}/entrar`; return; }
       let d; try { d = JSON.parse(xhr.responseText); } catch { d = {ok:false, erro:'resposta estranha'}; }
       if (!d.ok && /já existe/.test(d.erro || '') && !substituir &&
-          confirm(`${arquivo.name} já existe aqui. Substituir? (o atual vai para o porão de cópias)`)) {
+          await confirmar(`${arquivo.name} já existe aqui. Substituir? (o atual vai para o porão de cópias)`,
+                          {titulo: 'Arquivo já existe', acao: 'Substituir'})) {
         manda(true); return;
       }
       if (!d.ok) recado(`${arquivo.name}: ${d.erro}`, 'ruim');

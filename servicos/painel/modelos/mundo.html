@@ -243,17 +243,18 @@ document.getElementById('btn-wipe').onclick = async () => {
     chaves: [...document.querySelectorAll('#w-chaves input:checked')].map(input => input.value)
   } : null;
   const o_que = [mundo && 'o MUNDO', personagens && 'os PERSONAGENS'].filter(Boolean).join(' e ');
-  if (!confirm(`Wipe de ${o_que} de ${MUNDO}.\n\nO servidor vai parar, fazer backup e permanecer desligado. ` +
+  if (!await confirmar(`Wipe de ${o_que} de ${MUNDO}.\n\nO servidor vai parar, fazer backup e permanecer desligado. ` +
                (mundo ? `Novo mundo: ${novoNome}. ` + (seed ? `Seed: ${seed}.` : 'A seed será sorteada ao iniciar.') : 'O mundo será mantido.') +
-               '\n\nContinuar?')) return;
+               '\n\nContinuar?', {titulo: 'Wipe', acao: 'Fazer o wipe', perigo: true})) return;
   const d = await post({verbo:'mundo.wipe', dados:{mundo, personagens, novo_nome:novoNome, seed, modificadores,
     confirmar: document.getElementById('w-confirmar').value.trim()}});
   if (d && d.tarefa){ document.getElementById('w-confirmar').value = ''; confere(); acompanha(d.tarefa); }
 };
 
-document.getElementById('btn-enviar').onclick = () => {
+document.getElementById('btn-enviar').onclick = async () => {
   const arquivo = document.getElementById('m-arquivo').files[0];
-  if (!confirm(`Trocar ${MUNDO} pelo mundo de ${arquivo.name}?\n\nO mundo atual vai para o arquivo de wipes. O servidor permanecerá desligado.`)) return;
+  if (!await confirmar(`Trocar ${MUNDO} pelo mundo de ${arquivo.name}?\n\nO mundo atual vai para o arquivo de wipes. O servidor permanecerá desligado.`,
+                       {titulo: 'Trocar o mundo', acao: 'Trocar', perigo: true})) return;
   const corpo = new FormData();
   corpo.append('destino', 'mundo');
   corpo.append('confirmar', document.getElementById('m-confirmar').value.trim());

@@ -85,7 +85,8 @@ async function carregarPaginas(){
       if (p.url !== '/') {
         const apagar = botao('Remover', 'ruim');
         apagar.onclick = async () => {
-          if (!confirm(`Remover a página “${p.titulo}”? Ela sai do ar agora; uma cópia do arquivo fica guardada no servidor.`)) return;
+          if (!await confirmar(`Remover a página “${p.titulo}”? Ela sai do ar agora; uma cópia do arquivo fica guardada no servidor.`,
+                               {titulo: 'Remover página', acao: 'Remover', perigo: true})) return;
           try { await pede('/api/site/pagina', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({acao:'remover', dados:{pagina:p.id}})}); carregarPaginas(); }
           catch (e) { alert(e.message); }
         };
