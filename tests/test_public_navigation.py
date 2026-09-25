@@ -160,6 +160,13 @@ class NavigationTests(unittest.TestCase):
         self.assertEqual(publicar.public_html(published, 'index.html'), published)
         self.assertNotIn('navegacao.js', source)
 
+    def test_publisher_versions_unversioned_assets(self):
+        # A week of browser cache would otherwise hide an updated stylesheet.
+        page = publicar.public_html('<head><link rel="stylesheet" href="/assets/sagas-halls.css">'
+                                    '<link href="/assets/missing.css"></head>', 'armaria/index.html')
+        self.assertRegex(page, r'href="/assets/sagas-halls\.css\?v=[0-9a-f]{10}"')
+        self.assertIn('href="/assets/missing.css"', page)
+
     def test_publisher_replaces_missing_legacy_favicon(self):
         source = '<html><head><link rel="icon" href="/favicon.ico"></head><body></body></html>'
         identity = {'favicon': '/marca/new.ico'}

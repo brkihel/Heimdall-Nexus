@@ -66,8 +66,8 @@
   <div class="acoes"><button id="acesso-salvar" class="btn principal" type="button">Salvar acesso</button><span id="acesso-msg" role="status"></span></div>
 </div>
 <div class="cartao" style="max-width:850px">
-  <h2>Inicialização atual</h2><p>Prévia dos argumentos efetivos. A senha é sempre ocultada.</p>
-  <pre id="comando" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre>
+  <h2>Opções de inicialização</h2><p>Os argumentos com que o servidor é iniciado, montados a partir das opções acima. A senha é sempre ocultada.</p>
+  <textarea id="comando" class="comando" readonly rows="3" spellcheck="false" aria-label="Opções de inicialização"></textarea>
 </div>
 <div class="cartao" style="max-width:850px;border-color:#9b5944">
   <h2>Reinstalar servidor</h2>
@@ -83,6 +83,7 @@
 </dialog>
 <style>
 #cartao-acesso>.acoes{margin-top:1.2rem}
+.cartao textarea.comando{min-height:0;height:auto;resize:none;cursor:default;color:var(--texto);background:#04080c;border-color:var(--borda-viva);padding:.7rem .8rem;font:.84rem/1.7 ui-monospace,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
 .mod-topo{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap}
 .mod-topo h2{margin-bottom:.25rem}.mod-topo p{margin:0}
 .mod-gerenciar{display:flex;align-items:center;gap:.7rem;padding:.55rem .8rem;border:1px solid rgba(200,164,92,.35);border-radius:3px;background:rgba(200,164,92,.05);color:var(--osso);font-size:.88rem;cursor:pointer;white-space:nowrap}
@@ -132,12 +133,13 @@
 <script>
 const ROOT={{ raiz|tojson }}, $=id=>document.getElementById(id);
 async function api(verbo,dados={}){const r=await fetch(ROOT+'/api/administracao',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({verbo,dados})});const d=await r.json();if(!d.ok)throw Error(d.erro||'Falha');return d}
-async function load(){try{const d=await api('server.config'),c=d.configuracao||d;for(const key of ['nome','mundo','porta','descricao'])$(key).value=c[key]||'';for(const key of ['publico','crossplay'])$(key).checked=!!c[key];$('senha').disabled=!c.senha_suportada;$('remover-senha').checked=false;$('remover-senha-linha').hidden=!(c.mod_sem_senha&&c.senha_suportada);$('remover-senha-mod').textContent=c.mod_sem_senha?`(permitido pelo mod ${c.mod_sem_senha})`:'';$('senha-aviso').textContent=c.senha_suportada?(c.senha_definida?'Há uma senha configurada. Digite outra para trocar; a senha atual não é exibida.'+(c.mod_sem_senha?'':' Ela só pode ser removida com um mod de servidor sem senha instalado.'):(c.mod_sem_senha?'Servidor sem senha, permitido pelo mod '+c.mod_sem_senha+'. Digite uma senha para voltar a exigi-la.':'Sem senha configurada: qualquer pessoa com o endereço pode entrar. Defina uma senha agora.')):'O lançador atual não aceita VH_PASSWORD. A troca de senha pelo painel está indisponível nesta instalação.';$('comando').textContent=(c.comando||[]).map(x=>/\s/.test(x)?JSON.stringify(x):x).join(' ');$('status').textContent=c.ativo?'Ligado':'Desligado';mostraModificadores(c);}catch(e){$('mensagem').textContent=e.message}}
+function mostraComando(c){const caixa=$('comando');caixa.value=(c.comando||[]).map(x=>/\s/.test(x)?JSON.stringify(x):x).map((x,i)=>i&&x.startsWith('-')?'\n'+x:x).join(' ').replace(/ \n/g,'\n');caixa.style.height='auto';caixa.style.height=caixa.scrollHeight+2+'px'}
+async function load(){try{const d=await api('server.config'),c=d.configuracao||d;for(const key of ['nome','mundo','porta','descricao'])$(key).value=c[key]||'';for(const key of ['publico','crossplay'])$(key).checked=!!c[key];$('senha').disabled=!c.senha_suportada;$('remover-senha').checked=false;$('remover-senha-linha').hidden=!(c.mod_sem_senha&&c.senha_suportada);$('remover-senha-mod').textContent=c.mod_sem_senha?`(permitido pelo mod ${c.mod_sem_senha})`:'';$('senha-aviso').textContent=c.senha_suportada?(c.senha_definida?'Há uma senha configurada. Digite outra para trocar; a senha atual não é exibida.'+(c.mod_sem_senha?'':' Ela só pode ser removida com um mod de servidor sem senha instalado.'):(c.mod_sem_senha?'Servidor sem senha, permitido pelo mod '+c.mod_sem_senha+'. Digite uma senha para voltar a exigi-la.':'Sem senha configurada: qualquer pessoa com o endereço pode entrar. Defina uma senha agora.')):'O lançador atual não aceita VH_PASSWORD. A troca de senha pelo painel está indisponível nesta instalação.';mostraComando(c);$('status').textContent=c.ativo?'Ligado':'Desligado';mostraModificadores(c);}catch(e){$('mensagem').textContent=e.message}}
 $('salvar').onclick=async()=>{try{const data={gravar:true,nome:$('nome').value,mundo:$('mundo').value,porta:$('porta').value,descricao:$('descricao').value,publico:$('publico').checked,crossplay:$('crossplay').checked};if($('senha').value)data.senha=$('senha').value;if($('remover-senha').checked){if(data.senha){$('mensagem').textContent='Escolha entre trocar ou remover a senha.';return}if(!confirm('Remover a senha do jogo? Qualquer pessoa com o endereço poderá entrar.'))return;data.remover_senha=true}const d=await api('server.config',data);$('senha').value='';$('mensagem').textContent=d.reinicio_necessario?'Salvo. Reinicie o jogo para aplicar.':'Salvo.';$('reiniciar').hidden=!d.reinicio_necessario;await load()}catch(e){$('mensagem').textContent=e.message}};
 $('reiniciar').onclick=async()=>{if(!confirm('Reiniciar o jogo agora? Jogadores conectados serão desconectados.'))return;const r=await fetch(ROOT+'/api/servico',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'restart'})});const d=await r.json();$('mensagem').textContent=d.ok?'Reinício solicitado.':d.erro};
 $('reinstalar').onclick=()=>{$('senha-admin').value='';$('confirmar-reinstalacao').showModal();$('senha-admin').focus()};
 $('cancelar-acao').onclick=()=>$('confirmar-reinstalacao').close();
-$('confirmar-acao').onclick=async()=>{const senha=$('senha-admin').value;$('senha-admin').value='';$('confirmar-reinstalacao').close();try{const d=await api('server.reinstall',{senha_admin:senha});$('mensagem').textContent='Reinstalação iniciada. Tarefa '+d.tarefa+'. Acompanhe em Mods ou no log do executor.'}catch(e){$('mensagem').textContent=e.message}};
+$('confirmar-acao').onclick=async()=>{const senha=$('senha-admin').value;$('senha-admin').value='';$('confirmar-reinstalacao').close();try{const d=await api('server.reinstall',{senha_admin:senha});$('mensagem').textContent='Reinstalação iniciada. Tarefa '+d.tarefa+'. Acompanhe no Mod Manager ou no log do executor.'}catch(e){$('mensagem').textContent=e.message}};
 const MODS=[
   ['combat','Dificuldade de combate','Força e dano das criaturas.',[['veryeasy','Muito fácil'],['easy','Fácil'],['default','Normal'],['hard','Difícil'],['veryhard','Muito difícil']]],
   ['deathpenalty','Penalidade de morte','O que o Viking perde ao morrer.',[['casual','Casual'],['veryeasy','Muito fácil'],['easy','Fácil'],['default','Normal'],['hard','Difícil'],['hardcore','Pesadelo']]],
@@ -216,7 +218,7 @@ function avisoErro(e,titulo){
 $('mod-salvar').onclick=async()=>{
   if($('mod-gerenciar').checked&&!confirm('No próximo início do servidor, estas escolhas substituem os modificadores atuais do mundo. Continuar?'))return;
   try{const d=await api('server.config',{gravar:true,modificadores:{gerenciar:$('mod-gerenciar').checked,valores:modValores,chaves:[...modChaves]}});
-    const c=d.configuracao||d;mostraModificadores(c);$('comando').textContent=(c.comando||[]).map(x=>/\s/.test(x)?JSON.stringify(x):x).join(' ');
+    const c=d.configuracao||d;mostraModificadores(c);mostraComando(c);
     $('mod-reiniciar').hidden=!d.reinicio_necessario;
     avisar({tipo:'ok',titulo:'Modificadores salvos',texto:d.reinicio_necessario?'Reinicie o servidor para aplicar.':'Valem no próximo início do servidor.'});
   }catch(e){avisoErro(e,'Não foi possível salvar os modificadores');}

@@ -28,7 +28,7 @@
 <main class="stage"><img class="stage-art" src="/assets/historias-bg.webp" alt="" decoding="async">
 <div class="embers" aria-hidden="true"><i class="ember" style="--x:39%;--dur:8s;--delay:0s;--drift:-35px"></i><i class="ember" style="--x:43%;--dur:6s;--delay:2s;--drift:38px"></i><i class="ember" style="--x:36%;--dur:9s;--delay:4s;--drift:22px"></i><i class="ember" style="--x:45%;--dur:7s;--delay:1s;--drift:-29px"></i><i class="ember" style="--x:41%;--dur:10s;--delay:5s;--drift:18px"></i></div>
 <div class="shell"><header class="intro"><div class="eyebrow">Ao redor da fogueira</div><h1>Histórias dos Vikings</h1><p>Odin guarda os ecos dos feitos compartilhados neste mundo. Cada capítulo nasce de registros reais e ganha voz de lenda.</p><p class="disclaimer">Ficção criada por IA. Os fatos que inspiraram cada capítulo aparecem no fim da história.</p><div class="divisor" aria-hidden="true"><i></i><b></b><i></i></div></header>
-<div class="controls"><label for="world">Mundo<select id="world"></select></label><small>Capítulos atualizados a cada 30 segundos</small></div>
+<div class="controls"><small>Capítulos atualizados a cada 30 segundos</small></div>
 <p class="status" id="status" role="status">Carregando histórias…</p><div class="chapters" id="chapters" hidden></div>
 </div></main><footer><div class="shell"><span data-identidade="rodape">Servidor comunitário de Valheim. Não somos afiliados à Iron Gate AB nem à Coffee Stain.</span></div></footer>
 <script>
@@ -40,7 +40,6 @@ const when=seconds=>new Date(Number(seconds)*1000).toLocaleString('pt-BR',{dateS
 function target(item){const t=item.target||'';if(item.kind!=='discover')return t;return t.startsWith('vegvisir:')?'um Vegvisir que aponta para '+(landmarks[t.slice(9)]||t.slice(9)):landmarks[t]||t}
 let world='',requestId=0;
 function render(data){
-  const select=$('world');select.replaceChildren();for(const entry of data.worlds){const opt=node('option',entry.name||'Mundo');opt.value=entry.id;opt.selected=entry.id===data.world;select.append(opt)}select.disabled=data.worlds.length<2;
   const list=$('chapters');list.replaceChildren();const stories=Array.isArray(data.stories)?data.stories:[];
   if(!data.stories_enabled){$('status').textContent='As histórias estão desativadas neste servidor. O administrador pode ativá-las no Jarl → Sagas.';$('status').hidden=false;list.hidden=true;return}
   if(!stories.length){$('status').textContent='Ainda não há capítulos compartilhados neste mundo. Eles aparecem depois que um Viking autoriza as histórias e seus feitos são registrados.';$('status').hidden=false;list.hidden=true;return}
@@ -56,7 +55,7 @@ function render(data){
   list.hidden=false;$('status').hidden=true;
 }
 async function load(){const id=++requestId;try{const response=await fetch('/api/sagas/v1/overview?limit=20&story_limit=20'+(world?'&world='+encodeURIComponent(world):''),{cache:'no-store'});if(!response.ok)throw Error();const data=await response.json();if(id!==requestId)return;if(!data.available){$('status').textContent='Sagas ainda não está ativa neste servidor.';$('status').hidden=false;$('chapters').hidden=true;return}world=data.world||'';render(data)}catch(_){if(id!==requestId)return;$('status').textContent='Não foi possível carregar as histórias agora. Tente novamente em instantes.';$('status').hidden=false}}
-$('world').addEventListener('change',event=>{world=event.target.value;load()});load();setInterval(load,30000);
+load();setInterval(load,30000);
 })();
 </script>
 </body></html>

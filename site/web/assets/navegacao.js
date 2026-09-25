@@ -1,19 +1,47 @@
 /* One public menu on every page; the Jarl editor publishes the configuration. */
 (() => {
   'use strict';
+  const PANEL = '/jarl';
+  const framed = (() => { try { return window.top !== window; } catch (_) { return true; } })();
+  const editing = new URLSearchParams(location.search).get('jarl') === 'editar';
+  // Inside the Layout Editor every page gets the editing script, including pages
+  // whose source has no loader of its own.
+  if (framed && editing && !window.__jarlEditor) {
+    const script = document.createElement('script');
+    script.src = `${PANEL}/estatico/site-admin.js`;script.defer = true;
+    document.head.appendChild(script);
+  }
+  // Admin shortcuts at the right end of the menu bar. The "jarl" cookie is only a hint
+  // set by the panel; the session itself is confirmed before anything shows.
+  const adminShortcuts = async nav => {
+    if (framed || !/(^|;\s*)jarl=1/.test(document.cookie)) return;
+    try {
+      const response = await fetch(`${PANEL}/api/site/eu`, {credentials:'same-origin', cache:'no-store'});
+      const data = response.ok ? await response.json() : null;
+      if (!data || !data.ok) {
+        if (response.status === 401) document.cookie = 'jarl=; Max-Age=0; path=/; secure; samesite=lax';
+        return;
+      }
+    } catch (_) { return; }
+    const box = document.createElement('div');box.className = 'heimdall-nav-admin';
+    box.setAttribute('aria-label','Administração');
+    const shortcut = (label, href, title) => {
+      const link = document.createElement('a');link.href = href;link.title = title;
+      link.textContent = label;box.append(link);
+      return link;
+    };
+    shortcut('ᛃ Jarl', `${PANEL}/`, 'Painel do servidor').classList.add('heimdall-nav-jarl');
+    shortcut('Layout Editor', `${PANEL}/editor?url=${encodeURIComponent(location.pathname)}`,
+             'Editar esta página');
+    nav.append(box);
+    nav.classList.add('has-admin');
+  };
   const fallback = {style:'discreto',links:[
     {label:'Início',url:'/'},{label:'Wiki',url:'/wiki/'},
     {label:'Mapa',url:'/mapa/'},{label:'Histórias',url:'/historias/'},
     {label:'Armaria',url:'/armaria/'},{label:'Rankings',url:'/rankings/'}]};
-  const start = async () => {
-    let config = fallback;
-    try {
-      const response = await fetch('/assets/navegacao.json', {cache:'no-store'});
-      if (response.ok) {
-        const value = await response.json();
-        if (Array.isArray(value.links) && value.links.length <= 50) config = value;
-      }
-    } catch (_) { /* The fallback keeps navigation usable during installation. */ }
+  let current = null;
+  const render = config => {
     const nav = document.createElement('nav');
     nav.className = 'heimdall-nav';
     nav.setAttribute('aria-label','Navegação principal');
@@ -30,7 +58,6 @@
     brand.textContent = identity?.getAttribute('content') || identity?.textContent?.trim() ||
       (typeof config.name === 'string' ? config.name.slice(0,60) : '') || 'Heimdall Nexus';
     const links = document.createElement('div');links.className = 'heimdall-nav-links';
-    const editing = new URLSearchParams(location.search).get('jarl') === 'editar';
     const valid = entry => entry && typeof entry.label === 'string' &&
       typeof entry.url === 'string' && /^\/(?:[a-z0-9-]{1,40}\/){0,3}$/.test(entry.url);
     const anchor = entry => {
@@ -82,14 +109,9 @@
       }
       links.append(item);
     }
-    inner.append(brand, links);nav.append(inner);document.body.prepend(nav);
-    document.addEventListener('click', event => {
-      if (nav.contains(event.target)) return;
-      links.querySelectorAll('.heimdall-nav-item.is-open').forEach(item => {
-        item.classList.remove('is-open');
-        item.querySelector('.heimdall-nav-toggle')?.setAttribute('aria-expanded','false');
-      });
-    });
+    inner.append(brand, links);nav.append(inner);
+    if (current) current.replaceWith(nav); else document.body.prepend(nav);
+    current = nav;
     nav.addEventListener('keydown', event => {
       if (event.key !== 'Escape') return;
       const open = links.querySelector('.heimdall-nav-item.is-open');
@@ -101,7 +123,28 @@
     const height = () => document.documentElement.style.setProperty('--heimdall-nav-height',nav.offsetHeight+'px');
     height();
     if (window.ResizeObserver) new ResizeObserver(height).observe(nav);
+    return nav;
   };
+  document.addEventListener('click', event => {
+    if (!current || current.contains(event.target)) return;
+    current.querySelectorAll('.heimdall-nav-item.is-open').forEach(item => {
+      item.classList.remove('is-open');
+      item.querySelector('.heimdall-nav-toggle')?.setAttribute('aria-expanded','false');
+    });
+  });
+  const start = async () => {
+    let config = fallback;
+    try {
+      const response = await fetch('/assets/navegacao.json', {cache:'no-store'});
+      if (response.ok) {
+        const value = await response.json();
+        if (Array.isArray(value.links) && value.links.length <= 50) config = value;
+      }
+    } catch (_) { /* The fallback keeps navigation usable during installation. */ }
+    adminShortcuts(render(config));
+  };
+  // The Layout Editor redraws the menu while it is being edited, before saving.
+  if (framed && editing) window.heimdallNav = {preview: config => { render(config); }};
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once:true});
   else start();
 })();

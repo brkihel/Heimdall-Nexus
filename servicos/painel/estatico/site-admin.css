@@ -1,5 +1,5 @@
-/* In-page editor (site-admin.js). Everything is prefixed jarl- so it cannot
-   collide with the site's own classes. */
+/* Layout Editor (site-admin.js in the page, editor.html around it). Everything
+   is prefixed jarl- so it cannot collide with the site's own classes. */
 :root {
   --jarl-bg: #0d151d;
   --jarl-bg-2: #152029;
@@ -34,6 +34,9 @@
   cursor: text;
 }
 .jarl-editing .jarl-ed.jarl-active:focus { outline: 2px solid var(--jarl-gold); }
+/* The shared site menu opens the menu editor in the sidebar. */
+.jarl-editing .heimdall-nav { cursor: pointer; }
+.jarl-editing .heimdall-nav:hover { outline: 2px dashed var(--jarl-gold); outline-offset: -3px; }
 /* Layers the site puts over text (fog, embers) must not steal the hover. */
 .jarl-editing .brasa, .jarl-editing .nevoa { pointer-events: none; }
 
@@ -50,7 +53,7 @@
 }
 
 /* ---------------------------------------------------------------- shared */
-.jarl-dock, .jarl-toolbar, .jarl-menu, .jarl-toasts {
+.jarl-toolbar, .jarl-menu, .jarl-toasts {
   font-family: 'Spectral', Georgia, serif;
   font-size: 15px;
   line-height: 1.3;
@@ -61,7 +64,7 @@
   text-shadow: none;
   z-index: 2147483000;
 }
-.jarl-dock *, .jarl-toolbar *, .jarl-menu * { box-sizing: border-box; }
+.jarl-toolbar *, .jarl-menu * { box-sizing: border-box; }
 
 .jarl-btn, .jarl-tool {
   font: inherit;
@@ -82,25 +85,7 @@
 .jarl-working { animation: jarl-pulse 1s ease-in-out infinite; }
 @keyframes jarl-pulse { 50% { opacity: .55; } }
 
-/* ---------------------------------------------------------------- dock */
-.jarl-dock {
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  max-width: calc(100vw - 32px);
-  padding: 6px;
-  background: rgba(8, 14, 20, .94);
-  border: 1px solid var(--jarl-line);
-  border-radius: 3px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, .6);
-  backdrop-filter: blur(6px);
-}
-.jarl-dock.jarl-on { border-color: var(--jarl-gold); }
+/* ---------------------------------------------------------------- brand */
 .jarl-brand {
   display: inline-flex;
   align-items: center;
@@ -114,10 +99,6 @@
 }
 .jarl-brand:hover { background: var(--jarl-bg-2); color: var(--jarl-gold-soft); }
 .jarl-rune { font-size: 1.1em; }
-.jarl-toggle { font-family: 'Cinzel', Georgia, serif; font-weight: 600; }
-.jarl-on .jarl-toggle { border-color: var(--jarl-gold); color: var(--jarl-gold-soft); }
-.jarl-editbar { display: flex; gap: 6px; }
-.jarl-editbar[hidden] { display: none; }
 .jarl-count {
   display: inline-block;
   min-width: 1.4em;
@@ -127,8 +108,6 @@
   background: rgba(0, 0, 0, .35);
   text-align: center;
 }
-.jarl-note { flex-basis: 100%; color: var(--jarl-muted); font-size: 13px; padding: 2px 6px; max-width: 420px; }
-.jarl-note[hidden] { display: none; }
 
 /* ---------------------------------------------------------------- toolbar */
 .jarl-toolbar {
@@ -148,7 +127,6 @@
 .jarl-b { font-weight: 700; }
 .jarl-i { font-style: italic; }
 .jarl-u { text-decoration: underline; }
-.jarl-done { color: var(--jarl-ok); }
 .jarl-sep { width: 1px; align-self: stretch; margin: 2px 3px; background: var(--jarl-line); }
 .jarl-hint { color: var(--jarl-muted); font-size: 13px; padding: 0 .5em; }
 
@@ -234,7 +212,6 @@
 @keyframes jarl-in { from { transform: translateY(8px); opacity: 0; } }
 
 @media (max-width: 640px) {
-  .jarl-dock { left: 16px; right: 16px; justify-content: center; }
   .jarl-toolbar { flex-wrap: wrap; max-width: calc(100vw - 16px); }
 }
 
@@ -326,7 +303,6 @@
 .jarl-toasts .jarl-toast-acao { pointer-events: auto; }
 
 /* ---------------------------------------------------------------- link tool */
-.jarl-tool.jarl-tool-rotulo { padding: 0 .75em; }
 .jarl-rot { font: 600 11px 'Cinzel', Georgia, serif; letter-spacing: .1em; text-transform: uppercase; color: var(--jarl-muted); margin-top: 2px; }
 .jarl-link-tipo { color: var(--jarl-gold-soft); font-size: 13px; min-height: 1em; margin-top: -4px; }
 .jarl-input-busca { font-family: 'Spectral', Georgia, serif; }

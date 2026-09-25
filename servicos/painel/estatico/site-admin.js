@@ -1,7 +1,9 @@
-/* In-page editor for the public site.
+/* Page side of the Layout Editor (/jarl/editor).
  *
- * Loaded only when the "jarl" hint cookie exists (see the loader snippet in the
- * site's pages), and it does nothing until the panel confirms a real session.
+ * The editor shows the page in a frame and this script, loaded inside it, makes
+ * the page editable while the tools live in the editor's left sidebar. On its
+ * own (a page opened directly) it only forwards an edit request to the editor:
+ * the admin shortcuts on the public site live in the navigation menu.
  *
  * Two kinds of edits, one history:
  *   - text and style of a field (a paragraph, a heading, a button label);
@@ -28,7 +30,13 @@
   // them straight into the parent document.
   const SHELL = (() => { try { return window.parent !== window && window.parent.jarlShell || null; }
                          catch { return null; } })();
-  const H = SHELL ? window.parent.document : document;
+  if (!SHELL) {
+    // Old links (?jarl=editar) open the full editor instead of editing in place.
+    if (window.top === window && new URLSearchParams(location.search).get('jarl') === 'editar')
+      location.replace(`${ROOT}/editor?url=${encodeURIComponent(location.pathname)}`);
+    return;
+  }
+  const H = window.parent.document;
   const LANDMARKS = new Set(['SECTION', 'HEADER', 'FOOTER', 'NAV', 'ASIDE']);
   const OPAQUE = new Set(['SCRIPT', 'STYLE', 'SVG', 'NOSCRIPT', 'TEMPLATE', 'TEXTAREA', 'SELECT',
                           'CANVAS', 'IFRAME', 'OBJECT', 'VIDEO', 'AUDIO', 'PICTURE', 'MATH']);
@@ -142,9 +150,7 @@
   }
 
   function note(text) {
-    if (!ui.note) { if (text) toast(text, 'erro'); return; }
-    ui.note.textContent = text || '';
-    ui.note.hidden = !text;
+    if (text) toast(text, 'erro');
   }
 
   function toast(text, kind = 'ok', action) {
@@ -175,68 +181,24 @@
   const ui = {};
   function buildUi() {
     document.head.append($('link', {rel: 'stylesheet', href: `${ROOT}/estatico/site-admin.css`}));
-    if (SHELL) {
-      // No dock and no ribbon on the page: the sidebar has both.
-      ui.toasts = SHELL.toasts;
-      ui.toolbar = SHELL.toolbarHost;
-      ui.menu = $('div', {class: 'jarl-menu', 'data-jarl-ui': '', hidden: true});
-      document.body.append(ui.menu);
-      return;
-    }
-    ui.count = $('span', {class: 'jarl-count'}, '0');
-    ui.undo = $('button', {class: 'jarl-btn', title: 'Desfazer (Ctrl+Z)', on: {click: undo}}, '↶');
-    ui.redo = $('button', {class: 'jarl-btn', title: 'Refazer (Ctrl+Shift+Z)', on: {click: redo}}, '↷');
-    ui.discard = $('button', {class: 'jarl-btn', on: {click: discardAll}}, 'Descartar');
-    ui.save = $('button', {class: 'jarl-btn jarl-primary', title: 'Salvar (Ctrl+S)', on: {click: save}},
-                'Salvar ', ui.count);
-    ui.toggle = $('button', {class: 'jarl-btn jarl-toggle', on: {click: () => setEditing(!S.editing)}},
-                  'Modo edição');
-    ui.preview = $('button', {class: 'jarl-btn', title: 'Link para mostrar as alterações antes de publicar',
-                              on: {click: makePreview}}, 'Prévia');
-    ui.editBar = $('div', {class: 'jarl-editbar'}, ui.undo, ui.redo, ui.preview, ui.discard, ui.save);
-    ui.note = $('div', {class: 'jarl-note', hidden: true});
-    ui.dock = $('div', {class: 'jarl-dock', 'data-jarl-ui': ''},
-      $('a', {class: 'jarl-brand', href: `${ROOT}/`, target: '_top', title: 'Painel do servidor'},
-        $('span', {class: 'jarl-rune'}, 'ᛃ'), 'Jarl'),
-      $('a', {class: 'jarl-btn', href: `${ROOT}/editor?url=${encodeURIComponent(location.pathname)}`, target: '_top',
-              title: 'Abrir o Layout Editor'}, 'Layout Editor'),
-      ui.toggle, ui.editBar, ui.note);
-    ui.toasts = $('div', {class: 'jarl-toasts', 'data-jarl-ui': ''});
-    ui.toolbar = $('div', {class: 'jarl-toolbar', 'data-jarl-ui': '', hidden: true});
+    // The sidebar holds the toolbar and the notices; only menus live in the page.
+    ui.toasts = SHELL.toasts;
+    ui.toolbar = SHELL.toolbarHost;
+    // Clicking the panel must not take the text selection away from the page.
     ui.toolbar.addEventListener('mousedown', e => {
-      // Keep the text selection in the page while clicking the toolbar.
-      if (e.target.tagName !== 'INPUT') e.preventDefault();
+      if (!e.target.closest('input,label,select,textarea')) e.preventDefault();
     });
     ui.menu = $('div', {class: 'jarl-menu', 'data-jarl-ui': '', hidden: true});
-    document.body.append(ui.dock, ui.toasts, ui.toolbar, ui.menu);
-    refreshDock();
+    document.body.append(ui.menu);
   }
 
   function refreshDock() {
-    if (SHELL) {
-      for (const [token, el] of S.elements) {
-        const changed = fieldChanged(token);
-        el.classList.toggle('jarl-changed', changed);
-        el.classList.toggle('jarl-vazio', changed && isEmpty(token) && S.fields.get(token).tag !== 'mod');
-      }
-      SHELL.update(state());
-      return;
-    }
-    if (!ui.dock) return;
-    ui.dock.classList.toggle('jarl-on', S.editing);
-    ui.toggle.textContent = S.editing ? 'Sair da edição' : 'Modo edição';
-    ui.editBar.hidden = !S.editing;
-    const n = pendingCount();
-    ui.count.textContent = n;
-    ui.save.disabled = !n || S.busy;
-    ui.discard.disabled = !n || S.busy;
-    ui.undo.disabled = !S.past.length && !S.typing;
-    ui.redo.disabled = !S.future.length;
     for (const [token, el] of S.elements) {
       const changed = fieldChanged(token);
       el.classList.toggle('jarl-changed', changed);
       el.classList.toggle('jarl-vazio', changed && isEmpty(token) && S.fields.get(token).tag !== 'mod');
     }
+    SHELL.update(state());
   }
 
   // ------------------------------------------------------------ blocks and breadcrumb
@@ -311,11 +273,11 @@
       {label: 'Cor', icon: '◐', colors: true},
       {label: 'Borda', icon: '▢', sub: BORDERS.map(([n, v]) => ({label: n, run: () => setBox(v)}))},
       {label: 'Sombra', icon: '☼', sub: SHADOWS.map(([n, v]) => ({label: n, run: () => setProp('text-shadow', v)}))},
-      {label: 'Limpar formatação', icon: '⌫', run: clearFormat},
+      {label: 'Limpar formatação', short: 'Limpar', icon: '⌫', run: clearFormat},
     ];
     if (!blockLevel) {
-      list.push({label: 'Link', key: 'Ctrl+K', icon: '🔗 Link', cls: 'jarl-tool-rotulo', link: true});
-      if (S.values.length) list.push({label: 'Valores automáticos', icon: '{ }', values: true});
+      list.push({label: 'Link', key: 'Ctrl+K', icon: '🔗', link: true});
+      if (S.values.length) list.push({label: 'Valores automáticos', short: 'Valores', icon: '{ }', values: true});
     }
     return list;
   }
@@ -328,8 +290,8 @@
     const section = LANDMARKS.has(el.tagName);
     const models = S.models.filter(m => !!m.secao === section);
     const list = [
-      {label: 'Mover para cima', key: 'Alt+↑', icon: '↑', run: () => moveBlock(el, 'cima')},
-      {label: 'Mover para baixo', key: 'Alt+↓', icon: '↓', run: () => moveBlock(el, 'baixo')},
+      {label: 'Mover para cima', short: 'Subir', key: 'Alt+↑', icon: '↑', run: () => moveBlock(el, 'cima')},
+      {label: 'Mover para baixo', short: 'Descer', key: 'Alt+↓', icon: '↓', run: () => moveBlock(el, 'baixo')},
       {label: 'Duplicar', key: 'Ctrl+D', icon: '⧉', run: () => duplicateBlock(el),
        disabled: !info.duplicavel && !info.forcavel && (info.protegido || 'tem elementos com nome próprio')},
     ];
@@ -339,7 +301,7 @@
                 {label: 'Adicionar antes', icon: '⤒', sub: models.map(m =>
                   ({label: m.rotulo, run: () => insertModel(el, m, 'antes')}))});
     }
-    if (el.tagName === 'A') list.push({label: 'Destino do link', icon: '🔗 Destino', cls: 'jarl-tool-rotulo', blockLink: true});
+    if (el.tagName === 'A') list.push({label: 'Destino do link', short: 'Destino', icon: '🔗', blockLink: true});
     list.push({label: 'Remover', key: 'Del', icon: '🗑', cls: 'jarl-danger', run: () => removeBlock(el),
                disabled: info.protegido && !info.forcavel && info.protegido});
     return list;
@@ -348,21 +310,40 @@
   function toolButton(action) {
     const title = (action.key ? `${action.label} (${action.key})` : action.label) +
                   (typeof action.disabled === 'string' ? ` — ${action.disabled}` : '');
+    // Bold, italic and underline read as their own letter; the rest carry a name.
+    const letter = ['jarl-b', 'jarl-i', 'jarl-u'].includes(action.cls);
     const btn = $('button', {class: `jarl-tool ${action.cls || ''}`, title, disabled: !!action.disabled},
-                  action.icon);
+                  letter ? action.icon : [$('span', {class: 'jarl-ico'}, action.icon),
+                                          $('span', {class: 'jarl-lbl'}, action.short || action.label)]);
     if (action.run) btn.addEventListener('click', () => action.run());
     else btn.addEventListener('click', () => openPopover(action, btn));
     return btn;
   }
 
+  // The element panel, as in page builders: what was clicked, then its tools in
+  // three tabs. Choices open inside the panel instead of floating menus.
+  const TABS = [['conteudo', 'Conteúdo'], ['estilo', 'Estilo'], ['bloco', 'Bloco']];
+  let lastTab = 'conteudo';
+
+  function control(action) {
+    if (action.run) return toolButton(action);
+    const box = $('details', {class: 'jarl-control'},
+      $('summary', {title: action.key ? `${action.label} (${action.key})` : action.label},
+        $('span', {class: 'jarl-ico'}, action.icon), $('span', {class: 'jarl-lbl'}, action.label)));
+    box.addEventListener('toggle', () => {
+      if (!box.open) { box.querySelector('.jarl-control-body')?.remove(); return; }
+      // Only one open at a time, built fresh so it reflects the current selection.
+      for (const other of ui.toolbar.querySelectorAll('.jarl-control[open]')) if (other !== box) other.open = false;
+      rememberSelection();
+      box.append($('div', {class: 'jarl-control-body'}, popoverBody(action, () => { box.open = false; })));
+    });
+    return box;
+  }
+
   function fillToolbar() {
     const bar = ui.toolbar;
     bar.replaceChildren();
-    if (!S.active) {
-      if (SHELL) SHELL.empty(bar); else bar.hidden = true;
-      if (SHELL) SHELL.update(state());
-      return;
-    }
+    if (!S.active) { SHELL.update(state()); return; }
     const path = $('div', {class: 'jarl-crumbs'});
     const list = crumbs();
     list.slice().reverse().forEach((el, i) => {
@@ -371,20 +352,36 @@
                                title: 'Selecionar este nível', on: {click: () => selectBlock(el)}},
                     blockLabel(el)));
     });
-    const rowBlock = $('div', {class: 'jarl-row'}, path, $('span', {class: 'jarl-sep'}),
-                       ...blockActions().map(toolButton));
     const format = formatActions();
-    const rowFormat = $('div', {class: 'jarl-row'},
-      ...(format.length ? format.map(toolButton)
-                        : [$('span', {class: 'jarl-hint'}, 'Só texto neste campo')]),
-      $('span', {class: 'jarl-sep'}),
-      $('button', {class: 'jarl-tool', title: 'Desfazer (Ctrl+Z)', on: {click: undo}}, '↶'),
-      $('button', {class: 'jarl-tool', title: 'Refazer (Ctrl+Shift+Z)', on: {click: redo}}, '↷'),
-      $('button', {class: 'jarl-tool jarl-done', title: 'Concluir (Esc)', on: {click: () => deactivate()}}, '✓'));
-    bar.append(rowBlock, rowFormat);
-    bar.hidden = false;
-    positionToolbar();
-    if (SHELL) SHELL.update(state());
+    const isContent = a => a.link || a.values;
+    const letters = format.filter(a => ['jarl-b', 'jarl-i', 'jarl-u'].includes(a.cls));
+    const styles = format.filter(a => !letters.includes(a) && !isContent(a));
+    const block = blockActions();
+    const panes = {
+      conteudo: [
+        $('p', {class: 'jarl-hint'}, targetIsField() ? 'O texto se escreve direto na página.'
+          : 'Escolha um texto dentro deste bloco para mudar o que está escrito.'),
+        ...format.filter(isContent).map(control),
+        ...block.filter(a => a.blockLink).map(control)],
+      estilo: format.length ? [
+        $('div', {class: 'jarl-seg'}, ...letters.map(toolButton)), ...styles.map(control)] : [],
+      bloco: block.filter(a => !a.blockLink).map(control),
+    };
+    const tabs = TABS.filter(([key]) => panes[key].length);
+    if (!tabs.some(([key]) => key === lastTab)) lastTab = tabs[0][0];
+    const body = $('div', {class: 'jarl-pane'});
+    const bar2 = $('div', {class: 'jarl-tabs', role: 'tablist'});
+    const show = key => {
+      lastTab = key;
+      for (const b of bar2.children) b.classList.toggle('on', b.dataset.tab === key);
+      body.replaceChildren(...panes[key]);
+    };
+    for (const [key, label] of tabs) {
+      bar2.append($('button', {'data-tab': key, role: 'tab', on: {click: () => show(key)}}, label));
+    }
+    bar.append($('div', {class: 'jarl-crumbs-box'}, path), bar2, body);
+    show(lastTab);
+    SHELL.update(state());
   }
 
   function colorPicker(onPick) {
@@ -593,8 +590,7 @@
       item('Gerar link de prévia', makePreview, null, !n),
       item('Descartar alterações', discardAll, null, !n),
       sep(),
-      item('Sair do modo edição', () => setEditing(false)),
-      item('Abrir o painel do servidor', () => { location.href = `${ROOT}/`; }));
+      item('Abrir o painel do servidor', () => { top.location.href = `${ROOT}/`; }));
     menu.addEventListener('mousedown', ev => { if (!['INPUT', 'LABEL'].includes(ev.target.tagName)) ev.preventDefault(); });
     place(menu, e.clientX, e.clientY);
     // Submenus open to the side that has room.
@@ -1245,7 +1241,6 @@
       S.past.push({kind: 'campo', token, before, after});
       S.future = [];
     }
-    positionToolbar();
     refreshDock();
   }
 
@@ -1362,7 +1357,7 @@
     S.savedRange = null;
     if (S.block) S.block.classList.remove('jarl-sel');
     S.block = null;
-    ui.toolbar.hidden = true;
+    ui.toolbar.replaceChildren();
     closeMenus();
     // Untouched fields go back to the published text (markers filled in again).
     if (!S.created.has(token) && !fieldChanged(token) &&
@@ -1389,16 +1384,14 @@
     S.base.delete(token);
   }
 
-  function positionToolbar() {
-    // A ribbon pinned to the top of the window: floating over the field it would
-    // cover the text just above it, which then could not be clicked.
-    if (SHELL || !S.active || ui.toolbar.hidden) return;
-    const bar = ui.toolbar;
-    bar.style.top = '12px';
-    bar.style.left = Math.max(8, (innerWidth - bar.offsetWidth) / 2) + 'px';
-  }
-
   // ------------------------------------------------------------ edit mode
+  // A nav made only of in-page anchors (the dots beside a long page) follows the
+  // sections by itself; its labels are not content to edit.
+  const inSectionNav = el => {
+    const nav = el.closest('nav');
+    return !!nav && [...nav.querySelectorAll('a')].every(a => (a.getAttribute('href') || '').startsWith('#'));
+  };
+
   async function loadFields() {
     const d = await api(`/api/site/campos?url=${encodeURIComponent(location.pathname)}`);
     S.page = d.pagina;
@@ -1416,7 +1409,7 @@
         const el = field.tag === 'mod'
           ? document.querySelector(`[data-mod="${CSS.escape(field.token.slice(4))}"]`)
           : document.querySelector(`[data-campo="${CSS.escape(field.token)}"]`);
-        if (!el) continue;
+        if (!el || inSectionNav(el)) continue;
         S.fields.set(field.token, field);
         S.elements.set(field.token, el);
         tokenOf.set(el, field.token);
@@ -1480,8 +1473,10 @@
     sessionStorage.setItem(EDITING_KEY, '1');
     note('');
     refreshDock();
-    toast(`${S.elements.size} trechos editáveis. Clique para editar; a trilha no topo escolhe o bloco ` +
-          'inteiro (seção, caixa, item) para mover, duplicar, adicionar ou remover.');
+    fillToolbar();
+    if (S.elements.size)
+      toast(`${S.elements.size} trechos editáveis. Clique em um deles e as ferramentas dele aparecem na barra ` +
+            'ao lado; ← Voltar retorna à lista de seções.');
   }
 
   function discardAll() {
@@ -1521,7 +1516,6 @@
     }
     S.busy = true;
     refreshDock();
-    if (ui.save) ui.save.classList.add('jarl-working');
     try {
       const d = await api('/api/site/gravar', body);
       toast(`${d.alterados} ${d.alterados === 1 ? 'alteração salva' : 'alterações salvas'} e publicadas. Recarregando…`);
@@ -1532,7 +1526,6 @@
       if (error.expired) return signedOut();
       toast(error.message, 'erro');
     } finally {
-      if (ui.save) ui.save.classList.remove('jarl-working');
       refreshDock();
     }
   }
@@ -1735,6 +1728,14 @@
   // ------------------------------------------------------------ events
   document.addEventListener('click', e => {
     if (!S.editing || e.target.closest('[data-jarl-ui]')) return;
+    if (e.target.closest('.heimdall-nav')) {
+      // The site menu is shared by every page: it has its own editor in the sidebar.
+      e.preventDefault();
+      e.stopPropagation();
+      deactivate();
+      SHELL.openMenu();
+      return;
+    }
     if (!e.target.closest('.jarl-menu')) closeMenus();
     const el = e.target.closest('.jarl-ed');
     if (el) {
@@ -1753,7 +1754,6 @@
   document.addEventListener('contextmenu', contextMenu, true);
   document.addEventListener('selectionchange', rememberSelection);
   addEventListener('scroll', () => { if (!ui.menu.hidden) closeMenus(); }, {passive: true});
-  addEventListener('resize', positionToolbar);
 
   function handleKey(e) {
     if (!S.editing) return false;
@@ -1816,20 +1816,11 @@
       return;
     }
     buildUi();
-    const wanted = new URLSearchParams(location.search).get('jarl') === 'editar';
-    if (wanted || sessionStorage.getItem(EDITING_KEY)) setEditing(true);
+    setEditing(true);
   }
 
-  // Lets the panel's Site tab drive a page shown in its frame.
+  // What the Layout Editor's sidebar calls.
   window.jarlEditor = {
-    scrollTo(anchor, token) {
-      const found = (token && S.elements.get(token)) || (anchor && document.getElementById(anchor));
-      if (found) found.scrollIntoView({block: 'start', behavior: 'smooth'});
-    },
-    pending: () => pendingCount(),
-    insertMarker,
-    values: () => S.values,
-    // for the full-screen editor
     state, save, undo, redo, discardAll, handleKey, insertLive, insertAfterSelection,
     selectSection, catalog, liveValue, deactivate, makePreview,
   };

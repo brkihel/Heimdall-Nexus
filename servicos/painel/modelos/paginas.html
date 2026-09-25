@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block titulo %}Páginas{% endblock %}
+{% block corpo %}
+<div class="topo">
+  <h1>Páginas</h1>
+  <span id="estado" class="pastilha meio">lendo…</span>
+  <div class="acoes">
+    <a class="btn" href="{{ raiz }}/editor?aba=menu">Menu do site</a>
+    <a class="btn" href="/" target="_blank" rel="noopener">Abrir o site</a>
+  </div>
+</div>
+
+<div class="paginas">
+<section class="cartao">
+  <h2>Páginas do site</h2>
+  <p class="dica">Editar abre a página no Layout Editor. Remover tira a página do ar; uma cópia do arquivo fica guardada no servidor.</p>
+  <div id="lista-paginas"><div class="vazio">lendo…</div></div>
+</section>
+
+<section class="cartao" id="nova">
+  <h2>Nova página</h2>
+  <p class="dica">Escolha um modelo. Depois de criada, a página abre no Layout Editor e pode entrar no menu do site.</p>
+  <div class="tipos" id="tipos"></div>
+  <div class="grade-ap">
+    <label>Título<input id="nova-titulo" type="text" maxlength="60" placeholder="Regras do servidor"></label>
+    <label>Endereço<span class="endereco-campo"><span>/</span><input id="nova-endereco" type="text" maxlength="40" placeholder="regras"><span>/</span></span></label>
+  </div>
+  <label>Descrição curta<input id="nova-descricao" type="text" maxlength="200" placeholder="Aparece no topo da página e nos resultados de busca"></label>
+  <div class="acoes esquerda"><button class="btn principal" id="criar" type="button">Criar página</button><span id="criar-msg" role="status"></span></div>
+</section>
+</div>
+
+<style>
+.paginas{max-width:980px}
+.paginas .dica{color:var(--fraco); font-size:.85rem; margin:-.3rem 0 1rem}
+.paginas label{display:grid; gap:.3rem; margin-bottom:.9rem; font-size:.85rem}
+.paginas input[type=text]{min-height:0; font-family:inherit; font-size:.9rem; padding:.55rem .7rem; border-radius:3px}
+.grade-ap{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:0 1rem}
+.lista-pag{display:grid; gap:.4rem}
+.pag{display:flex; flex-wrap:wrap; align-items:center; gap:.5rem .8rem; padding:.6rem .8rem; border:1px solid var(--borda); border-radius:3px}
+.pag b{flex:0 0 auto; color:var(--osso)}.pag code{color:var(--fraco); font-size:.8rem; flex:1; min-width:6rem}
+.pag .etiqueta{font-size:.68rem; color:var(--fraco); border:1px solid var(--borda); border-radius:999px; padding:.1rem .5rem}
+.tipos{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:.7rem; margin-bottom:1rem}
+.tipo{text-align:left; border:1px solid var(--borda); border-radius:3px; padding:.8rem 1rem; background:none; color:var(--texto); cursor:pointer; font:inherit}
+.tipo b{display:block; color:var(--osso); margin-bottom:.2rem}.tipo small{color:var(--fraco); font-size:.78rem}
+.tipo[aria-pressed=true]{border-color:var(--ouro); background:rgba(200,164,92,.08)}
+.endereco-campo{display:flex; align-items:center; gap:.3rem; color:var(--fraco)}
+.acoes.esquerda{justify-content:flex-start; align-items:center; margin:0}
+#criar-msg{font-size:.85rem; color:var(--fraco)}
+</style>
+{% endblock %}
+{% block script %}
+<script>
+const RAIZ = {{ raiz|tojson }}, $ = id => document.getElementById(id);
+let tipoEscolhido = 'wiki';
+
+function esc(t){ const d = document.createElement('div'); d.textContent = t == null ? '' : t; return d.innerHTML; }
+async function pede(caminho, opcoes){
+  const r = await fetch(RAIZ + caminho, {credentials:'same-origin', ...opcoes});
+  const d = await r.json().catch(() => ({ok:false, erro:'resposta ilegível'}));
+  if (!d.ok) throw new Error(d.erro || 'falhou');
+  return d;
+}
+function pastilha(texto, tipo){ const e = $('estado'); e.textContent = texto; e.className = 'pastilha ' + tipo; }
+function botao(rotulo, classe, extra = {}){
+  const b = document.createElement(extra.href ? 'a' : 'button');
+  if (!extra.href) b.type = 'button';
+  b.className = 'btn mini ' + classe; b.textContent = rotulo;
+  Object.assign(b, extra);
+  return b;
+}
+
+async function carregarPaginas(){
+  try {
+    const d = await pede('/api/site/paginas');
+    const box = $('lista-paginas'); box.replaceChildren();
+    const lista = document.createElement('div'); lista.className = 'lista-pag';
+    for (const p of d.paginas){
+      const linha = document.createElement('div'); linha.className = 'pag';
+      linha.innerHTML = `<b>${esc(p.titulo)}</b><code>${esc(p.url || '')}</code>`;
+      if (p.url === '/') { const t = document.createElement('span'); t.className = 'etiqueta'; t.textContent = 'inicial'; linha.append(t); }
+      if (p.somente_leitura) { const t = document.createElement('span'); t.className = 'etiqueta'; t.textContent = 'só leitura'; t.title = p.somente_leitura; linha.append(t); }
+      else linha.append(botao('Editar', 'principal', {href: `${RAIZ}/editor?pagina=${encodeURIComponent(p.id)}`}));
+      linha.append(botao('Abrir', '', {href: p.url || '/', target: '_blank', rel: 'noopener'}));
+      if (p.url !== '/') {
+        const apagar = botao('Remover', 'ruim');
+        apagar.onclick = async () => {
+          if (!confirm(`Remover a página “${p.titulo}”? Ela sai do ar agora; uma cópia do arquivo fica guardada no servidor.`)) return;
+          try { await pede('/api/site/pagina', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({acao:'remover', dados:{pagina:p.id}})}); carregarPaginas(); }
+          catch (e) { alert(e.message); }
+        };
+        linha.append(apagar);
+      }
+      lista.append(linha);
+    }
+    box.append(lista);
+    pastilha(`${d.paginas.length} páginas`, 'viva');
+  } catch (e) { $('lista-paginas').textContent = e.message; pastilha('erro', 'morta'); }
+}
+function desenharTipos(){
+  const tipos = [['wiki','Formato wiki','Índice lateral, seções, caixas de destaque e tabelas.'],
+                 ['vazia','Página vazia','Só o topo, o fundo e o rodapé do site; você monta o conteúdo.']];
+  const box = $('tipos'); box.replaceChildren();
+  for (const [chave, nome, texto] of tipos){
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'tipo';
+    b.setAttribute('aria-pressed', String(chave === tipoEscolhido));
+    b.innerHTML = `<b>${nome}</b><small>${texto}</small>`;
+    b.onclick = () => { tipoEscolhido = chave; desenharTipos(); };
+    box.append(b);
+  }
+}
+$('nova-titulo').oninput = () => {
+  const e = $('nova-endereco'); if (e.dataset.mexido) return;
+  e.value = $('nova-titulo').value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+};
+$('nova-endereco').oninput = e => { e.target.dataset.mexido = '1'; };
+$('criar').onclick = async () => {
+  const b = $('criar'); b.disabled = true; $('criar-msg').textContent = 'Criando…';
+  try {
+    const d = await pede('/api/site/pagina', {method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({acao:'criar', dados:{titulo:$('nova-titulo').value, endereco:$('nova-endereco').value,
+        descricao:$('nova-descricao').value, tipo:tipoEscolhido}})});
+    const msg = $('criar-msg'); msg.replaceChildren(`Criada: ${d.pagina.url} · `);
+    const editar = document.createElement('a');
+    editar.href = `${RAIZ}/editor?pagina=${encodeURIComponent(d.pagina.id)}`; editar.textContent = 'editar agora';
+    const menu = document.createElement('a');
+    menu.href = `${RAIZ}/editor?pagina=${encodeURIComponent(d.pagina.id)}&aba=menu`; menu.textContent = 'pôr no menu';
+    msg.append(editar, ' · ', menu);
+    for (const k of ['nova-titulo','nova-endereco','nova-descricao']) { $(k).value = ''; delete $(k).dataset.mexido; }
+    carregarPaginas();
+  } catch (e) { $('criar-msg').textContent = e.message; }
+  finally { b.disabled = false; }
+};
+desenharTipos(); carregarPaginas();
+</script>
+{% endblock %}
