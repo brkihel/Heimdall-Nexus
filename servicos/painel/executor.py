@@ -2242,7 +2242,7 @@ def v_sagas_status(_):
     database = HEIMDALL_STATE_ROOT / 'sagas/sagas.sqlite3'
     if database.is_file():
         try:
-            with sqlite3.connect(f'file:{database}?mode=ro', uri=True, timeout=3) as db:
+            with sagas.read_only(database) as db:
                 status['external_atlas'] = sum(
                     atlas._external(row[0]) is not None
                     for row in db.execute('SELECT id FROM worlds LIMIT 100'))
