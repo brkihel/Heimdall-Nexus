@@ -1,65 +1,139 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace HeimdallNexus.Desktop
 {
     /// <summary>
-    /// Removes Heimdall with confirmation windows. It runs from a temporary copy of
-    /// this app, because the installed copy lives in the folder being removed.
+    /// Removes Heimdall. The window runs from a temporary copy of this app, because the
+    /// installed copy lives in the folder being removed; the removal itself runs in an
+    /// elevated worker with no window, which reports back to it.
     /// </summary>
     static class Uninstaller
     {
-        /// <summary>From the app or from Windows' installed apps list.</summary>
-        public static void Start()
+        /// <summary>From the app (the person already chose) or from Windows' installed apps list (keep: null).</summary>
+        public static void Start(bool? keep)
         {
             var copy = Path.Combine(Path.GetTempPath(), "HeimdallNexus-uninstall.exe");
-            File.Copy(Application.ExecutablePath, copy, true);
-            if (Heimdall.RunElevated(copy, "--uninstall-now"))
-                Application.Exit();
+            try { File.Copy(Application.ExecutablePath, copy, true); }
+            catch (IOException)
+            {
+                copy = Path.Combine(Path.GetTempPath(), $"HeimdallNexus-uninstall-{Guid.NewGuid():N}.exe");
+                File.Copy(Application.ExecutablePath, copy, true);
+            }
+            var choice = keep == null ? "" : keep.Value ? " --keep" : " --erase";
+            Process.Start(new ProcessStartInfo(copy, "--uninstall-ui" + choice) { UseShellExecute = false });
+        }
+    }
+
+    sealed class UninstallFlow
+    {
+        readonly WebWindow window = new WebWindow();
+        readonly bool? keep;
+        Channel worker;
+        bool removing, removed, kept;
+
+        public static void Run(bool? keep) => Application.Run(new UninstallFlow(keep).window);
+
+        UninstallFlow(bool? keep)
+        {
+            this.keep = keep;
+            window.Command += OnCommand;
+            window.FormClosing += (s, e) => { if (removing) e.Cancel = true; }; // it cannot stop halfway
+            window.FormClosed += (s, e) => SelfDelete();
         }
 
-        public static void Run()
+        void OnCommand(Dictionary<string, object> message)
         {
-            if (MessageBox.Show(T.UninstallConfirm, T.UninstallTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question,
-                                MessageBoxDefaultButton.Button2) != DialogResult.Yes)
-                return;
-            bool keep = MessageBox.Show(T.UninstallKeep, T.UninstallTitle, MessageBoxButtons.YesNo,
-                                        MessageBoxIcon.Question, MessageBoxDefaultButton.Button1) == DialogResult.Yes;
-            var form = new Form();
-            Theme.Style(form, T.UninstallTitle);
-            form.ClientSize = new Size(520, 150);
-            form.ControlBox = false;
-            var label = Theme.Label(T.Removing, Theme.Heading, Theme.GoldLight, 460);
-            label.Location = new Point(28, 28);
-            var bar = new ProgressBar { Style = ProgressBarStyle.Marquee, Location = new Point(28, 90), Width = 460, Height = 16 };
-            form.Controls.Add(label);
-            form.Controls.Add(bar);
-            string problem = null;
-            form.Shown += (s, e) => Task.Run(() =>
+            switch ((string)message["cmd"])
             {
-                try { Remove(keep); }
-                catch (Exception error) { problem = error.Message; }
-                form.BeginInvoke(new Action(form.Close));
+                case "ready":
+                    if (keep == null) window.Post(new { type = "screen", name = "farewell", ask = true });
+                    else Begin(keep.Value);
+                    break;
+                case "uninstall":
+                    Begin(message.TryGetValue("keep", out var k) && k is bool b && b);
+                    break;
+                case "close":
+                    window.Close();
+                    break;
+            }
+        }
+
+        void Begin(bool keepData)
+        {
+            if (removing || removed) return;
+            kept = keepData;
+            window.Post(new { type = "screen", name = "farewell" });
+            var name = Channel.NewName();
+            worker = Channel.Serve(name);
+            if (!Heimdall.RunElevated(Application.ExecutablePath, $"--uninstall-worker {(keepData ? "--keep" : "--erase")} --pipe {name}"))
+            {
+                worker.Dispose();
+                window.Post(new { type = "farewellError", text = T.NeedsPermissionUninstall });
+                return;
+            }
+            removing = true;
+            bool answered = false;
+            worker.Accept(message =>
+            {
+                answered = true;
+                window.OnUi(() =>
+                {
+                    removing = false;
+                    removed = message.TryGetValue("type", out var type) && (type as string) == "removed";
+                    var text = message.TryGetValue("text", out var t) ? t as string : null;
+                    window.Post(removed ? new { type = "removed", text }
+                                        : (object)new { type = "farewellError", text = text ?? T.WorkerStopped });
+                });
+            }, () =>
+            {
+                if (answered) return;
+                window.OnUi(() =>
+                {
+                    removing = false;
+                    window.Post(new { type = "farewellError", text = T.WorkerStopped });
+                });
             });
-            Application.Run(form);
-            if (problem != null)
-                MessageBox.Show(T.Error(problem), T.UninstallTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            else
-                MessageBox.Show(T.Removed + (keep ? "\n\n" + T.RemovedKept : ""), T.UninstallTitle,
-                                MessageBoxButtons.OK, MessageBoxIcon.Information);
-            SelfDelete();
+        }
+
+        /// <summary>The temporary copy removes itself once closed; after a removal, also this app's own folders.</summary>
+        void SelfDelete()
+        {
+            var command = $"ping -n 4 127.0.0.1 >nul & del /f /q \"{Application.ExecutablePath}\"";
+            if (removed)
+            {
+                command += $" & rmdir /s /q \"{Path.GetDirectoryName(Runtime.Folder)}\"";
+                if (!kept) command += $" & rmdir /s /q \"{Path.GetDirectoryName(Heimdall.PrefsFile)}\"";
+            }
+            Process.Start(new ProcessStartInfo("cmd.exe", "/c " + command) { CreateNoWindow = true, UseShellExecute = false });
+        }
+    }
+
+    static class UninstallWorker
+    {
+        public static void Run(string pipe, bool keep)
+        {
+            Channel window;
+            try { window = Channel.Connect(pipe); }
+            catch (Exception) { return; }
+            try
+            {
+                Remove(keep);
+                window.Send(new { type = "removed", text = T.Removed + (keep ? " " + T.RemovedKept : "") });
+            }
+            catch (Exception error) { window.Send(new { type = "error", text = T.Error(error.Message) }); }
+            window.Dispose();
         }
 
         static void Remove(bool keep)
         {
-            var source = Path.Combine(Heimdall.AppDir, "app", "deploy", "windows", "uninstall.ps1");
-            if (!File.Exists(source)) throw new Exception(source);
-            var script = Path.Combine(Path.GetTempPath(), "heimdall-uninstall.ps1");
-            File.Copy(source, script, true);
+            // Run in place: only administrators can change Program Files, and PowerShell reads the
+            // whole script before it starts removing that folder.
+            var script = Path.Combine(Heimdall.AppDir, "app", "deploy", "windows", "uninstall.ps1");
+            if (!File.Exists(script)) throw new Exception(script);
             var arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{script}\" -Yes -RemovePython" + (keep ? "" : " -RemoveData");
             using (var process = Process.Start(new ProcessStartInfo("powershell.exe", arguments)
                    { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true }))
@@ -69,15 +143,6 @@ namespace HeimdallNexus.Desktop
                 process.WaitForExit();
                 if (process.ExitCode != 0) throw new Exception(errors.Result.Trim());
             }
-            File.Delete(script);
-        }
-
-        /// <summary>The temporary copy removes itself once it has closed.</summary>
-        static void SelfDelete()
-        {
-            var me = Application.ExecutablePath;
-            Process.Start(new ProcessStartInfo("cmd.exe", $"/c ping -n 3 127.0.0.1 >nul & del /f /q \"{me}\"")
-                          { CreateNoWindow = true, UseShellExecute = false });
         }
     }
 }

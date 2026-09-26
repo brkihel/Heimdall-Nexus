@@ -140,11 +140,31 @@ def test_release_packages_carry_their_commit():
 
 def test_desktop_app_is_complete():
     app = ROOT / 'desktop' / 'HeimdallNexus.Desktop'
-    for name in ('Program.cs', 'SetupForm.cs', 'CenterForm.cs', 'Heimdall.cs', 'Uninstall.cs', 'Texts.cs',
-                 'Theme.cs', 'app.manifest', 'heimdall.ico', 'HeimdallNexus.Desktop.csproj'):
+    for name in ('Program.cs', 'Setup.cs', 'Center.cs', 'Uninstall.cs', 'WebWindow.cs', 'Channel.cs', 'Runtime.cs',
+                 'Heimdall.cs', 'Texts.cs', 'app.manifest', 'heimdall.ico', 'HeimdallNexus.Desktop.csproj'):
         assert (app / name).is_file(), name
+    ui = ROOT / 'desktop' / 'ui'
+    for name in ('index.html', 'app.css', 'app.js', 'heimdall.svg', 'fundo.webp',
+                 'fontes/OFL-cinzel.txt', 'fontes/OFL-spectral.txt'):
+        assert (ui / name).is_file(), name
+    assert (ROOT / 'desktop' / 'licenses' / 'WebView2-SDK-LICENSE.txt').is_file()
     manifest = (app / 'app.manifest').read_text(encoding='utf-8')
     assert 'level="asInvoker"' in manifest   # daily use without the administrator prompt
-    texts = (app / 'Texts.cs').read_text(encoding='utf-8')
-    for option in ('OnOpenHint', 'WithWindowsHint', 'ServerWithHeimdallHint'):
-        assert option in texts                   # every switch explains what it does
+    page = (ui / 'app.js').read_text(encoding='utf-8')
+    for option in ('onOpenHint', 'withWindowsHint', 'serverWithHint'):
+        assert page.count(option + ':') == 2     # every switch explains what it does, in both languages
+
+
+def test_desktop_page_is_served_only_from_the_exe():
+    window = (ROOT / 'desktop' / 'HeimdallNexus.Desktop' / 'WebWindow.cs').read_text(encoding='utf-8')
+    assert "connect-src 'none'" in window and "default-src 'none'" in window
+    assert 'e.Cancel = true' in window            # no navigating away from the app's own page
+    assert 'AreDevToolsEnabled = false' in window
+    page = (ROOT / 'desktop' / 'ui' / 'index.html').read_text(encoding='utf-8')
+    assert 'http' not in page.replace('http-equiv', '')  # nothing loaded from the network
+
+
+def test_browser_engine_never_runs_as_administrator():
+    program = (ROOT / 'desktop' / 'HeimdallNexus.Desktop' / 'Program.cs').read_text(encoding='utf-8')
+    workers = program.index('args.Contains("--install-worker")'), program.index('args.Contains("--uninstall-worker")')
+    assert all(index < program.index('Runtime.Prepare()') for index in workers)

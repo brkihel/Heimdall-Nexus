@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -10,129 +9,167 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
 
 namespace HeimdallNexus.Desktop
 {
     /// <summary>
-    /// Before installing: what will happen and a Start button. Started elevated
-    /// (--install), the same window downloads Heimdall and its Python, opens the
-    /// setup assistant in the browser and follows it to the end.
+    /// Before installing, the window shows what will happen and a Start button. Start asks
+    /// Windows for permission once and runs <see cref="InstallWorker"/> elevated, with no
+    /// window of its own; this window shows its progress until the end.
     /// </summary>
-    class SetupForm : Form
+    sealed class SetupFlow
+    {
+        readonly WebWindow window = new WebWindow();
+        Channel worker;
+        bool installing, finished;
+
+        public static void Run() => Application.Run(new SetupFlow().window);
+
+        SetupFlow()
+        {
+            window.Command += OnCommand;
+            window.FormClosing += (s, e) =>
+            {
+                if (!installing || finished) return;
+                e.Cancel = true;
+                window.Post(new { type = "confirmCancel" });
+            };
+        }
+
+        void OnCommand(Dictionary<string, object> message)
+        {
+            switch ((string)message["cmd"])
+            {
+                case "ready":
+                    window.Post(new { type = "screen", name = "welcome" });
+                    break;
+                case "install":
+                    Start(message.TryGetValue("desktopShortcut", out var s) && s is bool shortcut && shortcut);
+                    break;
+                case "reopenBrowser":
+                    worker?.Send(new { cmd = "reopenBrowser" });
+                    break;
+                case "cancelInstall":
+                    worker?.Send(new { cmd = "cancel" });
+                    finished = true;
+                    window.Close();
+                    break;
+                case "openCenter":
+                    Heimdall.OpenAsUser(File.Exists(Heimdall.InstalledExe) ? Heimdall.InstalledExe : Application.ExecutablePath);
+                    window.Close();
+                    break;
+                case "close":
+                    finished = true;
+                    window.Close();
+                    break;
+            }
+        }
+
+        void Start(bool desktopShortcut)
+        {
+            if (installing) return;
+            if (string.IsNullOrEmpty(BuildInfo.SourceUrl))
+            {
+                window.Post(new { type = "welcomeError", text = T.DevBuild });
+                return;
+            }
+            var name = Channel.NewName();
+            worker = Channel.Serve(name);
+            var arguments = $"--install-worker --for {Heimdall.UserSid} --pipe {name}" + (desktopShortcut ? " --desktop-shortcut" : "");
+            if (!Heimdall.RunElevated(Application.ExecutablePath, arguments))
+            {
+                worker.Dispose();
+                worker = null;
+                window.Post(new { type = "welcomeError", text = T.NeedsPermission });
+                return;
+            }
+            installing = true;
+            window.Post(new { type = "install", percent = 0, stage = 0, title = T.StepCheck });
+            worker.Accept(message =>
+            {
+                if (message.TryGetValue("done", out var d) && d is bool done && done) finished = true;
+                if (message.TryGetValue("fatal", out var f) && f is bool fatal && fatal) finished = true;
+                window.Post(message);
+            }, () =>
+            {
+                if (finished) return;
+                finished = true;
+                window.Post(new { type = "install", stage = (object)null, title = T.Failed, error = T.WorkerStopped, fatal = true });
+            });
+        }
+    }
+
+    /// <summary>
+    /// The elevated side of the installation: downloads Heimdall and its Python, starts the
+    /// setup assistant, opens it in the person's browser and follows it to the end.
+    /// </summary>
+    sealed class InstallWorker
     {
         const string PythonUrl = "https://www.python.org/ftp/python/3.12.10/python-3.12.10-amd64.exe";
         const int WizardPort = 8765;
 
-        readonly bool installing;
+        // The stages the window lists, in order.
+        const int StageCheck = 0, StageDownload = 1, StagePython = 2, StageWizard = 3, StageBrowser = 4,
+                  StageValheim = 5, StageFinish = 6, StageDone = 7;
+
+        readonly Channel window;
         readonly string controllerSid;
         readonly bool desktopShortcut;
-        readonly FlowLayoutPanel body;
-        readonly CheckBox shortcut;
-        readonly Button start;
-        readonly ProgressBar bar;
-        readonly Label step;
-        readonly Label detail;
-        readonly LinkLabel browserLink;
         Process wizard;
         string claimLink;
         volatile bool finished;
 
-        public SetupForm(bool installing, string controllerSid, bool desktopShortcut)
+        public static void Run(string pipe, string controllerSid, bool desktopShortcut)
         {
-            this.installing = installing;
+            Channel channel;
+            try { channel = Channel.Connect(pipe); }
+            catch (Exception) { return; } // the window is gone
+            new InstallWorker(channel, controllerSid, desktopShortcut).Install();
+        }
+
+        InstallWorker(Channel window, string controllerSid, bool desktopShortcut)
+        {
+            this.window = window;
             this.controllerSid = controllerSid;
             this.desktopShortcut = desktopShortcut;
-            Theme.Style(this, T.SetupTitle);
-            ClientSize = new Size(640, 560);
-            body = new FlowLayoutPanel
+            window.Listen(message =>
             {
-                Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false,
-                Padding = new Padding(28, 24, 28, 20), AutoScroll = true,
-            };
-            Controls.Add(body);
-            body.Controls.Add(Theme.Header(T.SetupTitle));
-            body.Controls.Add(Theme.Label(T.SetupIntro, Theme.Heading));
-            body.Controls.Add(Theme.Label(T.SetupWhat));
-            body.Controls.Add(Theme.Label(T.SetupHowTitle, Theme.Heading, Theme.GoldLight));
-            body.Controls.Add(Theme.Label(T.SetupHow));
-            body.Controls.Add(Theme.Label(T.SetupNotes, Theme.Small, Theme.Muted));
-
-            shortcut = new CheckBox
-            {
-                Text = T.DesktopShortcut, Checked = true, AutoSize = true, ForeColor = Theme.Text,
-                Margin = new Padding(0, 6, 0, 10), Visible = !installing,
-            };
-            body.Controls.Add(shortcut);
-
-            start = Theme.Button(T.StartInstall);
-            start.Visible = !installing;
-            start.Click += (s, e) => AskForAdmin();
-            body.Controls.Add(start);
-
-            bar = new ProgressBar { Width = 580, Height = 18, Maximum = 1000, Visible = installing, Margin = new Padding(0, 10, 0, 8) };
-            step = Theme.Label("", Theme.Heading, Theme.GoldLight, 580);
-            detail = Theme.Label("", Theme.Small, Theme.Muted, 580);
-            browserLink = new LinkLabel
-            {
-                Text = T.OpenBrowserAgain, AutoSize = true, Visible = false, LinkColor = Theme.Gold,
-                ActiveLinkColor = Theme.GoldLight, Margin = new Padding(0, 4, 0, 0),
-            };
-            browserLink.LinkClicked += (s, e) => { if (claimLink != null) Heimdall.OpenAsUser(claimLink); };
-            body.Controls.AddRange(new Control[] { bar, step, detail, browserLink });
-
-            if (installing)
-                Shown += (s, e) => Task.Run(Install);
-            FormClosing += OnClosing;
+                var cmd = message.TryGetValue("cmd", out var c) ? c as string : null;
+                if (cmd == "reopenBrowser" && claimLink != null) Heimdall.OpenAsUser(claimLink);
+                if (cmd == "cancel") Stop();
+            }, Stop); // closing the window stops the installation, as it always did
         }
 
-        // ---------------------------------------------------------------- before: ask Windows for permission
-        void AskForAdmin()
+        void Stop()
         {
-            if (string.IsNullOrEmpty(BuildInfo.SourceUrl))
-            {
-                MessageBox.Show(T.DevBuild, "Heimdall Nexus", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-            var arguments = $"--install --for {Heimdall.UserSid}" + (shortcut.Checked ? " --desktop-shortcut" : "");
-            if (Heimdall.RunElevated(Application.ExecutablePath, arguments))
-                Close(); // the elevated window takes over
+            if (finished) return;
+            finished = true;
+            StopWizard();
+            Environment.Exit(1);
         }
 
-        // ---------------------------------------------------------------- during: elevated
-        void Show(string text, string more = "", int? progress = null)
-        {
-            if (IsDisposed) return;
-            BeginInvoke(new Action(() =>
+        void Show(int stage, string title, string detail = "", int progress = -1, bool browser = false) =>
+            window.Send(new Dictionary<string, object>
             {
-                step.Text = text;
-                detail.Text = more;
-                if (progress.HasValue) bar.Value = Math.Max(0, Math.Min(bar.Maximum, progress.Value));
-            }));
+                ["type"] = "install", ["stage"] = stage, ["title"] = title, ["detail"] = detail,
+                ["percent"] = progress < 0 ? (object)null : progress / 10.0, ["browser"] = browser,
+            });
+
+        void Fail(string message, int stage)
+        {
+            finished = true;
+            window.Send(new { type = "install", stage, title = T.Failed, error = message, fatal = true });
         }
 
-        void Fail(string message)
-        {
-            if (IsDisposed) return;
-            BeginInvoke(new Action(() =>
-            {
-                step.Text = T.Failed;
-                step.ForeColor = Theme.Bad;
-                detail.Text = message;
-                detail.ForeColor = Theme.Text;
-                var close = Theme.Button(T.Close, false);
-                close.Click += (s, e) => Close();
-                body.Controls.Add(close);
-            }));
-        }
+        int stage = StageCheck;
 
         void Install()
         {
             try
             {
-                Show(T.StepCheck, "", 10);
+                Show(stage = StageCheck, T.StepCheck, "", 10);
                 var os = Environment.OSVersion.Version;
                 if (!Environment.Is64BitOperatingSystem || os.Major < 10 || (os.Major == 10 && os.Build < 17763))
                     throw new SetupError(T.NeedsWindows);
@@ -141,12 +178,13 @@ namespace HeimdallNexus.Desktop
                 if (freeGb < 10) throw new SetupError(T.NeedsSpace(freeGb));
                 ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
 
+                stage = StageDownload;
                 var setup = Path.Combine(Heimdall.DataDir, "setup", BuildInfo.Version);
                 var package = setup + ".zip";
                 Directory.CreateDirectory(Path.GetDirectoryName(package));
                 if (!File.Exists(package) || Sha256(package) != BuildInfo.SourceSha256)
                     Download(BuildInfo.SourceUrl, package, T.StepDownload, 20, 180);
-                Show(T.StepVerify, "", 185);
+                Show(stage, T.StepVerify, "", 185);
                 if (Sha256(package) != BuildInfo.SourceSha256)
                 {
                     File.Delete(package);
@@ -157,22 +195,23 @@ namespace HeimdallNexus.Desktop
                 var root = Directory.GetDirectories(setup).FirstOrDefault(d => File.Exists(Path.Combine(d, "deploy", "setup_server.py")))
                            ?? setup;
 
+                stage = StagePython;
                 var python = Path.Combine(Heimdall.AppDir, "python", "python.exe");
                 if (!File.Exists(python)) InstallPython(python);
 
-                Show(T.StepWizard, "", 420);
+                Show(stage = StageWizard, T.StepWizard, "", 420);
                 StartWizard(python, root);
                 Follow();
             }
-            catch (SetupError error) { Fail(error.Message); }
-            catch (Exception error) { Fail(T.Error(error.Message)); }
+            catch (SetupError error) { Fail(error.Message, stage); }
+            catch (Exception error) { Fail(T.Error(error.Message), stage); }
         }
 
         void InstallPython(string python)
         {
             var setup = Path.Combine(Path.GetTempPath(), "heimdall-python-3.12.10-amd64.exe");
             Download(PythonUrl, setup, T.StepPython, 200, 330);
-            Show(T.StepPython, "", 340);
+            Show(stage, T.StepPython, T.StepPythonHint, 340);
             if (!Heimdall.SignedBy(setup, "Python Software Foundation"))
             {
                 File.Delete(setup);
@@ -201,7 +240,7 @@ namespace HeimdallNexus.Desktop
                 client.DownloadProgressChanged += (s, e) =>
                 {
                     var total = e.TotalBytesToReceive > 0 ? e.TotalBytesToReceive : 1;
-                    Show(label, $"{e.BytesReceived / 1048576} MB / {Math.Max(1, total / 1048576)} MB",
+                    Show(stage, label, $"{e.BytesReceived / 1048576} MB / {Math.Max(1, total / 1048576)} MB",
                          from + (int)((to - from) * (double)e.BytesReceived / total));
                 };
                 client.DownloadFileCompleted += (s, e) => { failure = e.Error; done.Set(); };
@@ -259,8 +298,9 @@ namespace HeimdallNexus.Desktop
         void Follow()
         {
             var cookies = new CookieContainer();
-            Get(claimLink, cookies); // the one-time link also signs this window in
-            BeginInvoke(new Action(() => browserLink.Visible = true));
+            Get(claimLink, cookies); // the one-time link also signs this worker in
+            stage = StageBrowser;
+            Show(stage, T.ContinueInBrowser, T.ContinueInBrowserHint, 430, true);
             var serializer = new JavaScriptSerializer();
             while (!finished)
             {
@@ -272,17 +312,19 @@ namespace HeimdallNexus.Desktop
                 var last = messages != null && messages.Count > 0 ? messages[messages.Count - 1] as Dictionary<string, object> : null;
                 var lastText = last != null && last.TryGetValue("message", out var t) ? t as string : "";
                 var stepName = state.TryGetValue("step", out var s) ? s as string : "";
-                if (state.TryGetValue("error", out var e) && e is string error && error.Length > 0)
-                {
-                    Show(T.WizardFailed, error);
-                    continue;
-                }
                 if (state.TryGetValue("done", out var d) && d is bool done && done)
                 {
                     Finish();
                     return;
                 }
-                Show(T.ContinueInBrowser, lastText ?? "", Progress(stepName, lastText));
+                var known = StepProgress.TryGetValue(stepName ?? "", out var progress);
+                stage = !known ? StageBrowser : progress <= StepProgress["valheim"] ? StageValheim : StageFinish;
+                var title = stage == StageBrowser ? T.ContinueInBrowser : stage == StageValheim ? T.StepValheim : T.StepFinish;
+                var detail = stage == StageBrowser && string.IsNullOrEmpty(lastText) ? T.ContinueInBrowserHint : lastText ?? "";
+                if (state.TryGetValue("error", out var e) && e is string error && error.Length > 0)
+                    window.Send(new { type = "install", stage, title = T.StepFailed, detail = T.WizardFailed, error, browser = true });
+                else
+                    Show(stage, title, detail, Progress(stepName, lastText), true);
             }
         }
 
@@ -318,46 +360,17 @@ namespace HeimdallNexus.Desktop
 
         void Finish()
         {
-            finished = true;
             Thread.Sleep(4000); // let the browser show its own "ready" screen first
+            finished = true;
             StopWizard();
-            BeginInvoke(new Action(() =>
-            {
-                bar.Value = bar.Maximum;
-                step.Text = T.Done;
-                step.ForeColor = Theme.Good;
-                detail.Text = T.DoneHint;
-                detail.ForeColor = Theme.Text;
-                browserLink.Visible = false;
-                var open = Theme.Button(T.OpenCenter);
-                open.Click += (s, e) =>
-                {
-                    Heimdall.OpenAsUser(File.Exists(Heimdall.InstalledExe) ? Heimdall.InstalledExe : Application.ExecutablePath);
-                    Close();
-                };
-                body.Controls.Add(open);
-            }));
+            window.Send(new { type = "install", percent = 100, stage = StageDone, done = true });
+            window.Dispose();
         }
 
         void StopWizard()
         {
             try { if (wizard != null && !wizard.HasExited) wizard.Kill(); }
             catch (Exception) { }
-        }
-
-        void OnClosing(object sender, FormClosingEventArgs e)
-        {
-            if (installing && !finished && wizard != null && !wizard.HasExited)
-            {
-                if (MessageBox.Show(T.ConfirmCancel, "Heimdall Nexus", MessageBoxButtons.YesNo, MessageBoxIcon.Question)
-                    != DialogResult.Yes)
-                {
-                    e.Cancel = true;
-                    return;
-                }
-            }
-            finished = true;
-            StopWizard();
         }
     }
 

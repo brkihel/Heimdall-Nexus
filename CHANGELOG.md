@@ -11,6 +11,14 @@
   online e abre o painel e o site. Três chaves, cada uma explicada, decidem
   quando as coisas ligam: ao abrir o aplicativo, junto com o Windows e se o
   servidor liga junto com o Heimdall. Todas começam desligadas.
+- **Uma janela com cara de Valheim.** Céu noturno com aurora e brasas, letras
+  Cinzel e Spectral, botões de liga e desliga que acendem e giram enquanto
+  trabalham, confirmações no mesmo estilo e um anel de progresso na
+  instalação. A janela é uma página embutida no próprio `.exe`, mostrada pelo
+  WebView2 da Microsoft, que já vem no Windows 11 e na maioria dos Windows 10
+  (se faltar, o aplicativo oferece instalar). Ela nunca carrega nada da
+  internet, e o navegador embutido nunca roda como administrador: o que
+  precisa de permissão roda à parte, sem janela, e só conta o andamento.
 - **Nada liga sozinho no Windows sem você escolher.** A instalação deixa todos
   os serviços em modo manual e nunca liga o Valheim; quem decide é o
   aplicativo. A conta que instalou pode ligar, desligar e escolher o início
@@ -19,8 +27,9 @@
   atualizar vem embutido e escondido, como o Python. O pacote de cada versão
   leva o próprio commit, então o Jarl sabe exatamente o que está instalado.
 - **Desinstalar pelo Windows.** O Heimdall aparece em Configurações →
-  Aplicativos, com janelas de confirmação que perguntam se os mundos ficam
-  guardados.
+  Aplicativos, com confirmações que perguntam se os mundos ficam guardados.
+  Os perfis das contas de serviço também são removidos, mesmo quando o
+  Windows os mantém presos até reiniciar.
 
 ## 1.1.1
 

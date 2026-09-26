@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Heimdall Nexus</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="sky" aria-hidden="true"><div class="aurora"></div><canvas id="embers"></canvas></div>
+
+<main id="app">
+
+  <!-- ============================================ before installing -->
+  <section class="screen" id="welcome">
+    <div class="hero">
+      <img class="sigil" src="heimdall.svg" alt="">
+      <p class="eyebrow" data-t="eyebrow"></p>
+      <h1>Heimdall Nexus</h1>
+      <p class="lead" data-t="lead"></p>
+      <ul class="gifts">
+        <li><span class="rune"><svg viewBox="0 0 24 24"><path d="M9 4v16M9 4l6 4-6 4 7 8"/></svg></span><div><b data-t="giftServer"></b><small data-t="giftServerHint"></small></div></li>
+        <li><span class="rune"><svg viewBox="0 0 24 24"><path d="M11 4 6.5 9l4.5 5M13 10l4.5 5-4.5 5"/></svg></span><div><b data-t="giftPanel"></b><small data-t="giftPanelHint"></small></div></li>
+        <li><span class="rune"><svg viewBox="0 0 24 24"><path d="M12 3l6 7L7 21M12 3 6 10l11 11"/></svg></span><div><b data-t="giftSite"></b><small data-t="giftSiteHint"></small></div></li>
+      </ul>
+    </div>
+    <div class="panel-card">
+      <h2 data-t="howTitle"></h2>
+      <ol class="path">
+        <li><span>1</span><p data-t="how1"></p></li>
+        <li><span>2</span><p data-t="how2"></p></li>
+        <li><span>3</span><p data-t="how3"></p></li>
+      </ol>
+      <div class="facts">
+        <div><b data-t="factTime"></b><small data-t="factTimeHint"></small></div>
+        <div><b data-t="factSpace"></b><small data-t="factSpaceHint"></small></div>
+      </div>
+      <p class="promise" data-t="promise"></p>
+      <label class="toggle-row small">
+        <input type="checkbox" id="desktop-shortcut" checked><span class="switch"></span>
+        <span data-t="shortcut"></span>
+      </label>
+      <button class="cta" id="start-install"><span data-t="startInstall"></span></button>
+      <p class="fineprint" data-t="uac"></p>
+    </div>
+  </section>
+
+  <!-- ============================================ installing -->
+  <section class="screen" id="installing" hidden>
+    <div class="install-card">
+      <div class="ring" id="ring">
+        <svg viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="track" cx="60" cy="60" r="52"/>
+          <circle class="fill" cx="60" cy="60" r="52"/>
+        </svg>
+        <div class="ring-text"><b id="percent">0%</b><small id="ring-word" data-t="installingWord"></small></div>
+      </div>
+      <div class="install-text">
+        <h2 id="step-title"></h2>
+        <p class="detail" id="step-detail"></p>
+        <p class="detail error" id="step-error" hidden></p>
+        <ol class="stages" id="stages"></ol>
+        <button class="link" id="reopen-browser" hidden data-t="reopenBrowser"></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ installed: the control center -->
+  <section class="screen" id="center" hidden>
+    <header class="topbar">
+      <div class="brand"><img src="heimdall.svg" alt=""><span>Heimdall Nexus</span><em id="version"></em></div>
+      <p class="hint" data-t="closingNote"></p>
+    </header>
+
+    <div class="powers">
+      <article class="power" id="power-heimdall">
+        <button class="orb" data-action="heimdall" aria-describedby="heimdall-state">
+          <svg viewBox="0 0 100 100" aria-hidden="true"><circle class="spin" cx="50" cy="50" r="46"/>
+            <path d="M50 22v26M34 32a24 24 0 1 0 32 0" /></svg>
+        </button>
+        <div class="power-text">
+          <p class="eyebrow" data-t="heimdall"></p>
+          <h2 id="heimdall-state"></h2>
+          <p class="sub" data-t="heimdallHint"></p>
+          <div class="actions">
+            <button class="ghost" data-open="panel" data-t="openPanel"></button>
+            <button class="ghost" data-open="site" data-t="openSite"></button>
+          </div>
+        </div>
+      </article>
+      <article class="power" id="power-server">
+        <button class="orb" data-action="server" aria-describedby="server-state">
+          <svg viewBox="0 0 100 100" aria-hidden="true"><circle class="spin" cx="50" cy="50" r="46"/>
+            <path d="M50 22v26M34 32a24 24 0 1 0 32 0" /></svg>
+        </button>
+        <div class="power-text">
+          <p class="eyebrow" data-t="server"></p>
+          <h2 id="server-state"></h2>
+          <p class="sub" id="server-sub"></p>
+        </div>
+      </article>
+    </div>
+
+    <section class="when">
+      <h3 data-t="whenTitle"></h3>
+      <label class="toggle-row"><input type="checkbox" id="on-open"><span class="switch"></span>
+        <span><b data-t="onOpen"></b><small data-t="onOpenHint"></small></span></label>
+      <label class="toggle-row"><input type="checkbox" id="with-windows"><span class="switch"></span>
+        <span><b data-t="withWindows"></b><small data-t="withWindowsHint"></small></span></label>
+      <label class="toggle-row"><input type="checkbox" id="server-with"><span class="switch"></span>
+        <span><b data-t="serverWith"></b><small data-t="serverWithHint"></small></span></label>
+    </section>
+
+    <footer class="footer">
+      <button class="link" id="uninstall" data-t="uninstall"></button>
+    </footer>
+  </section>
+
+  <!-- ============================================ uninstalling, from a temporary copy of the app -->
+  <section class="screen" id="farewell" hidden>
+    <div class="farewell-card">
+      <div class="ring spinning" id="farewell-ring">
+        <svg viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="track" cx="60" cy="60" r="52"/>
+          <circle class="fill" cx="60" cy="60" r="52"/>
+        </svg>
+        <div class="ring-text"><img src="heimdall.svg" alt=""></div>
+      </div>
+      <h2 id="farewell-title"></h2>
+      <p class="detail" id="farewell-text"></p>
+      <button class="cta" id="farewell-close" hidden data-t="close"></button>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <h2 id="modal-title"></h2>
+    <p id="modal-text"></p>
+    <div class="modal-choices" id="modal-choices"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

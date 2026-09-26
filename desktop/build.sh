@@ -23,9 +23,10 @@ URL="https://github.com/brkihel/Heimdall-Nexus/releases/download/$TAG/HeimdallNe
 
 BUILD="$(mktemp -d)"
 trap 'rm -rf "$BUILD"' EXIT
-cp -r "$ROOT/desktop/HeimdallNexus.Desktop/." "$BUILD/"
-rm -rf "$BUILD/bin" "$BUILD/obj"
-cat > "$BUILD/BuildInfo.cs" <<CS
+cp -r "$ROOT/desktop/." "$BUILD/"
+PROJECT="$BUILD/HeimdallNexus.Desktop"
+rm -rf "$PROJECT/bin" "$PROJECT/obj"
+cat > "$PROJECT/BuildInfo.cs" <<CS
 namespace HeimdallNexus.Desktop
 {
     static class BuildInfo
@@ -37,7 +38,7 @@ namespace HeimdallNexus.Desktop
 }
 CS
 NUMERIC="$(sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+).*/\1/' <<< "$VERSION")"
-dotnet build "$BUILD/HeimdallNexus.Desktop.csproj" -c Release -nologo -v quiet \
+dotnet build "$PROJECT/HeimdallNexus.Desktop.csproj" -c Release -nologo -v quiet \
   -p:Version="$NUMERIC" -p:InformationalVersion="$VERSION" -o "$BUILD/out"
 cp "$BUILD/out/HeimdallNexus.exe" "$OUT/HeimdallNexus-$VERSION.exe"
 echo "source: $SOURCE ($SHA)"

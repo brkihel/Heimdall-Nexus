@@ -21,7 +21,7 @@ namespace HeimdallNexus.Desktop
         public static readonly string AppDir = Path.Combine(ProgramFiles, "HeimdallNexus");
         public static readonly string InstalledExe = Path.Combine(AppDir, "HeimdallNexus.exe");
         static readonly string DesktopInfo = Path.Combine(AppDir, "desktop.json");
-        static readonly string PrefsFile = Path.Combine(
+        public static readonly string PrefsFile = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "HeimdallNexus", "desktop-app.json");
 
         // The panel and website, in start order; the game is separate.
@@ -52,8 +52,14 @@ namespace HeimdallNexus.Desktop
         public static bool HeimdallOn => Core.Take(3).All(n => Status(n) == ServiceControllerStatus.Running);
         public static bool ServerOn => Status(Game) == ServiceControllerStatus.Running;
 
-        /// <summary>Players online, from the public status feed the website shows; null if unknown.</summary>
-        public static int? PlayersOnline()
+        public class Live
+        {
+            public int? Players;
+            public string World;
+        }
+
+        /// <summary>Players online and the world, from the public status feed the website shows; null if unknown.</summary>
+        public static Live Feed()
         {
             try
             {
@@ -61,12 +67,16 @@ namespace HeimdallNexus.Desktop
                 if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
                 var feed = new JavaScriptSerializer().Deserialize<Dictionary<string, object>>(File.ReadAllText(path));
                 if (!(feed.TryGetValue("online", out var up) && up is bool online && online)) return null;
+                var live = new Live();
                 if (feed.TryGetValue("jogadores", out var p) && p is Dictionary<string, object> players &&
                     players.TryGetValue("online", out var count) && count is int n)
-                    return n;
+                    live.Players = n;
+                if (feed.TryGetValue("servidor", out var sv) && sv is Dictionary<string, object> server &&
+                    server.TryGetValue("mundo", out var world))
+                    live.World = world as string;
+                return live;
             }
-            catch (Exception) { }
-            return null;
+            catch (Exception) { return null; }
         }
 
         // ---------------------------------------------------------------- actions

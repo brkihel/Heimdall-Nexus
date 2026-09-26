@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- The Heimdall Nexus desktop app for Windows: installs Heimdall, then turns it on and off.
-       .NET Framework 4.8 ships with every supported Windows, so the exe needs nothing else. -->
+       .NET Framework 4.8 ships with every supported Windows. The window is a page (../ui) shown by
+       Microsoft's WebView2; its libraries and the page are built into the exe, so it is one file. -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net48</TargetFramework>
@@ -10,6 +11,7 @@
     <RootNamespace>HeimdallNexus.Desktop</RootNamespace>
     <ApplicationIcon>heimdall.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Prefer32Bit>false</Prefer32Bit>
     <Product>Heimdall Nexus</Product>
     <Company>BRKiHeL</Company>
     <Copyright>BRKiHeL · PolyForm Noncommercial 1.0.0</Copyright>
@@ -18,6 +20,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4191.47" GeneratePathProperty="true" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.ServiceProcess" />
@@ -25,5 +28,11 @@
     <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="System.Web.Extensions" />
     <EmbeddedResource Include="heimdall.ico" LogicalName="heimdall.ico" />
+    <EmbeddedResource Include="../ui/**/*" LogicalName="ui/%(RecursiveDir)%(Filename)%(Extension)" />
+    <EmbeddedResource Include="$(PkgMicrosoft_Web_WebView2)/lib/net462/Microsoft.Web.WebView2.Core.dll" LogicalName="lib/Microsoft.Web.WebView2.Core.dll" />
+    <EmbeddedResource Include="$(PkgMicrosoft_Web_WebView2)/lib/net462/Microsoft.Web.WebView2.WinForms.dll" LogicalName="lib/Microsoft.Web.WebView2.WinForms.dll" />
+    <EmbeddedResource Include="$(PkgMicrosoft_Web_WebView2)/runtimes/win-x64/native/WebView2Loader.dll" LogicalName="native/x64/WebView2Loader.dll" />
+    <EmbeddedResource Include="$(PkgMicrosoft_Web_WebView2)/runtimes/win-arm64/native/WebView2Loader.dll" LogicalName="native/arm64/WebView2Loader.dll" />
+    <EmbeddedResource Include="$(PkgMicrosoft_Web_WebView2)/runtimes/win-x86/native/WebView2Loader.dll" LogicalName="native/x86/WebView2Loader.dll" />
   </ItemGroup>
 </Project>
