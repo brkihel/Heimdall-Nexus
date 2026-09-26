@@ -56,3 +56,20 @@ def test_wipe_rejects_an_existing_new_world(tmp_path, monkeypatch):
     monkeypatch.setattr(executor, '_nome_do_mundo', lambda: 'Old')
     with pytest.raises(executor.Recusa, match='já existe'):
         executor.v_mundo_wipe({'confirmar': 'Old', 'mundo': True, 'novo_nome': 'Taken'})
+
+
+def test_riverheim_worlds_are_required_only_on_riverheim_servers(tmp_path, monkeypatch):
+    import json
+    game = tmp_path / 'valheim'
+    plugins = game / 'current' / 'BepInEx' / 'plugins'
+    plugins.mkdir(parents=True)
+    lock = game / 'current' / 'mods.lock.json'
+    lock.write_text(json.dumps({'packages': {'denikson-BepInExPack_Valheim': {'version': '5.4.2351'}}}))
+    monkeypatch.setattr(executor, 'VALHEIM_ROOT', game)
+    monkeypatch.setattr(executor, 'LOCK', lock)
+    assert not executor._servidor_usa_riverheim()      # vanilla or other mods: any world is fine
+    lock.write_text(json.dumps({'packages': {'gurebu-Riverheim': {'version': '1.2.0'}}}))
+    assert executor._servidor_usa_riverheim()
+    lock.unlink()
+    (plugins / 'Riverheim').mkdir()                  # installed by hand, outside the lock
+    assert executor._servidor_usa_riverheim()

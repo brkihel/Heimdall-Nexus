@@ -51,7 +51,7 @@ DEFAULTS = {
     'HEIMDALL_ENV_FILE': str(BASE / 'etc' / 'heimdall.env'),
     'HEIMDALL_LOG_DIR': str(BASE / 'logs'),
     'HEIMDALL_RUN_DIR': str(BASE / 'run'),
-    'PAINEL_CONFIG': str(BASE / 'etc' / 'panel.json'),
+    'PAINEL_CONFIG': str(BASE / 'etc' / 'panel' / 'config.json'),
     'HEIMDALL_MODPACK_CACHE': str(BASE / 'cache' / 'modpack'),
 }
 

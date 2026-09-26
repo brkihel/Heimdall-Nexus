@@ -13,7 +13,7 @@ from one guided wizard, on Linux (Ubuntu or Debian) or Windows.
 [![Valheim](https://img.shields.io/badge/Valheim-dedicated%20server-c8a45c?style=flat-square&labelColor=0d151d)](https://valheim.com/support/a-guide-to-dedicated-servers/)
 [![Platform](https://img.shields.io/badge/Ubuntu%20%7C%20Debian%20%7C%20Windows-x86--64-c8a45c?style=flat-square&labelColor=0d151d)](#quick-start)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-c8a45c?style=flat-square&labelColor=0d151d)](https://www.python.org/)
-[![Version](https://img.shields.io/badge/version-1.0.0-c8a45c?style=flat-square&labelColor=0d151d)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.1.0-c8a45c?style=flat-square&labelColor=0d151d)](CHANGELOG.md)
 
 </div>
 
@@ -43,7 +43,7 @@ A fast site with live server status, players online, world time and your mod lis
 
 ## Quick start
 
-Heimdall installs the same thing on both systems, with the same wizard. Not
+Linux and Windows are both fully supported: Heimdall installs the same thing on either, with the same wizard, and the panel, site and Sagas work the same way. Not
 sure which? On a rented VPS, prefer Linux; on your own Windows PC, use
 Windows. The full comparison is in [**Installation**](https://github.com/brkihel/Heimdall-Nexus/wiki/Installation).
 
@@ -75,7 +75,7 @@ On **Windows 10 (1809+), 11 or Server 2019/2022, 64-bit**, with
 **PowerShell as administrator**:
 
 ```powershell
-git clone --branch dev/windows https://github.com/brkihel/Heimdall-Nexus.git C:\HeimdallNexus-src
+git clone https://github.com/brkihel/Heimdall-Nexus.git C:\HeimdallNexus-src
 cd C:\HeimdallNexus-src
 powershell -ExecutionPolicy Bypass -File .\deploy\windows\install.ps1
 ```
@@ -84,10 +84,6 @@ The script installs a private Python for Heimdall (outside PATH) and opens the
 wizard in the PC's own browser. The server, the panel and the site become
 Windows services, each with its own unprivileged account. Caddy serves the
 site, with automatic HTTPS. Then sign in at `http://your-address/jarl/entrar`.
-
-> [!NOTE]
-> Windows support lives on the `dev/windows` branch while it is tested on more
-> machines.
 
 A step-by-step for newcomers, with a quick reference for veterans:
 [**Installation on Windows**](https://github.com/brkihel/Heimdall-Nexus/wiki/Installation-Windows).

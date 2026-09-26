@@ -1,6 +1,9 @@
 # Heimdall Nexus — versões
 
-## Em desenvolvimento (branch dev/windows)
+## 1.1.0
+
+Linux e Windows com suporte completo. O mesmo Heimdall Nexus, com o mesmo
+assistente, painel, site e Sagas, agora instala e roda nos dois sistemas.
 
 - **Windows nativo.** O Heimdall Nexus agora instala e roda no Windows 10
   (1809+), 11 e Server 2019/2022, sem WSL nem Docker: `install.ps1` instala um
@@ -18,6 +21,11 @@
   reconhecido por qualquer caminho absoluto; a caixa de entrada das Sagas
   recusa links também onde não existe `O_NOFOLLOW`; regravar um arquivo pelo
   painel mantém as permissões do original.
+- **Aba Mundo:** "Usar um mundo gerado no jogo" aceita mundos comuns; a exigência
+  do Riverheim só vale em servidores que usam esse mod.
+- **Assistente de instalação:** o botão "Instalar o modpack no servidor" não
+  fica mais espremido, e no Windows o HTTPS começa desligado, porque quase
+  toda instalação doméstica usa um IP.
 - **Documentação:** guias de instalação separados para Linux e Windows, com
   referência rápida para veteranos, e os equivalentes do Windows em Operação,
   Configuração e Sagas.

@@ -25,20 +25,31 @@
   const t = key => words[language][key] || key;
   // Windows: no Linux account to choose, Caddy instead of Nginx, other folders.
   const windowsText = {
-    pt: {stepAdminHint:'Login do painel', domainHint:'O assistente configura o servidor web (Caddy) para este endereço.',
+    pt: {localOnly:'Assistente temporário · só neste computador',
+         httpsHint:'Só com um domínio público apontando para esta máquina e as portas 80 e 443 liberadas no roteador. O Caddy pede e renova o certificado Let’s Encrypt sozinho. Com um IP ou localhost, deixe desligado.',
+         stepAdminHint:'Login do painel', domainHint:'O assistente configura o servidor web (Caddy) para este endereço.',
          siteNote:'O assistente está aberto só neste computador. Guarde o endereço com token em privado.',
          gameIntro:'O SteamCMD baixa o servidor oficial. O mundo fica em C:\\ProgramData\\HeimdallNexus\\valheim\\saves, separado dos arquivos do jogo.',
          adminIntro:'Escolha o login do painel. Cada serviço roda com uma conta própria do Windows, criada sozinha. A senha do painel é guardada como hash.',
          reviewNote:'SteamCMD, Valheim Dedicated Server, serviços do Windows, Caddy, site e painel. BepInEx será incluído se você o selecionou.'},
-    en: {stepAdminHint:'Panel login', domainHint:'The wizard configures the web server (Caddy) for this address.',
+    en: {localOnly:'Temporary wizard · this computer only',
+         httpsHint:'Only with a public domain pointing at this machine and ports 80 and 443 forwarded by the router. Caddy requests and renews the Let’s Encrypt certificate by itself. With an IP or localhost, leave it off.',
+         stepAdminHint:'Panel login', domainHint:'The wizard configures the web server (Caddy) for this address.',
          siteNote:'The wizard is open on this computer only. Keep the token URL private.',
          gameIntro:'SteamCMD downloads the official dedicated server. Your world is saved in C:\\ProgramData\\HeimdallNexus\\valheim\\saves, separate from game files.',
          adminIntro:'Choose the panel login. Each service runs with its own Windows account, created automatically. The panel password is stored as a hash.',
          reviewNote:'SteamCMD, Valheim Dedicated Server, Windows services, Caddy, site and panel. BepInEx is included if you selected it.'},
   };
   let windows = false;
+  let platformApplied = false;
   function applyPlatform() {
     if (!windows) return;
+    if (!platformApplied) {
+      // Most Windows installs use an IP or localhost, where HTTPS cannot work.
+      platformApplied = true;
+      $('tls').checked = false;
+      $('tls').dispatchEvent(new Event('change'));
+    }
     document.querySelectorAll('[data-i18n]').forEach(el => {
       const text = windowsText[language][el.dataset.i18n];
       if (text) el.textContent = text;

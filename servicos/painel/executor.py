@@ -1038,6 +1038,20 @@ def _fwl_atual(pasta: Path):
     return candidatos[-1] if candidatos else None
 
 
+def _servidor_usa_riverheim() -> bool:
+    """Whether the server's mods include Riverheim (the terrain generator)."""
+    try:
+        if any('riverheim' in nome.lower() for nome in _instalados()):
+            return True
+    except Recusa:
+        pass
+    plugins = VALHEIM_ROOT / 'current' / 'BepInEx' / 'plugins'
+    try:
+        return any('riverheim' in item.name.lower() for item in plugins.iterdir())
+    except OSError:
+        return False
+
+
 def _servidor_ativo() -> bool:
     return hostos.service_is_active(GAME_SERVICE)
 
@@ -1270,7 +1284,8 @@ def v_mundo_instalar(dados):
                 raise Recusa(f'arquivo fora do lugar no zip: {i.filename}')
         maior = max(metas, key=lambda i: int(re.search(r'_main\.(\d+)\.fwl2', i.filename).group(1)))
         meta = fwl.Fwl(z.read(maior))
-    if not meta.riverheim and not dados.get('sem_riverheim'):
+    # Only a server that generates terrain with Riverheim needs a Riverheim world.
+    if _servidor_usa_riverheim() and not meta.riverheim and not dados.get('sem_riverheim'):
         raise Recusa('esse mundo não foi gerado com o Riverheim: o terreno seria o do jogo '
                      'padrão. Gere com o modpack instalado.')
 
