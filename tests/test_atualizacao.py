@@ -86,6 +86,7 @@ class UpdateTests(unittest.TestCase):
         self.assertEqual(atualizacao.set_channel('dev/sagas', self.state), 'dev/sagas')
         self.assertEqual(atualizacao.channel(self.state), 'dev/sagas')
 
+    @unittest.skipIf(sys.platform == 'win32', 'systemd-run is the Linux path; Windows uses a scheduled task')
     def test_start_runs_exactly_the_approved_commit_detached(self):
         self.check()
         calls = []

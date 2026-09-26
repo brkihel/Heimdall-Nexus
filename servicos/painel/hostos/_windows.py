@@ -402,6 +402,34 @@ def exclusive_lock(path, blocking: bool = False):
         raise
 
 
+_OPEN_REPARSE_POINT = 0x00200000
+_ATTRIBUTE_DIRECTORY = 0x10
+_ATTRIBUTE_REPARSE_POINT = 0x400
+
+
+def open_untrusted(path) -> int:
+    """Read-only descriptor for a file another account could have planted.
+
+    Windows has no O_NOFOLLOW. The file is opened without following reparse
+    points, and the open handle itself is checked: a symlink, junction,
+    directory or a file with extra hard links is refused, so nothing can be
+    swapped between the check and the read.
+    """
+    import errno
+    import win32con
+    import win32file
+    handle = win32file.CreateFile(str(path), win32con.GENERIC_READ, win32con.FILE_SHARE_READ, None,
+                                  win32con.OPEN_EXISTING, _OPEN_REPARSE_POINT, None)
+    try:
+        info = win32file.GetFileInformationByHandle(handle)
+        attributes, links = info[0], info[7]
+        if attributes & (_ATTRIBUTE_REPARSE_POINT | _ATTRIBUTE_DIRECTORY) or links != 1:
+            raise OSError(errno.ELOOP, 'refusing a link or special file', str(path))
+        return msvcrt.open_osfhandle(handle.Detach(), os.O_RDONLY | os.O_BINARY)
+    finally:
+        handle.Close()
+
+
 def run_as_game(argv: list[str]) -> list[str]:
     """The executor runs as SYSTEM; files it writes inherit the game's access."""
     return list(argv)

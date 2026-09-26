@@ -58,7 +58,6 @@ def test_archive_name_blocks_paths(tmp_path, monkeypatch):
 
 
 def test_backup_create_and_restore_in_isolated_directory(tmp_path, monkeypatch):
-    import pwd
     game = tmp_path / 'game'
     saves = game / 'saves'
     saves.mkdir(parents=True)
@@ -68,7 +67,7 @@ def test_backup_create_and_restore_in_isolated_directory(tmp_path, monkeypatch):
     monkeypatch.setattr(operacoes, 'BACKUPS', game / 'backups')
     monkeypatch.setattr(operacoes, 'MAINTENANCE_LOCK', tmp_path / 'maintenance.lock')
     monkeypatch.setattr(operacoes, 'online', lambda: False)
-    monkeypatch.setattr(pwd, 'getpwnam', lambda _: SimpleNamespace(pw_uid=os.getuid(), pw_gid=os.getgid()))
+    monkeypatch.setattr(operacoes.hostos, 'account_exists', lambda _: False)
     archive = operacoes.backup_create()
     world.write_bytes(b'changed world')
     safety = operacoes.backup_restore(archive)

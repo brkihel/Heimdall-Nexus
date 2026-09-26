@@ -16,6 +16,7 @@ import os
 import re
 import shutil
 import stat
+import sys
 import tempfile
 import urllib.error
 import urllib.parse
@@ -24,6 +25,9 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Callable
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'servicos' / 'painel'))
+import hostos  # noqa: E402
 
 
 HEXIUM_API = 'https://valheim.hexium.gg/api/experimental/package/'
@@ -397,7 +401,7 @@ def install(package: str, game_files: Path, persistent_config: Path,
                 if kind == 'config' and target.exists():
                     continue  # preserve an operator's existing configuration
                 shutil.copy2(source, target)
-                os.chown(target, uid, gid)
+                hostos.chown(target, uid, gid)
                 target.chmod(0o644)
     lock = {'modpack': f"{local['owner']}/{local['name']}" if local else package,
             'packages': {item.package_id: {
@@ -410,7 +414,7 @@ def install(package: str, game_files: Path, persistent_config: Path,
     lock_path = game_files / 'mods.lock.json'
     staged = lock_path.with_name('.mods.lock.json.heimdall')
     staged.write_text(json.dumps(lock, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-    os.chown(staged, uid, gid)
+    hostos.chown(staged, uid, gid)
     staged.chmod(0o640)
     os.replace(staged, lock_path)
     report(f'Modpack installed: {len(packages)} packages. Client-only skipped: {", ".join(skipped) or "none"}.')

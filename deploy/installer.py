@@ -7,13 +7,11 @@ come from Valve and the Valheim BepInEx pack's Thunderstore listing.
 from __future__ import annotations
 
 import datetime as dt
-import grp
 import http.client
 import io
 import ipaddress
 import json
 import os
-import pwd
 import queue
 import re
 import secrets
@@ -30,6 +28,12 @@ from pathlib import Path, PurePosixPath
 from typing import Callable
 
 import modpack as server_modpack
+
+try:  # POSIX accounts: only the Linux installation steps use them
+    import grp
+    import pwd
+except ImportError:  # Windows installs through deploy/windows/installer_windows.py
+    grp = pwd = None
 
 
 ROOT = Path(__file__).resolve().parents[1]

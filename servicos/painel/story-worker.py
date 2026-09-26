@@ -18,7 +18,7 @@ def main(state: Path = sagas.STATE) -> dict | None:
         return automatic(state)
     path = files[0]
     try:
-        fd = os.open(path, os.O_RDONLY | hostos.O_NOFOLLOW)
+        fd = hostos.open_untrusted(path)
         with os.fdopen(fd, 'rb') as source:
             raw = source.read(1025)
         if len(raw) > 1024:

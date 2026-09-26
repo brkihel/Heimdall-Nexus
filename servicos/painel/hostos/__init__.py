@@ -81,6 +81,7 @@ account_exists = _impl.account_exists
 link_directory = _impl.link_directory
 exclusive_lock = _impl.exclusive_lock
 run_as_game = _impl.run_as_game
+open_untrusted = _impl.open_untrusted
 is_privileged = _impl.is_privileged
 
 # ---------------------------------------------------------------- executor channel

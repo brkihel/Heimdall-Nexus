@@ -93,7 +93,7 @@ class ModpackInstallTests(unittest.TestCase):
 
             with patch.object(modpack, 'resolve', return_value=([package], [])), \
                  patch.object(modpack, 'download', side_effect=fake_download), \
-                 patch.object(modpack.os, 'chown'):
+                 patch.object(modpack.hostos, 'chown'):
                 lock = modpack.install('Owner/Pack', game, config, lambda _line: None, 1000, 1000)
             self.assertEqual((game / 'BepInEx/plugins/Owner-Pack/Plugin.dll').read_bytes(), b'plugin')
             self.assertEqual((config / 'Plugin.cfg').read_bytes(), b'setting=1')
@@ -141,7 +141,7 @@ class LocalModpackTests(unittest.TestCase):
                 'patchers/Compat/Compat.dll': b'patch',
                 'config/TeamSuite.cfg': b'on=1'})
             self.assertTrue(modpack.is_local_pack(str(path)))
-            with patch.object(modpack.os, 'chown'):
+            with patch.object(modpack.hostos, 'chown'):
                 lock = modpack.install(str(path), game, config, lambda _line: None, 1000, 1000)
             plugins = game / 'BepInEx/plugins'
             self.assertEqual((plugins / 'TeamSuite/TeamSuite.dll').read_bytes(), b'suite')
@@ -163,7 +163,7 @@ class LocalModpackTests(unittest.TestCase):
             with self.assertRaises(modpack.ModpackError):
                 modpack.read_local_pack(Path('relative.zip'))
             bad = local_pack(root / 'c.zip', files={'../evil.dll': b'x'})
-            with self.assertRaises(modpack.ModpackError), patch.object(modpack.os, 'chown'):
+            with self.assertRaises(modpack.ModpackError), patch.object(modpack.hostos, 'chown'):
                 modpack.install(str(bad), root, root, lambda _line: None, 0, 0)
 
 

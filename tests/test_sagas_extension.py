@@ -440,7 +440,7 @@ class SagasContractTests(unittest.TestCase):
     def test_existing_preview_database_gains_new_columns(self):
         with tempfile.TemporaryDirectory() as temporary:
             dbfile = Path(temporary) / 'sagas.sqlite3'
-            with sqlite3.connect(dbfile) as db:
+            with sqlite3.connect(dbfile, factory=sagas.Connection) as db:
                 db.execute('CREATE TABLE worlds(id TEXT PRIMARY KEY, day INTEGER, fraction REAL, clock_at INTEGER)')
                 db.execute('''CREATE TABLE players(world TEXT, id TEXT, name TEXT, online INTEGER,
                            share_profile INTEGER, share_map INTEGER, share_position INTEGER,

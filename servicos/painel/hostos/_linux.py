@@ -181,6 +181,11 @@ def exclusive_lock(path, blocking: bool = False):
     return stream
 
 
+def open_untrusted(path) -> int:
+    """Read-only descriptor that refuses symlinks (and never blocks on a FIFO)."""
+    return os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+
+
 def run_as_game(argv: list[str]) -> list[str]:
     return ['runuser', '-u', 'valheim', '--', *argv]
 
