@@ -214,6 +214,30 @@ function ligaBotoes(){
 }
 
 async function executa(verbo, dados, pergunta){
+  if (verbo === 'mods.instalar' || verbo === 'mods.atualizar') {
+    // What the mod needs and the server lacks: shown before anything is installed.
+    const deps = await post('/api/mods', {verbo: 'mods.dependencias', dados});
+    if (!deps) return;
+    const loja = d => d.url ? {link: d.url, rotulo: 'Ver na loja'} : {};
+    if (deps.antigas && deps.antigas.length) {
+      await confirmar(`${dados.nome} precisa de versões mais novas de mods que o servidor já tem. Atualize-os primeiro na aba Instalados e tente de novo.`,
+        {titulo: 'Dependências desatualizadas', acao: 'Entendi', cancelar: 'Fechar',
+         itens: deps.antigas.map(d => ({titulo: d.nome, detalhe: `precisa da ${d.precisa} ou mais nova · o servidor tem a ${d.tem}`, ...loja(d)}))});
+      return;
+    }
+    if (deps.faltando && deps.faltando.length) {
+      const n = deps.faltando.length;
+      const ok = await confirmar(`${dados.nome} ${dados.versao} precisa de ${n === 1 ? 'um mod' : n + ' mods'} que o servidor ainda não tem. Sem ${n === 1 ? 'ele' : 'eles'}, o mod não funciona.\n\nVeja cada um na loja antes de decidir:`,
+        {titulo: 'Dependências que faltam', acao: `Instalar tudo (${n + 1} mods)`,
+         itens: deps.faltando.map(d => ({titulo: d.nome, detalhe: `versão ${d.versao} · pedido por ${d.pedido_por}`, ...loja(d)})),
+         depois: 'Tudo é instalado junto, numa só parada do servidor, que continua desligado depois; ligue-o pelo Console quando quiser.'});
+      if (!ok) return;
+      dados = {...dados, dependencias: deps.faltando.map(d => `${d.nome}-${d.versao}`)};
+      const r = await post('/api/mods', {verbo, dados});
+      if (r && r.tarefa) acompanha(r.tarefa, {tipo: verbo.split('.')[1], nome: dados.nome, versao: dados.versao});
+      return;
+    }
+  }
   if (!await confirmar(pergunta, {titulo: 'Mods do servidor', acao: 'Continuar', perigo: verbo === 'mods.remover'})) return;
   const d = await post('/api/mods', {verbo, dados});
   if (d && d.tarefa) acompanha(d.tarefa, {tipo: verbo.split('.')[1], nome: dados.nome, versao: dados.versao});

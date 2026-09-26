@@ -23,6 +23,14 @@
   rodam com privilégio, a pasta só é aceita se nenhum usuário comum puder
   alterá-la, renomeá-la ou trocá-la, e ela é criada já trancada. Quem
   desinstala guardando os mundos e instala de novo recebe o mesmo lugar.
+- **Dependências de mods.** Instalar ou atualizar um mod pelo Mod Manager
+  agora confere antes o que ele precisa. Se faltar algum mod, aparece a lista,
+  com um botão **Ver na loja** para cada um, e só com a confirmação tudo é
+  instalado junto, dependências primeiro, numa só parada do servidor. Se o
+  servidor tem uma dependência antiga demais, o painel diz qual atualizar
+  primeiro. Antes, a instalação quebrava com um erro técnico (`KeyError`) e
+  a atualização instalava a versão nova sem a dependência. Vale para Linux e
+  Windows.
 - **O assistente fala da janela do aplicativo**, não mais de um terminal, no
   Windows.
 

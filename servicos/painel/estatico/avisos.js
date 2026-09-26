@@ -132,8 +132,18 @@
   letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--borda-viva,#33475a);background:transparent;color:var(--osso,#e6e0d2)}
 .confirma-acoes .sim{background:linear-gradient(180deg,#d8b66c,#b08c45);border-color:#c8a45c;color:#1a1206}
 .confirma.perigo .confirma-acoes .sim{background:#7a2e22;border-color:#c0392b;color:#fbe9e5}
-.confirma-acoes button:focus-visible{outline:2px solid var(--ouro-claro,#eeddb0);outline-offset:2px}`;
+.confirma-acoes button:focus-visible{outline:2px solid var(--ouro-claro,#eeddb0);outline-offset:2px}
+.confirma-itens{list-style:none;margin:.2rem 0 .8rem;padding:0;display:grid;gap:.45rem;max-height:40vh;overflow-y:auto}
+.confirma-itens li{display:flex;align-items:center;justify-content:space-between;gap:.8rem;padding:.55rem .7rem;
+  border:1px solid var(--borda,#22313d);border-radius:3px;background:rgba(8,14,20,.6)}
+.confirma-itens strong{display:block;color:var(--osso,#e6e0d2);font-weight:600;overflow-wrap:anywhere}
+.confirma-itens small{display:block;color:var(--fraco,#78848f);font-size:.82rem}
+.confirma-itens a{flex:none;padding:.3rem .65rem;border:1px solid var(--borda-viva,#33475a);border-radius:3px;color:var(--ouro-claro,#eeddb0);
+  font:600 .66rem Cinzel,Georgia,serif;letter-spacing:.1em;text-transform:uppercase;text-decoration:none}
+.confirma-itens a:hover{border-color:var(--ouro,#c8a45c)}`;
   let estilo = false;
+  // opcoes.itens: [{titulo, detalhe, link, rotulo}], a list shown under the text,
+  // each with an optional link (opened in a new tab) to look before deciding.
   window.confirmar = function confirmar(texto, opcoes = {}) {
     if (!estilo) {
       const tag = el('style'); tag.textContent = ESTILO; document.head.append(tag); estilo = true;
@@ -144,6 +154,23 @@
       const corpo = el('div', 'confirma-corpo');
       corpo.append(el('h2', null, opcoes.titulo || 'Confirmar'));
       for (const parte of String(texto).split(/\n{2,}/)) corpo.append(el('p', null, parte));
+      if (opcoes.itens && opcoes.itens.length) {
+        const lista = el('ul', 'confirma-itens');
+        for (const item of opcoes.itens) {
+          const linha = el('li'), textos = el('div');
+          textos.append(el('strong', null, item.titulo));
+          if (item.detalhe) textos.append(el('small', null, item.detalhe));
+          linha.append(textos);
+          if (item.link && /^https:\/\//.test(item.link)) {
+            const ir = el('a', null, item.rotulo || 'Ver');
+            ir.href = item.link; ir.target = '_blank'; ir.rel = 'noopener';
+            linha.append(ir);
+          }
+          lista.append(linha);
+        }
+        corpo.append(lista);
+        if (opcoes.depois) corpo.append(el('p', null, opcoes.depois));
+      }
       const acoes = el('div', 'confirma-acoes');
       const nao = el('button', 'nao', opcoes.cancelar || 'Cancelar');
       const sim = el('button', 'sim', opcoes.acao || 'Confirmar');

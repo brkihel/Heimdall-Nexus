@@ -35,6 +35,23 @@ release = (ROOT / 'current').resolve(strict=True)
 lock_rel = release / 'mods.lock.json'
 lock = json.loads(lock_rel.read_text())
 
+# Dependencies may come in this same batch: the panel sends them before the package.
+lote = {}
+for pasta, zpath in alvos:
+    with zipfile.ZipFile(zpath) as z:
+        lote[pasta] = json.loads(z.read('manifest.json'))['version_number']
+
+
+def versao_de(pasta, dn):
+    if dn == 'denikson-BepInExPack_Valheim':
+        return '5.4.2350'
+    if dn in lote:
+        return lote[dn]
+    if dn in lock['packages']:
+        return lock['packages'][dn]['version']
+    raise SystemExit(f'{pasta} precisa de {dn}, que nao esta instalado nem veio neste lote; instale {dn} antes')
+
+
 carga, registros = {}, {}
 for pasta, zpath in alvos:
     sha = hashlib.sha256(zpath.read_bytes()).hexdigest()
@@ -43,8 +60,9 @@ for pasta, zpath in alvos:
         man = json.loads(z.read('manifest.json'))
         for dep in man.get('dependencies', []):
             dn, dv = dep.rsplit('-', 1)
-            atual = '5.4.2350' if dn == 'denikson-BepInExPack_Valheim' else lock['packages'][dn]['version']
-            assert tuple(map(int, atual.split('.'))) >= tuple(map(int, dv.split('.'))), dep
+            atual = versao_de(pasta, dn)
+            if tuple(map(int, atual.split('.'))) < tuple(map(int, dv.split('.'))):
+                raise SystemExit(f'{pasta} precisa de {dn} {dv} ou mais nova; o servidor tem a {atual}')
             print(f'  {pasta}: dependencia ok -> {dep} (instalado {atual})')
         for info in z.infolist():
             p = Path(info.filename.replace('\\', '/'))

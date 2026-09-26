@@ -490,7 +490,7 @@ async def api_mods(pedido: Request):
     usuario = exige(pedido)
     corpo = await pedido.json()
     verbo = corpo.get('verbo', '')
-    if verbo not in ('mods.instalar', 'mods.atualizar', 'mods.remover',
+    if verbo not in ('mods.dependencias', 'mods.instalar', 'mods.atualizar', 'mods.remover',
                      'mods.catalogo.atualizar', 'mods.varredura',
                      'mods.tarefa', 'mods.tarefas'):
         return JSONResponse({'ok': False, 'erro': 'verbo não permitido aqui'}, status_code=400)

@@ -911,6 +911,102 @@ def _roda(comando: list[str], anota):
         raise Recusa(f'o script saiu com código {processo.returncode}')
 
 
+# BepInEx itself comes with the server install, not as a package in the lock.
+BEPINEX_PACK = 'denikson-BepInExPack_Valheim'
+
+
+def _dependencias(caminho: Path) -> list[str]:
+    import zipfile
+    with zipfile.ZipFile(caminho) as z:
+        manifesto = json.loads(z.read('manifest.json').decode('utf-8-sig'))
+    return [d for d in manifesto.get('dependencies') or [] if isinstance(d, str)]
+
+
+def _versao_para(nome: str, minima: str) -> str:
+    """The version a dependency asks for, or the oldest newer one the stores still have."""
+    for pacote in _catalogo():
+        if pacote['full_name'] != nome:
+            continue
+        versoes = {v['version_number'] for loja in (pacote, pacote.get('outra')) if loja
+                   for v in loja.get('versions', []) if FORMA_VERSAO.match(v.get('version_number') or '')}
+        if minima in versoes:
+            return minima
+        novas = [v for v in versoes if _versao_maior(v, minima)]
+        if novas:
+            return min(novas, key=lambda v: [int(x) for x in re.findall(r'\d+', v)[:4]])
+        raise Recusa(f'{nome} {minima} ou mais nova não está no Hexium nem na Thunderstore')
+    raise Recusa(f'a dependência {nome} não está no Hexium nem na Thunderstore')
+
+
+def _pacote(nome: str) -> dict | None:
+    return next((p for p in _catalogo() if p['full_name'] == nome), None)
+
+
+def _deps_de(nome: str, versao: str) -> list[str]:
+    """What a version needs: from the catalog when it says, else from the package's own manifest."""
+    declaradas = _acha_versao(nome, versao).get('dependencies')
+    if isinstance(declaradas, list):
+        return [d for d in declaradas if isinstance(d, str)]
+    return _dependencias(_baixa(nome, versao))
+
+
+def _resolve(nome: str, versao: str) -> dict:
+    """The dependencies the server lacks, deepest first, and the installed ones that are too old.
+
+    Like the mod managers: each package lists what it needs, and a missing one
+    brings what it needs too. Nothing is installed here; the admin sees the list first.
+    """
+    instalados = _instalados()
+    faltando, antigas, vistos = [], [], {nome}
+
+    def visita(pacote: str, qual: str):
+        for dependencia in _deps_de(pacote, qual):
+            dn, _, dv = dependencia.rpartition('-')
+            if not FORMA_PACOTE.match(dn) or not FORMA_VERSAO.match(dv):
+                raise Recusa(f'{pacote} declara uma dependência com formato estranho: {dependencia}')
+            if dn == BEPINEX_PACK or dn in vistos:
+                continue
+            vistos.add(dn)
+            loja = _pacote(dn) or {}
+            if dn in instalados:
+                if _versao_maior(dv, instalados[dn]):
+                    antigas.append({'nome': dn, 'precisa': dv, 'tem': instalados[dn],
+                                    'url': loja.get('package_url'), 'pedido_por': pacote})
+                continue
+            escolhida = _versao_para(dn, dv)
+            visita(dn, escolhida)
+            faltando.append({'nome': dn, 'versao': escolhida, 'url': loja.get('package_url'),
+                             'loja': loja.get('loja'), 'pedido_por': pacote})
+
+    visita(nome, versao)
+    return {'faltando': faltando, 'antigas': antigas}
+
+
+def v_mods_dependencias(dados):
+    nome, versao = dados.get('nome', ''), dados.get('versao', '')
+    _confere_nomes(nome, versao)
+    return _resolve(nome, versao)
+
+
+def _com_dependencias(nome: str, versao: str, aceitas, anota) -> list[tuple[str, Path]]:
+    """Downloads the confirmed dependencies, in order; refuses if they are not what the admin saw."""
+    plano = _resolve(nome, versao)
+    if plano['antigas']:
+        primeira = plano['antigas'][0]
+        raise Recusa(f'{primeira["pedido_por"]} precisa de {primeira["nome"]} {primeira["precisa"]} ou mais nova, '
+                     f'e o servidor tem a {primeira["tem"]}. Atualize {primeira["nome"]} primeiro.')
+    esperadas = [f'{d["nome"]}-{d["versao"]}' for d in plano['faltando']]
+    if esperadas and (not isinstance(aceitas, list) or sorted(map(str, aceitas)) != sorted(esperadas)):
+        raise Recusa('faltam dependências: ' + ', '.join(esperadas) +
+                     '. Confirme a instalação delas na tela do Mod Manager.')
+    baixados = []
+    for dependencia in plano['faltando']:
+        anota(f'dependência: baixando {dependencia["nome"]} {dependencia["versao"]} '
+              f'(pedida por {dependencia["pedido_por"]})…')
+        baixados.append((dependencia['nome'], _baixa(dependencia['nome'], dependencia['versao'])))
+    return baixados
+
+
 def v_mods_instalar(dados):
     nome, versao = dados.get('nome', ''), dados.get('versao', '')
     _confere_nomes(nome, versao)
@@ -918,11 +1014,16 @@ def v_mods_instalar(dados):
         raise Recusa(f'{nome} já está instalado')
 
     def passos(anota):
-        anota(f'baixando {nome} {versao} do Hexium…')
+        dependencias = _com_dependencias(nome, versao, dados.get('dependencias'), anota)
+        anota(f'baixando {nome} {versao}…')
         caminho = _baixa(nome, versao)
-        anota(f'zip conferido: {caminho.name} ({caminho.stat().st_size} bytes)')
+        lote = [*dependencias, (nome, caminho)]
+        for pacote, arquivo in lote:
+            anota(f'zip conferido: {arquivo.name} ({arquivo.stat().st_size} bytes)')
+        if dependencias:
+            anota('instalando junto: ' + ', '.join(p for p, _ in dependencias))
         _roda([hostos.PYTHON, str(FERRAMENTAS / 'instalar-mods.py'),
-               f'{nome}={caminho.name}'], anota)
+               *(f'{pacote}={arquivo.name}' for pacote, arquivo in lote)], anota)
 
     return {'tarefa': _tarefa(f'instalar {nome} {versao}', [passos])}
 
@@ -934,9 +1035,15 @@ def v_mods_atualizar(dados):
         raise Recusa(f'{nome} não está instalado')
 
     def passos(anota):
-        anota(f'baixando {nome} {versao} do Hexium…')
+        # A new version may need something the old one did not: that goes in first.
+        dependencias = _com_dependencias(nome, versao, dados.get('dependencias'), anota)
+        anota(f'baixando {nome} {versao}…')
         caminho = _baixa(nome, versao)
         anota(f'zip conferido: {caminho.name}')
+        if dependencias:
+            anota('instalando antes as dependências novas: ' + ', '.join(p for p, _ in dependencias))
+            _roda([hostos.PYTHON, str(FERRAMENTAS / 'instalar-mods.py'),
+                   *(f'{pacote}={arquivo.name}' for pacote, arquivo in dependencias)], anota)
         _roda([hostos.PYTHON, str(FERRAMENTAS / 'atualizar-mods.py'),
                f'{nome}={versao}'], anota)
 
@@ -2502,6 +2609,7 @@ VERBOS = {
     'mods.instalados': v_mods_instalados,
     'mods.procurar': v_mods_procurar,
     'mods.catalogo.atualizar': v_mods_catalogo_atualizar,
+    'mods.dependencias': v_mods_dependencias,
     'mods.instalar': v_mods_instalar,
     'mods.atualizar': v_mods_atualizar,
     'mods.remover': v_mods_remover,
@@ -2580,7 +2688,7 @@ class Atendente(socketserver.StreamRequestHandler):
         else:
             # Leitura e listagem sao barulho na auditoria: registro so o que muda.
             silenciosos = ('ping', 'servico.estado', 'log', 'arquivo.listar', 'arquivo.ler',
-                           'mods.instalados', 'mods.procurar', 'mods.tarefa', 'mods.tarefas',
+                           'mods.instalados', 'mods.procurar', 'mods.dependencias', 'mods.tarefa', 'mods.tarefas',
                            'cronica.sessoes', 'cronica.ler', 'mundo.estado', 'mundo.seed', 'config.listar',
                            'arquivo.preparar_download', 'site.paginas', 'site.campos',
                            'site.versoes', 'site.versao.ver', 'site.previa.ler', 'site.identidade', 'site.endereco',
