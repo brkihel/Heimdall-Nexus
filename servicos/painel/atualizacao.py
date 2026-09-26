@@ -58,7 +58,8 @@ def _git(source: Path, *args: str, timeout: int = 30, allow_file: bool = False) 
                               cwd=source if source.is_dir() else source.parent,
                               env=env, capture_output=True, text=True, timeout=timeout)
     except FileNotFoundError as error:
-        raise UpdateError('HN-UPD-001', 'o Git não está instalado; rode: sudo apt install git') from error
+        raise UpdateError('HN-UPD-001', 'o Git não está instalado' + (
+            '' if hostos.IS_WINDOWS else '; rode: sudo apt install git')) from error
     except subprocess.TimeoutExpired as error:
         raise UpdateError('HN-UPD-002', 'o repositório demorou demais para responder') from error
     if done.returncode != 0:

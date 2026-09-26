@@ -6,6 +6,7 @@ published; retired codes stay listed. Admin-facing text is pt-BR.
 from __future__ import annotations
 
 import re
+import sys
 
 CODE = re.compile(r'^HN-[A-Z]{3,5}-\d{3}$')
 PREFIXED = re.compile(r'^(HN-[A-Z]{3,5}-\d{3}): (.*)$', re.S)
@@ -111,6 +112,32 @@ CATALOGO: dict[str, dict[str, str]] = {
     'HN-CFG-009': {'titulo': 'Dados de acesso inválidos',
                    'solucao': 'Recarregue a página e tente de novo.'},
 }
+
+
+# On Windows the same problems are solved with other logs and commands.
+LOGS_WINDOWS = r'C:\ProgramData\HeimdallNexus\logs'
+SOLUCOES_WINDOWS = {
+    'HN-ATL-001': rf'Confira o erro em {LOGS_WINDOWS}\heimdall-sagas-jobs. Após corrigir a causa, '
+                  'o Nexus tenta de novo em até 10 minutos.',
+    'HN-UPD-001': 'Instale o Git para Windows (https://git-scm.com/download/win) para todos os usuários '
+                  'e reinicie o serviço heimdall-executor.',
+    'HN-UPD-004': r'HEIMDALL_UPDATE_REPO em C:\ProgramData\HeimdallNexus\etc\heimdall.env precisa ser '
+                  'um endereço https://….git.',
+    'HN-UPD-005': r'Apague C:\ProgramData\HeimdallNexus\state\source e procure atualizações de novo.',
+    'HN-UPD-011': rf'O Windows recusou a tarefa agendada. Veja {LOGS_WINDOWS}\heimdall-executor.',
+    'HN-UPD-101': r'Confira o espaço livre no disco de C:\Program Files. A versão anterior continua nos '
+                  'serviços até o reinício.',
+    'HN-UPD-103': rf'Veja {LOGS_WINDOWS}\heimdall-sagas-jobs e o serviço heimdall-sagas-jobs.',
+    'HN-UPD-104': r'Confira as permissões de C:\ProgramData\HeimdallNexus\state\site. Suas páginas '
+                  'não foram alteradas.',
+    'HN-UPD-108': rf'Veja {LOGS_WINDOWS}\heimdall-panel. Pelo PowerShell como administrador, na pasta do '
+                  r'repositório: & "$env:ProgramFiles\HeimdallNexus\venv\Scripts\python.exe" '
+                  r'deploy\windows\update.py',
+    'HN-STO-018': rf'Veja {LOGS_WINDOWS}\heimdall-sagas-jobs.',
+}
+if sys.platform == 'win32':
+    for _codigo, _solucao in SOLUCOES_WINDOWS.items():
+        CATALOGO[_codigo] = {**CATALOGO[_codigo], 'solucao': _solucao}
 
 
 def com_codigo(codigo: str, mensagem: str) -> str:
