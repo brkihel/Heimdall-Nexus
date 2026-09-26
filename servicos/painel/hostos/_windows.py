@@ -294,7 +294,7 @@ def timer_is_active(name: str) -> bool:
 
 def _powershell(script: str, timeout: int = 30) -> subprocess.CompletedProcess:
     return subprocess.run(['powershell.exe', '-NoProfile', '-NonInteractive', '-Command', script],
-                          capture_output=True, text=True, timeout=timeout)
+                          capture_output=True, text=True, errors='replace', timeout=timeout)
 
 
 def _ps_quote(value) -> str:

@@ -141,7 +141,7 @@ class WindowsInstaller:
             raise InstallError('Heimdall Nexus needs 64-bit Windows.')
         if sys.version_info < (3, 10):
             raise InstallError('The installer needs Python 3.10 or newer.')
-        existing = subprocess.run(['sc.exe', 'query', 'heimdall-valheim'], capture_output=True, text=True)
+        existing = subprocess.run(['sc.exe', 'query', 'heimdall-valheim'], capture_output=True, text=True, errors='replace')
         marker = self.paths.installed
         if existing.returncode == 0 and not self.paths.service_files.joinpath('heimdall-valheim.xml').is_file() \
                 and not marker.is_file():
@@ -185,9 +185,9 @@ class WindowsInstaller:
         info = {'version': version.read_text(encoding='ascii').strip() if version.is_file() else ''}
         try:
             info['commit'] = subprocess.run(['git', '-C', str(self.root), 'rev-parse', 'HEAD'],
-                                            capture_output=True, text=True, timeout=10).stdout.strip()
+                                            capture_output=True, text=True, errors='replace', timeout=10).stdout.strip()
             info['branch'] = subprocess.run(['git', '-C', str(self.root), 'rev-parse', '--abbrev-ref', 'HEAD'],
-                                            capture_output=True, text=True, timeout=10).stdout.strip()
+                                            capture_output=True, text=True, errors='replace', timeout=10).stdout.strip()
         except OSError:
             pass
         (target / '.heimdall-version.json').write_text(json.dumps(info) + '\n', encoding='utf-8')
@@ -217,7 +217,7 @@ class WindowsInstaller:
                 bundle.extract('steamcmd.exe', self.paths.steamcmd)
         signature = subprocess.run(['powershell.exe', '-NoProfile', '-Command',
                                     f"(Get-AuthenticodeSignature -LiteralPath '{executable}').SignerCertificate.Subject"],
-                                   capture_output=True, text=True, timeout=60).stdout
+                                   capture_output=True, text=True, errors='replace', timeout=60).stdout
         if 'O=Valve' not in signature:
             raise InstallError('SteamCMD is not signed by Valve; refusing to run it.')
 
