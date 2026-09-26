@@ -238,6 +238,7 @@ def v_arquivo_gravar(dados):
     if dono:
         hostos.chown(tmp, dono.st_uid, dono.st_gid)
         os.chmod(tmp, dono.st_mode & 0o7777)
+        hostos.copy_access(alvo, tmp)
     else:
         # Arquivo novo herda o dono da pasta: dentro de /srv/valheim isso mantem
         # tudo pertencendo ao usuario valheim, que e o que o jogo exige.
@@ -497,6 +498,8 @@ def v_arquivo_receber(dados):
     uid, gid = _dono_da_pasta(pasta)
     hostos.chown(tmp, uid, gid)
     os.chmod(tmp, 0o644)
+    if alvo.exists():
+        hostos.copy_access(alvo, tmp)
     os.replace(tmp, alvo)
     shutil.rmtree(ficha, ignore_errors=True)
     return {'caminho': str(alvo), 'copia': copia, 'tamanho': alvo.stat().st_size}
@@ -2285,6 +2288,8 @@ def v_sagas_settings_gravar(dados):
             file.write('\n')
             file.flush()
             os.fsync(file.fileno())
+        if target.exists():  # on Windows the game's read access lives on this file
+            hostos.copy_access(target, temporary)
         os.replace(temporary, target)
     finally:
         if descriptor >= 0:

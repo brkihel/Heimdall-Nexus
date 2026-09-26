@@ -186,6 +186,10 @@ def open_untrusted(path) -> int:
     return os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
 
 
+def copy_access(source, target) -> None:
+    """Nothing to do here: callers keep owner and mode with chown and chmod."""
+
+
 def run_as_game(argv: list[str]) -> list[str]:
     return ['runuser', '-u', 'valheim', '--', *argv]
 

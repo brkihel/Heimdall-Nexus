@@ -438,6 +438,24 @@ def open_untrusted(path) -> int:
         handle.Close()
 
 
+def copy_access(source, target) -> None:
+    """Give `target` the permissions of `source` before it replaces it.
+
+    A new file inherits its folder's permissions. Without this, rewriting
+    server.env (read-only for the game) would hand it the folder's write access.
+    """
+    import win32security
+    information = win32security.DACL_SECURITY_INFORMATION
+    descriptor = win32security.GetFileSecurity(str(source), information)
+    control, _ = descriptor.GetSecurityDescriptorControl()
+    if control & win32security.SE_DACL_PROTECTED:
+        information |= win32security.PROTECTED_DACL_SECURITY_INFORMATION
+    else:
+        information |= win32security.UNPROTECTED_DACL_SECURITY_INFORMATION
+    win32security.SetNamedSecurityInfo(str(target), win32security.SE_FILE_OBJECT, information, None, None,
+                                       descriptor.GetSecurityDescriptorDacl(), None)
+
+
 def run_as_game(argv: list[str]) -> list[str]:
     """The executor runs as SYSTEM; files it writes inherit the game's access."""
     return list(argv)

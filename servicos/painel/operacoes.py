@@ -66,6 +66,7 @@ def _write(path: Path, content: str, mode=0o600):
         if path.exists():
             st = path.stat()
             hostos.chown(temp, st.st_uid, st.st_gid)
+            hostos.copy_access(path, temp)
             mode = st.st_mode & 0o777
         os.chmod(temp, mode)
         os.replace(temp, path)
@@ -608,6 +609,8 @@ def _write_list(path: Path, header: str, comments: list[str], active, off=()) ->
         os.chmod(temp, 0o644)
         if path.is_symlink():
             raise Problem(codigos.com_codigo('HN-CFG-006', f'{path.name} é um link simbólico'))
+        if path.exists():
+            hostos.copy_access(path, temp)
         os.replace(temp, path)
     finally:
         temp.unlink(missing_ok=True)

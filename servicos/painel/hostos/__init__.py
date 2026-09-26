@@ -82,6 +82,7 @@ link_directory = _impl.link_directory
 exclusive_lock = _impl.exclusive_lock
 run_as_game = _impl.run_as_game
 open_untrusted = _impl.open_untrusted
+copy_access = _impl.copy_access
 is_privileged = _impl.is_privileged
 
 # ---------------------------------------------------------------- executor channel

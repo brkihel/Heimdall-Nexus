@@ -88,3 +88,21 @@ def test_windows_installer_imports_and_lays_out_paths(tmp_path):
     assert layout.executor_key.parent == tmp_path / 'data' / 'etc'
     assert installer_windows.CADDY_URL.endswith('windows_amd64.zip')
     assert re.fullmatch(r'[0-9a-f]{64}', installer_windows.CADDY_SHA256)
+
+
+def test_update_and_sagas_scripts_compile_and_keep_update_markers():
+    for name in ('update.py', 'install-sagas.py', 'uninstall.ps1', 'install.ps1'):
+        assert (WINDOWS / name).is_file()
+    source = (WINDOWS / 'update.py').read_text(encoding='utf-8')
+    compile(source, 'update.py', 'exec')
+    compile((WINDOWS / 'install-sagas.py').read_text(encoding='utf-8'), 'install-sagas.py', 'exec')
+    linux = (ROOT / 'deploy' / 'update.sh').read_text(encoding='utf-8')
+    for code in re.findall(r'step \d+ [\w-]+ (HN-UPD-\d{3})', linux):
+        assert code in source, code
+    for script in ('install.ps1', 'uninstall.ps1'):  # Windows PowerShell 5 reads BOM-less files as ANSI
+        (WINDOWS / script).read_text(encoding='ascii')
+
+
+def test_launcher_hands_server_env_to_the_game():
+    source = (WINDOWS / 'launcher-windows.py').read_text(encoding='utf-8')
+    assert "environment = {**os.environ, **settings, 'SteamAppId': '892970'}" in source

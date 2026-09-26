@@ -161,7 +161,8 @@ def main() -> int:
         log.close()
         return 78  # EX_CONFIG: the service manager should not loop on it
 
-    environment = {**os.environ, 'SteamAppId': '892970'}
+    # Like systemd's EnvironmentFile: server.env reaches the game (the Sagas bridge reads it).
+    environment = {**os.environ, **settings, 'SteamAppId': '892970'}
     # Ctrl+C from the service stop reaches every process on this console, the
     # game included; this launcher only waits for the game to finish saving.
     signal.signal(signal.SIGINT, lambda *_: None)
