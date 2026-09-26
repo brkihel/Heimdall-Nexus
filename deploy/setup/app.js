@@ -31,14 +31,18 @@
          siteNote:'O assistente está aberto só neste computador. Guarde o endereço com token em privado.',
          gameIntro:'O SteamCMD baixa o servidor oficial. O mundo fica em C:\\ProgramData\\HeimdallNexus\\valheim\\saves, separado dos arquivos do jogo.',
          adminIntro:'Escolha o login do painel. Cada serviço roda com uma conta própria do Windows, criada sozinha. A senha do painel é guardada como hash.',
-         reviewNote:'SteamCMD, Valheim Dedicated Server, serviços do Windows, Caddy, site e painel. BepInEx será incluído se você o selecionou.'},
+         reviewNote:'SteamCMD, Valheim Dedicated Server, serviços do Windows, Caddy, site e painel. BepInEx será incluído se você o selecionou.',
+         progressHint:'Deixe esta página aberta, e também a janela que começou a instalação. Você pode acompanhar as etapas abaixo.',
+         successHint:'Use o painel para editar o site. Para ligar e desligar o servidor, use o aplicativo Heimdall Nexus ou o painel.'},
     en: {localOnly:'Temporary wizard · this computer only',
          httpsHint:'Only with a public domain pointing at this machine and ports 80 and 443 forwarded by the router. Caddy requests and renews the Let’s Encrypt certificate by itself. With an IP or localhost, leave it off.',
          stepAdminHint:'Panel login', domainHint:'The wizard configures the web server (Caddy) for this address.',
          siteNote:'The wizard is open on this computer only. Keep the token URL private.',
          gameIntro:'SteamCMD downloads the official dedicated server. Your world is saved in C:\\ProgramData\\HeimdallNexus\\valheim\\saves, separate from game files.',
          adminIntro:'Choose the panel login. Each service runs with its own Windows account, created automatically. The panel password is stored as a hash.',
-         reviewNote:'SteamCMD, Valheim Dedicated Server, Windows services, Caddy, site and panel. BepInEx is included if you selected it.'},
+         reviewNote:'SteamCMD, Valheim Dedicated Server, Windows services, Caddy, site and panel. BepInEx is included if you selected it.',
+         progressHint:'Keep this page open, and also the window that started the installation. Follow the steps below.',
+         successHint:'Use the panel to edit the site. To turn the server on and off, use the Heimdall Nexus app or the panel.'},
   };
   let windows = false;
   let platformApplied = false;
