@@ -73,7 +73,7 @@ Depois entre em `https://seu-dominio/jarl/entrar`. Passo a passo completo: [**In
 
 Em **Windows 10 (1809+), 11 ou Server 2019/2022, 64 bits**, sem nenhum comando:
 
-1. Baixe o **`HeimdallNexus-Windows-1.1.exe`** na
+1. Baixe o **`HeimdallNexus-Windows-….exe`** (o número muda a cada versão) na
    [versão mais recente](https://github.com/brkihel/Heimdall-Nexus/releases/latest) e abra.
 2. Escolha onde instalar (o padrão do Windows, no C:, ou outro disco, onde tudo
    fica numa pasta `HeimdallNexus`), clique em **Iniciar instalação** e permita
