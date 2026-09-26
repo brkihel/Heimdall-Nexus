@@ -47,6 +47,25 @@ foreach ($name in $names) {
     "  $name removed"
 }
 
+'Removing the service accounts profiles...'
+# Windows keeps a profile for each service account; it stays loaded until the
+# next restart, so what cannot go now goes once at the next boot.
+$profiles = Get-CimInstance Win32_UserProfile -ErrorAction SilentlyContinue |
+    Where-Object { $_.LocalPath -like '*\ServiceProfiles\heimdall-*' }
+$left = @()
+foreach ($profile in $profiles) {
+    try { Remove-CimInstance -InputObject $profile -ErrorAction Stop } catch { $left += $profile.LocalPath }
+}
+if ($left) {
+    $cleanup = "Get-CimInstance Win32_UserProfile | Where-Object { `$_.LocalPath -like '*\ServiceProfiles\heimdall-*' } | Remove-CimInstance; " +
+               "Unregister-ScheduledTask -TaskName 'heimdall-cleanup-profiles' -Confirm:`$false"
+    $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -NonInteractive -Command `"$cleanup`""
+    $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
+    Register-ScheduledTask -TaskName 'heimdall-cleanup-profiles' -Action $action -Trigger (New-ScheduledTaskTrigger -AtStartup) `
+        -Principal $principal -Description 'Heimdall Nexus: removes the leftover service profiles once, then removes itself.' -Force | Out-Null
+    "  $($left.Count) profile(s) in use; removed at the next restart"
+}
+
 'Removing firewall rules and the update task...'
 Get-NetFirewallRule -DisplayName 'Heimdall Nexus - *' -ErrorAction SilentlyContinue | Remove-NetFirewallRule
 Unregister-ScheduledTask -TaskName 'heimdall-self-update' -Confirm:$false -ErrorAction SilentlyContinue
