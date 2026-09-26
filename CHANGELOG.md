@@ -1,5 +1,24 @@
 # Heimdall Nexus — versões
 
+## 1.3.0
+
+- **Mudar o endereço pelo painel.** Server Config ganhou o cartão
+  **Endereço**, com o endereço do site e do painel e o endereço de conexão que
+  o site mostra aos jogadores. Antes, eles só mudavam reinstalando. Salvar
+  atualiza tudo o que depende deles, inclusive os botões do aplicativo do
+  Windows, e o servidor do site só recebe o novo nome depois de aceitá-lo.
+  O jogo não reinicia. No Linux, um site com HTTPS mantém o domínio por
+  enquanto, porque o certificado vale só para ele.
+- **Aplicativo Windows 1.1: escolha onde instalar.** A tela inicial mostra
+  onde o Heimdall vai ficar e deixa escolher outro disco. Nele, tudo fica numa
+  pasta só, `HeimdallNexus`, com o programa em `program`, os dados em `data`
+  e um arquivo explicando o que é cada coisa. Como os serviços do Heimdall
+  rodam com privilégio, a pasta só é aceita se nenhum usuário comum puder
+  alterá-la, renomeá-la ou trocá-la, e ela é criada já trancada. Quem
+  desinstala guardando os mundos e instala de novo recebe o mesmo lugar.
+- **O assistente fala da janela do aplicativo**, não mais de um terminal, no
+  Windows.
+
 ## 1.2.0
 
 - **Aplicativo Heimdall Nexus para Windows 1.0.** Um único `.exe`

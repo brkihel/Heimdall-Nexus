@@ -13,7 +13,7 @@ num único assistente guiado, no Linux (Ubuntu ou Debian) ou no Windows.
 [![Valheim](https://img.shields.io/badge/Valheim-servidor%20dedicado-c8a45c?style=flat-square&labelColor=0d151d)](https://valheim.com/support/a-guide-to-dedicated-servers/)
 [![Plataforma](https://img.shields.io/badge/Ubuntu%20%7C%20Debian%20%7C%20Windows-x86--64-c8a45c?style=flat-square&labelColor=0d151d)](#começo-rápido)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-c8a45c?style=flat-square&labelColor=0d151d)](https://www.python.org/)
-[![Versão](https://img.shields.io/badge/vers%C3%A3o-1.2.0-c8a45c?style=flat-square&labelColor=0d151d)](CHANGELOG.md)
+[![Versão](https://img.shields.io/badge/vers%C3%A3o-1.3.0-c8a45c?style=flat-square&labelColor=0d151d)](CHANGELOG.md)
 
 </div>
 
@@ -73,9 +73,11 @@ Depois entre em `https://seu-dominio/jarl/entrar`. Passo a passo completo: [**In
 
 Em **Windows 10 (1809+), 11 ou Server 2019/2022, 64 bits**, sem nenhum comando:
 
-1. Baixe o **`HeimdallNexus-Windows-1.0.exe`** na
+1. Baixe o **`HeimdallNexus-Windows-1.1.exe`** na
    [versão mais recente](https://github.com/brkihel/Heimdall-Nexus/releases/latest) e abra.
-2. Clique em **Iniciar instalação** e permita quando o Windows perguntar. O
+2. Escolha onde instalar (o padrão do Windows, no C:, ou outro disco, onde tudo
+   fica numa pasta `HeimdallNexus`), clique em **Iniciar instalação** e permita
+   quando o Windows perguntar. O
    aplicativo baixa o Heimdall e o Python dele, e abre o assistente no navegador.
 3. Quando terminar, o mesmo aplicativo vira a sua central: liga e desliga o
    Heimdall e o servidor de Valheim, abre o painel e o site, e deixa você escolher

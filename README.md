@@ -13,7 +13,7 @@ from one guided wizard, on Linux (Ubuntu or Debian) or Windows.
 [![Valheim](https://img.shields.io/badge/Valheim-dedicated%20server-c8a45c?style=flat-square&labelColor=0d151d)](https://valheim.com/support/a-guide-to-dedicated-servers/)
 [![Platform](https://img.shields.io/badge/Ubuntu%20%7C%20Debian%20%7C%20Windows-x86--64-c8a45c?style=flat-square&labelColor=0d151d)](#quick-start)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-c8a45c?style=flat-square&labelColor=0d151d)](https://www.python.org/)
-[![Version](https://img.shields.io/badge/version-1.2.0-c8a45c?style=flat-square&labelColor=0d151d)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.3.0-c8a45c?style=flat-square&labelColor=0d151d)](CHANGELOG.md)
 
 </div>
 
@@ -72,9 +72,11 @@ Then sign in at `https://your-domain/jarl/entrar`. Full walkthrough: [**Installa
 
 On **Windows 10 (1809+), 11 or Server 2019/2022, 64-bit**, no commands needed:
 
-1. Download **`HeimdallNexus-Windows-1.0.exe`** from the
+1. Download **`HeimdallNexus-Windows-1.1.exe`** from the
    [latest release](https://github.com/brkihel/Heimdall-Nexus/releases/latest) and open it.
-2. Click **Start installation** and allow it when Windows asks. The app downloads
+2. Choose where to install (the Windows default on C:, or another disk, where
+   everything stays in one `HeimdallNexus` folder), click **Start installation**
+   and allow it when Windows asks. The app downloads
    Heimdall and its own Python, then opens the wizard in your browser.
 3. When it finishes, the same app becomes your control center: turn Heimdall and
    the Valheim server on and off, open the panel and the site, and choose whether
