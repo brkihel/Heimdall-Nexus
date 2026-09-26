@@ -33,7 +33,7 @@ if (-not $Yes) {
     if ((Read-Host 'Type REMOVE to continue') -ne 'REMOVE') { 'Nothing was changed.'; exit 1 }
 }
 
-'Stopping and removing the services…'
+'Stopping and removing the services...'
 $names = 'heimdall-web', 'heimdall-panel', 'heimdall-sagas-jobs', 'heimdall-jobs', 'heimdall-valheim', 'heimdall-executor'
 foreach ($name in $names) {
     $service = Get-Service -Name $name -ErrorAction SilentlyContinue
@@ -47,28 +47,30 @@ foreach ($name in $names) {
     "  $name removed"
 }
 
-'Removing firewall rules and the update task…'
+'Removing firewall rules and the update task...'
 Get-NetFirewallRule -DisplayName 'Heimdall Nexus - *' -ErrorAction SilentlyContinue | Remove-NetFirewallRule
 Unregister-ScheduledTask -TaskName 'heimdall-self-update' -Confirm:$false -ErrorAction SilentlyContinue
 
 if ($RemovePython) {
-    'Uninstalling Heimdall''s private Python…'
+    'Uninstalling Heimdall''s private Python...'
     $target = Join-Path $appBase 'python'
-    $keys = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall', 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall' -ErrorAction SilentlyContinue |
-        ForEach-Object { Get-ItemProperty $_.PSPath } |
-        Where-Object { $_.DisplayName -like 'Python 3.12.* (64-bit)' -and $_.QuietUninstallString -and $_.BundleCachePath }
     $installed = (Get-ItemProperty 'HKLM:\SOFTWARE\Python\PythonCore\3.12\InstallPath' -ErrorAction SilentlyContinue).'(default)'
-    # Only the Python that lives in Heimdall's folder, never another one.
-    if ($installed -and ($installed.TrimEnd('\') -eq $target) -and $keys) {
-        foreach ($key in $keys) {
-            $command = $key.QuietUninstallString
-            $exe = ($command -split '"')[1]
-            Start-Process -FilePath $exe -ArgumentList '/uninstall /quiet' -Wait
+    # Only the Python that lives in Heimdall's folder, never another one. Its
+    # bundle must run before the folder goes: without the files it fails (1603).
+    if ($installed -and ($installed.TrimEnd('\') -eq $target)) {
+        $bundles = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall',
+                                 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall' -ErrorAction SilentlyContinue |
+            ForEach-Object { Get-ItemProperty $_.PSPath } |
+            Where-Object { $_.DisplayName -like 'Python 3.12.* (64-bit)' -and $_.QuietUninstallString -match 'Package Cache' }
+        foreach ($bundle in $bundles) {
+            $exe = ($bundle.QuietUninstallString -split '"')[1]
+            $process = Start-Process -FilePath $exe -ArgumentList '/uninstall /quiet' -Wait -PassThru
+            "  Python uninstaller finished with code $($process.ExitCode)"
         }
     }
 }
 
-'Removing the code…'
+'Removing the code...'
 $keep = if ($RemovePython) { @() } else { @('python') }
 if (Test-Path $appBase) {
     Get-ChildItem $appBase -Force | Where-Object { $keep -notcontains $_.Name } | Remove-Item -Recurse -Force
@@ -76,7 +78,7 @@ if (Test-Path $appBase) {
 }
 
 if ($RemoveData -and (Test-Path $dataBase)) {
-    'Erasing the data…'
+    'Erasing the data...'
     # Junctions are removed as links, never followed.
     Get-ChildItem $dataBase -Recurse -Force -Attributes ReparsePoint -ErrorAction SilentlyContinue |
         ForEach-Object { $_.Delete() }

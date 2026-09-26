@@ -177,7 +177,8 @@ class SetupHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.UNAUTHORIZED, {'error': 'Open the one-time URL shown in the server terminal.'})
             return
         if parsed.path == '/api/state':
-            self._json(HTTPStatus.OK, self.server.state.snapshot())
+            self._json(HTTPStatus.OK, {**self.server.state.snapshot(),
+                                       'platform': 'windows' if sys.platform == 'win32' else 'linux'})
             return
         if parsed.path not in CONTENT:
             self._json(HTTPStatus.NOT_FOUND, {'error': 'Not found.'})

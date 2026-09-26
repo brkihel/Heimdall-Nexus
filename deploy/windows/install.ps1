@@ -38,7 +38,7 @@ if ($Check) { 'This machine can run the Heimdall Nexus installer.'; exit 0 }
 $appBase = Join-Path $env:ProgramFiles 'HeimdallNexus'
 $python = Join-Path $appBase 'python\python.exe'
 if (-not (Test-Path $python)) {
-    'Installing a private Python 3.12 for Heimdall…'
+    'Installing a private Python 3.12 for Heimdall...'
     $url = 'https://www.python.org/ftp/python/3.12.10/python-3.12.10-amd64.exe'
     $setup = Join-Path $env:TEMP 'heimdall-python-3.12.10-amd64.exe'
     Invoke-WebRequest -Uri $url -OutFile $setup -UseBasicParsing
