@@ -18,11 +18,14 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'servicos' / 'painel'))
+import hostos  # noqa: E402
+
 BASE = Path(os.environ.get('HEIMDALL_DATA_DIR', str(Path(__file__).resolve().parent.parent / 'dados')))
 DESTINO = BASE / 'catalogs' / 'thunderstore.json'
 API = 'https://thunderstore.io/c/valheim/api/v1/package/'
 API_PACOTE = 'https://thunderstore.io/api/experimental/package/{dono}/{nome}/'
-LOCK = Path(os.environ.get('HEIMDALL_MODS_LOCK', '/srv/valheim/current/mods.lock.json'))
+LOCK = Path(os.environ.get('HEIMDALL_MODS_LOCK') or hostos.env_path('HEIMDALL_VALHEIM_DIR') / 'current' / 'mods.lock.json')
 CAMPOS = ('name', 'full_name', 'owner', 'package_url', 'date_updated',
           'rating_score', 'is_deprecated', 'categories')
 
@@ -102,7 +105,7 @@ def main():
     # Mesmo dono da pasta: roda como root pelo executor, mas o resto do repo
     # (varredura, backups) mexe nestes arquivos como diego.
     pasta = DESTINO.parent.stat()
-    os.chown(tmp, pasta.st_uid, pasta.st_gid)
+    hostos.chown(tmp, pasta.st_uid, pasta.st_gid)
     os.chmod(tmp, 0o664)
     tmp.replace(DESTINO)
     print(len(novo))

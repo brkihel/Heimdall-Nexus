@@ -7,8 +7,10 @@ instalados a mao.
 """
 import json, hashlib, re, sys, datetime, os
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'servicos' / 'painel'))
+import hostos  # noqa: E402
 
-VALHEIM = Path(os.environ.get('HEIMDALL_VALHEIM_DIR', '/srv/valheim'))
+VALHEIM = hostos.env_path('HEIMDALL_VALHEIM_DIR')
 RAIZ = (VALHEIM / "current").resolve(strict=True)
 PLUGINS  = RAIZ / "BepInEx/plugins"
 PATCHERS = RAIZ / "BepInEx/patchers"
@@ -70,11 +72,9 @@ def build_do_jogo():
     except Exception: return None
 
 def versao_do_jogo():
-    import subprocess
     for leitura in (
         lambda: LOG.read_text(errors="replace"),
-        lambda: subprocess.run(["journalctl","-u",os.environ.get('HEIMDALL_GAME_SERVICE', 'heimdall-valheim'),"--no-pager","-n","20000"],
-                               capture_output=True, text=True).stdout,
+        lambda: hostos.service_log_text(os.environ.get('HEIMDALL_GAME_SERVICE', 'heimdall-valheim'), 20000),
     ):
         try:
             # a ULTIMA ocorrencia: o journal guarda execucoes antigas, de antes

@@ -18,10 +18,12 @@ import tempfile
 import time
 import zlib
 from contextlib import nullcontext
+
+import hostos
 from datetime import datetime, timezone
 from pathlib import Path
 
-STATE = Path(os.environ.get('HEIMDALL_SAGAS_DIR', '/var/lib/heimdall-nexus/sagas'))
+STATE = hostos.env_path('HEIMDALL_SAGAS_DIR')
 INBOX = STATE / 'inbox'
 REJECTED = STATE / 'rejected'
 DATABASE = STATE / 'sagas.sqlite3'
@@ -497,7 +499,7 @@ def import_cartography(state: Path) -> None:
         try:
             if not match:
                 raise ValueError('invalid meta')
-            descriptor = os.open(meta_path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            descriptor = os.open(meta_path, os.O_RDONLY | hostos.O_NOFOLLOW | hostos.O_NONBLOCK)
             with os.fdopen(descriptor, 'rb') as source:
                 info = os.fstat(source.fileno())
                 if not stat.S_ISREG(info.st_mode) or info.st_size > 1024:
@@ -510,7 +512,7 @@ def import_cartography(state: Path) -> None:
             target.mkdir(parents=True, mode=0o750, exist_ok=True)
             for layer, path in layers.items():
                 expected = n * CARTOGRAPHY_LAYERS[layer]
-                descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+                descriptor = os.open(path, os.O_RDONLY | hostos.O_NOFOLLOW | hostos.O_NONBLOCK)
                 with os.fdopen(descriptor, 'rb') as source:
                     info = os.fstat(source.fileno())
                     if not stat.S_ISREG(info.st_mode) or info.st_size != expected:
@@ -603,7 +605,7 @@ def import_media(state: Path) -> int:
             if not match:
                 raise ValueError('unexpected name')
             kind, media_id = match.groups()
-            descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            descriptor = os.open(path, os.O_RDONLY | hostos.O_NOFOLLOW | hostos.O_NONBLOCK)
             with os.fdopen(descriptor, 'rb') as source:
                 if not stat.S_ISREG(os.fstat(source.fileno()).st_mode):
                     raise ValueError('not a regular file')
@@ -692,7 +694,7 @@ def process_inbox(state: Path = STATE, limit: int = MAX_BATCH) -> dict:
             if index >= limit:
                 break
             try:
-                descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+                descriptor = os.open(path, os.O_RDONLY | hostos.O_NOFOLLOW | hostos.O_NONBLOCK)
                 with os.fdopen(descriptor, 'rb') as source:
                     if not stat.S_ISREG(os.fstat(source.fileno()).st_mode):
                         raise InvalidPacket('not a regular file')

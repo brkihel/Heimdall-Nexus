@@ -9,12 +9,13 @@ import hmac
 import json
 import os
 import secrets
-import socket
 import time
 from pathlib import Path
 
-CONFIG = Path(os.environ.get('PAINEL_CONFIG', '/etc/heimdall-panel/config.json'))
-SOCKET = os.environ.get('HEIMDALL_PANEL_SOCKET', '/run/heimdall-panel/executor.sock')
+import hostos
+
+CONFIG = hostos.env_path('PAINEL_CONFIG')
+SOCKET = hostos.env_value('HEIMDALL_PANEL_SOCKET')
 
 # scrypt com estes parametros leva ~0,1 s por tentativa: rapido para voce, caro
 # para quem quiser testar um dicionario inteiro.
@@ -95,9 +96,7 @@ def pede(verbo: str, dados: dict | None = None, quem: str = 'painel') -> dict:
     pedido = json.dumps({'verbo': verbo, 'dados': dados or {}, 'quem': quem},
                         ensure_ascii=False).encode('utf-8') + b'\n'
     try:
-        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as ligacao:
-            ligacao.settimeout(300)
-            ligacao.connect(SOCKET)
+        with hostos.executor_connect(SOCKET, 300) as ligacao:
             ligacao.sendall(pedido)
             resposta = json.loads(ligacao.makefile('rb').readline())
     except (OSError, json.JSONDecodeError) as erro:

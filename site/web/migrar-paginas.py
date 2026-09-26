@@ -7,6 +7,9 @@ import os
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from sistema import hostos  # noqa: E402
+
 BUILTIN = ('mapa', 'historias', 'armaria', 'rankings')
 
 
@@ -31,7 +34,7 @@ def migrate(reference: Path, site: Path) -> list[str]:
         temporary = source.with_name('.' + source.name + '.new')
         temporary.write_bytes(data)
         owner = site.stat()
-        os.chown(temporary, owner.st_uid, owner.st_gid)
+        hostos.chown(temporary, owner.st_uid, owner.st_gid)
         os.chmod(temporary, 0o640)
         os.replace(temporary, source)
         if not registered:
@@ -41,7 +44,7 @@ def migrate(reference: Path, site: Path) -> list[str]:
         old = path.stat()
         temporary = path.with_name('.site-pages.json.new')
         temporary.write_text(json.dumps(current, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-        os.chown(temporary, old.st_uid, old.st_gid)
+        hostos.chown(temporary, old.st_uid, old.st_gid)
         os.chmod(temporary, old.st_mode & 0o777)
         os.replace(temporary, path)
     return added

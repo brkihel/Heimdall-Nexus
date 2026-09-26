@@ -7,23 +7,21 @@ se qualquer etapa falhar.
 
 Uso: instalar-mods.py <Pasta-Do-Pacote>=<arquivo.zip> [...]
 """
-import datetime, fcntl, grp, hashlib, json, os, pwd, stat, subprocess, sys, tarfile, time, zipfile
+import datetime, hashlib, json, os, stat, subprocess, sys, tarfile, time, zipfile
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'servicos' / 'painel'))
+import hostos  # noqa: E402
 SERVICE = os.environ.get('HEIMDALL_GAME_SERVICE', 'heimdall-valheim')
 
 BASE = Path(os.environ.get('HEIMDALL_DATA_DIR', str(Path(__file__).resolve().parent.parent / 'dados')))
-ROOT = Path(os.environ.get('HEIMDALL_VALHEIM_DIR', '/srv/valheim'))
+ROOT = hostos.env_path('HEIMDALL_VALHEIM_DIR')
 DOCS = {'manifest.json', 'icon.png', 'readme.md', 'changelog.md', 'license.md', 'license.txt'}
 
 def run(*a): return subprocess.run(a, check=True, capture_output=True, text=True).stdout
 
 def estado_do_servico(nome=SERVICE):
-    """O estado, sem explodir. 'systemctl is-active' sai com codigo 3 quando o
-    servico esta parado, e o nosso run() usa check=True — entao perguntar o
-    estado com ele derrubava o script justamente quando o servidor ja estava
-    desligado de proposito."""
-    return subprocess.run(['systemctl', 'is-active', nome],
-                          capture_output=True, text=True).stdout.strip()
+    """The state as text, without raising when the service is stopped."""
+    return 'active' if hostos.service_is_active(nome) else 'inactive'
 
 
 
@@ -77,8 +75,7 @@ for d in sorted(carga):
     assert not d.exists(), f'ja existe, nao vou sobrescrever: {d}'
     print('  ->', d)
 
-trava = open('/run/lock/heimdall-maintenance.lock', 'w')
-fcntl.flock(trava, fcntl.LOCK_EX | fcntl.LOCK_NB)
+trava = hostos.exclusive_lock(hostos.env_path('HEIMDALL_MAINTENANCE_LOCK'))
 # Maintenance leaves the game stopped until the administrator starts it.
 ativo_antes = estado_do_servico() == 'active'
 if not ativo_antes:
@@ -89,8 +86,8 @@ marca = time.time() - 2
 escritos = []
 try:
     if ativo_antes:
-        run('systemctl', 'stop', SERVICE)
-    assert subprocess.run(['systemctl', 'is-active', '--quiet', SERVICE]).returncode != 0
+        hostos.service_action('stop', SERVICE, timeout=300)
+    assert not hostos.service_is_active(SERVICE)
     # O que precisa ser verdade e que a ultima geracao do mundo esteja COMPLETA,
     # nao que ela seja nova. Com o servidor vazio o relogio do Valheim fica
     # parado (ZNet.UpdateNetTime so anda com jogador conectado), entao nada muda
@@ -120,7 +117,7 @@ try:
             if (ROOT / item).exists():
                 tar.add(ROOT / item, arcname=item)
         tar.add(lock_rel, arcname='release/mods.lock.json')
-        tar.add(f'/etc/systemd/system/{SERVICE}.service', arcname=f'service/{SERVICE}.service')
+        if hostos.service_file(SERVICE).is_file(): tar.add(hostos.service_file(SERVICE), arcname=f'service/{hostos.service_file(SERVICE).name}')
         if (release / 'BepInEx/LogOutput.log').is_file():
             tar.add(release / 'BepInEx/LogOutput.log', arcname='antes-da-instalacao.log')
     os.chmod(backup, 0o600)
@@ -128,18 +125,18 @@ try:
     assert 'release/mods.lock.json' in nomes and 'server.env' in nomes
     print(f'backup verificado: {backup} ({backup.stat().st_size/1048576:.1f} MB, {len(nomes)} itens)')
 
-    uid, gid = pwd.getpwnam('valheim').pw_uid, grp.getgrnam('valheim').gr_gid
+    uid, gid = hostos.account_ids('valheim') if hostos.account_exists('valheim') else (-1, -1)
     for destino, dados in carga.items():
         destino.parent.mkdir(parents=True, exist_ok=True)
-        os.chown(destino.parent, uid, gid); os.chmod(destino.parent, 0o755)
-        destino.write_bytes(dados); os.chown(destino, uid, gid); os.chmod(destino, 0o644)
+        hostos.chown(destino.parent, uid, gid); os.chmod(destino.parent, 0o755)
+        destino.write_bytes(dados); hostos.chown(destino, uid, gid); os.chmod(destino, 0o644)
         escritos.append(destino)
     for pasta, reg in registros.items():
         reg['dlls'] = sorted(d.name for d in escritos
                              if d.suffix == '.dll' and d.parent.name == pasta)
         lock['packages'][pasta] = reg
     lock_rel.write_text(json.dumps(lock, indent=2, sort_keys=True) + '\n')
-    os.chown(lock_rel, uid, gid)
+    hostos.chown(lock_rel, uid, gid)
     print(f'instalado; mods.lock.json agora com {len(lock["packages"])} pacotes')
 except BaseException as e:
     for d in escritos:

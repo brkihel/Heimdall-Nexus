@@ -17,7 +17,6 @@ import hashlib
 import html
 import json
 import os
-import pwd
 import re
 import shutil
 import sys
@@ -26,10 +25,11 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0, str(BASE))
 import identidade  # noqa: E402
+from sistema import hostos  # noqa: E402
 import navegacao  # noqa: E402
 
-DESTINO = Path(os.environ.get('HEIMDALL_WEB_DIR', '/srv/heimdall-web'))
-BACKUP = Path(os.environ.get('HEIMDALL_WEB_BACKUP_DIR', '/var/backups/heimdall-web'))
+DESTINO = hostos.env_path('HEIMDALL_WEB_DIR')
+BACKUP = hostos.env_path('HEIMDALL_WEB_BACKUP_DIR')
 URL_PAGINA = re.compile(r'^/(?:[a-z0-9-]{1,40}/){0,3}$')
 FIXOS = {
     'vivo': ('assets/vivo.js', 'assets/vivo.js'),
@@ -93,12 +93,13 @@ def paginas() -> dict[str, tuple[str, str]]:
 
 class Publicador:
     def __init__(self):
-        self.www = pwd.getpwnam(os.environ.get('HEIMDALL_WEB_USER', 'www-data'))
+        web_user = os.environ.get('HEIMDALL_WEB_USER', 'www-data')
+        self.www = hostos.account_ids(web_user) if hostos.account_exists(web_user) else (-1, -1)
         self.carimbo = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')
         self.guardou = False
 
     def _dono(self, path: Path, mode: int):
-        os.chown(path, self.www.pw_uid, self.www.pw_gid)
+        hostos.chown(path, *self.www)
         os.chmod(path, mode)
 
     def _pasta(self, pasta: Path):

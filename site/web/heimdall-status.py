@@ -1,17 +1,20 @@
 #!/usr/bin/python3
 """Gera o feed público de status a partir do estado real do servidor."""
-import json, socket, struct, subprocess, re, os, glob, tempfile, time
+import json, socket, struct, subprocess, re, os, glob, sys, tempfile, time
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from sistema import hostos  # noqa: E402
+
 TZ = ZoneInfo(os.environ.get("HEIMDALL_TIMEZONE", "America/Sao_Paulo"))
-VALHEIM_DIR = os.environ.get("HEIMDALL_VALHEIM_DIR", "/srv/valheim")
+VALHEIM_DIR = str(hostos.env_path("HEIMDALL_VALHEIM_DIR"))
 SERVER_NAME = os.environ.get("HEIMDALL_SERVER_NAME", "Valheim Server")
 SERVER_ADDRESS = os.environ.get("HEIMDALL_SERVER_ADDRESS", "play.example.org")
 SERVER_IP = os.environ.get("HEIMDALL_SERVER_IP", "")
 SERVER_PORT = os.environ.get("HEIMDALL_SERVER_PORT", "2456")
 WORLD_NAME = os.environ.get("HEIMDALL_WORLD_NAME", "Valheim")
-WEB_DIR = os.environ.get("HEIMDALL_WEB_DIR", "/srv/heimdall-web")
+WEB_DIR = str(hostos.env_path("HEIMDALL_WEB_DIR"))
 CONFIG_DIR = os.path.join(VALHEIM_DIR, "config/BepInEx")
 OUT = os.environ.get("HEIMDALL_STATUS_FILE", os.path.join(WEB_DIR, "api/status.json"))
 CFG = os.environ.get("HEIMDALL_STATUS_RESTART_CFG", os.path.join(CONFIG_DIR, "org.tristan.serverrestart.cfg"))
@@ -369,30 +372,18 @@ def a2s(host="127.0.0.1", port=2457, timeout=4):
         try: s.close()
         except Exception: pass
 
-def systemd(prop, unit=None):
-    unit = unit or os.environ.get('HEIMDALL_GAME_SERVICE') or 'heimdall-valheim'
-    try:
-        return subprocess.run(["systemctl","show",unit,"-p",prop,"--value"],
-                              capture_output=True, text=True, timeout=10).stdout.strip()
-    except Exception:
-        return ""
+GAME_SERVICE = os.environ.get('HEIMDALL_GAME_SERVICE') or 'heimdall-valheim'
+
 
 def pronto_no_journal():
     """Confirma a prontidão da execução atual quando a consulta A2S não responde.
 
     O servidor pode aceitar jogadores mesmo sem responder à consulta UDP de
-    status. O InvocationID impede que um início anterior marque o atual como
-    pronto. O journal só é consultado quando o processo está ativo e A2S falhou.
+    status. Só a execução atual conta: um início anterior não marca o atual
+    como pronto. O log só é consultado quando o processo está ativo e A2S falhou.
     """
-    invocation = systemd("InvocationID")
-    if not re.fullmatch(r"[0-9a-f]{32}", invocation):
-        return False
     try:
-        result = subprocess.run(
-            ["journalctl", "_SYSTEMD_INVOCATION_ID=" + invocation,
-             "--grep=Game server connected", "-n", "1", "--no-pager", "-o", "cat"],
-            capture_output=True, text=True, timeout=10)
-        return result.returncode == 0 and "Game server connected" in result.stdout
+        return bool(hostos.service_logged_since_start(GAME_SERVICE, "Game server connected"))
     except Exception:
         return False
 
@@ -420,19 +411,13 @@ def proximo_reinicio():
 
 DIA_SEG, FRACAO_MANHA, QUEM_MANDA = ciclo_do_dia()
 info   = a2s(port=int(SERVER_PORT) + 1)
-ativo  = systemd("ActiveState") == "active"
+ativo  = hostos.service_is_active(GAME_SERVICE)
 pronto = ativo and (bool(info) or pronto_no_journal())
 inicio = None
-try:
-    # systemctl formats ActiveEnterTimestamp in the host's local timezone. The
-    # monotonic property uses microseconds since boot and avoids a wrong uptime
-    # when HEIMDALL_TIMEZONE differs from the VM's timezone.
-    start_us = int(systemd("ActiveEnterTimestampMonotonic") or 0)
-    if ativo and start_us > 0:
-        elapsed = max(0.0, time.monotonic() - start_us / 1_000_000)
-        inicio = datetime.now(timezone.utc) - timedelta(seconds=elapsed)
-except ValueError:
-    pass
+# The host layer measures uptime without the timezone traps of formatted times.
+elapsed = hostos.service_active_seconds(GAME_SERVICE) if ativo else None
+if elapsed is not None:
+    inicio = datetime.now(timezone.utc) - timedelta(seconds=elapsed)
 
 agora = datetime.now(TZ)
 prox, horarios_locais = proximo_reinicio()

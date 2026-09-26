@@ -20,6 +20,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from itsdangerous import BadSignature, URLSafeTimedSerializer
 
+import hostos
 import nucleo
 import sagas
 import stories
@@ -30,13 +31,13 @@ BASE = Path(__file__).parent
 RAIZ_URL = os.environ.get('PAINEL_RAIZ', '/jarl')
 VALIDADE_SESSAO = 12 * 3600
 # Site, servidor de jogo e dados persistentes podem viver em qualquer raiz da instalação.
-VALHEIM_DIR = Path(os.environ.get('HEIMDALL_VALHEIM_DIR', '/srv/valheim'))
+VALHEIM_DIR = hostos.env_path('HEIMDALL_VALHEIM_DIR')
 COOKIE_SECURE = os.environ.get('HEIMDALL_PANEL_COOKIE_SECURE', 'true').lower() != 'false'
-WEB_DIR = Path(os.environ.get('HEIMDALL_WEB_DIR', '/srv/heimdall-web'))
-PANEL_STATE_DIR = Path(os.environ.get('HEIMDALL_PANEL_STATE_DIR', '/var/lib/heimdall-panel'))
+WEB_DIR = hostos.env_path('HEIMDALL_WEB_DIR')
+PANEL_STATE_DIR = hostos.env_path('HEIMDALL_PANEL_STATE_DIR')
 # Onde upload e download de arquivo grande se encontram com o executor (em disco).
 TROCA = Path(os.environ.get('HEIMDALL_PANEL_SWAP_DIR', str(PANEL_STATE_DIR / 'troca')))
-AUDITORIA = Path(os.environ.get('HEIMDALL_PANEL_AUDIT_FILE', '/var/log/heimdall-panel/auditoria.jsonl'))
+AUDITORIA = hostos.env_path('HEIMDALL_PANEL_AUDIT_FILE')
 STATUS_FILE = Path(os.environ.get('HEIMDALL_STATUS_FILE', str(WEB_DIR / 'api/status.json')))
 GAME_SERVICE = os.environ.get('HEIMDALL_GAME_SERVICE') or 'heimdall-valheim'
 

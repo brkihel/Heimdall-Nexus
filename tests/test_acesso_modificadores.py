@@ -24,7 +24,7 @@ def game(tmp_path, monkeypatch):
     monkeypatch.setattr(operacoes, 'PROFILE', tmp_path / 'profile.json')
     monkeypatch.setattr(operacoes, '_launcher', lambda: launcher)
     monkeypatch.setattr(operacoes, 'online', lambda: False)
-    monkeypatch.setattr(operacoes, '_user_exists', lambda name: False)
+    monkeypatch.setattr(operacoes.hostos, 'account_exists', lambda name: False)
     return saves
 
 

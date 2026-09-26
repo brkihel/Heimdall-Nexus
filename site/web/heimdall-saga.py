@@ -13,9 +13,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-VALHEIM = Path(os.environ.get("HEIMDALL_VALHEIM_DIR", "/srv/valheim"))
-WEB = Path(os.environ.get("HEIMDALL_WEB_DIR", "/srv/heimdall-web"))
-STATE = Path(os.environ.get("HEIMDALL_STATE_DIR", "/var/lib/heimdall-nexus"))
+import sys  # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from sistema import hostos  # noqa: E402
+
+VALHEIM = hostos.env_path("HEIMDALL_VALHEIM_DIR")
+WEB = hostos.env_path("HEIMDALL_WEB_DIR")
+STATE = hostos.env_path("HEIMDALL_STATE_DIR")
 PERFIS = Path(os.environ.get("HEIMDALL_CHARACTERS_DIR", str(VALHEIM / "saves/characters_local")))
 SAIDA = Path(os.environ.get("HEIMDALL_SAGA_FILE", str(WEB / "api/saga.json")))
 PLUGINS = Path(os.environ.get("HEIMDALL_BEPINEX_PLUGINS", str(VALHEIM / "current/BepInEx/plugins")))

@@ -19,9 +19,10 @@ import time
 from pathlib import Path
 
 import codigos
+import hostos
 
-STATE = Path(os.environ.get('HEIMDALL_STATE_DIR', '/var/lib/heimdall-nexus'))
-RUNTIME = Path(os.environ.get('HEIMDALL_ROOT', '/opt/heimdall-nexus'))
+STATE = hostos.env_path('HEIMDALL_STATE_DIR')
+RUNTIME = hostos.env_path('HEIMDALL_ROOT')
 REPOSITORY = os.environ.get('HEIMDALL_UPDATE_REPO', 'https://github.com/brkihel/Heimdall-Nexus.git')
 UNIT = 'heimdall-self-update'
 CHANNEL = re.compile(r'^(main|dev/[a-z0-9._-]{1,40})$')
@@ -47,8 +48,11 @@ def _git(source: Path, *args: str, timeout: int = 30, allow_file: bool = False) 
     protocols = ['-c', 'protocol.allow=never', '-c', 'protocol.https.allow=always']
     if allow_file:  # tests only
         protocols += ['-c', 'protocol.file.allow=always']
-    env = {'PATH': '/usr/bin:/bin', 'GIT_TERMINAL_PROMPT': '0', 'HOME': str(source.parent),
+    env = {'PATH': hostos.GIT_SEARCH_PATH, 'GIT_TERMINAL_PROMPT': '0', 'HOME': str(source.parent),
            'GIT_CONFIG_NOSYSTEM': '1', 'LC_ALL': 'C'}
+    if hostos.IS_WINDOWS:  # Windows programs need these to start at all
+        env.update({key: os.environ[key] for key in ('SYSTEMROOT', 'TEMP', 'TMP', 'USERPROFILE')
+                    if key in os.environ})
     try:
         done = subprocess.run(['git', *protocols, '-c', f'safe.directory={source}', *args],
                               cwd=source if source.is_dir() else source.parent,
@@ -101,12 +105,7 @@ def set_channel(value: object, state: Path = STATE) -> str:
 
 
 def running() -> bool:
-    try:
-        state = subprocess.run(['systemctl', 'is-active', UNIT + '.service'],
-                               capture_output=True, text=True, timeout=5).stdout.strip()
-        return state in ('active', 'activating', 'reloading')
-    except (OSError, subprocess.TimeoutExpired):
-        return False
+    return hostos.detached_job_running(UNIT)
 
 
 def _log_tail(path: Path, lines: int = 80) -> list[str]:
@@ -190,7 +189,7 @@ def status(state: Path = STATE, runtime: Path = RUNTIME) -> dict:
 
 
 def _has_git() -> bool:
-    return any(Path(folder, 'git').is_file() for folder in ('/usr/bin', '/bin'))
+    return hostos.git_available()
 
 
 def _ensure_clone(state: Path, repository: str, allow_file: bool) -> Path:
@@ -280,13 +279,13 @@ def start(commit: object, state: Path = STATE, runner=subprocess.run,
     _git(source, 'clean', '--quiet', '-fdx')
     paths['log'].write_text(time.strftime('%Y-%m-%d %H:%M:%S') +
                             f' Updating to {commit[:7]} ({last["channel"]})\n', encoding='utf-8')
-    # --no-block: update.sh restarts this executor; do not wait inside it.
-    command = ['systemd-run', f'--unit={UNIT}', '--collect', '--quiet', '--no-block',
-               f'--property=StandardOutput=append:{paths["log"]}',
-               f'--property=StandardError=append:{paths["log"]}',
-               f'--setenv=HEIMDALL_UPDATE_BRANCH={last["channel"]}',
-               '/bin/bash', str(source / 'deploy/update.sh')]
-    done = runner(command, capture_output=True, text=True, timeout=30)
+    # The update restarts this executor: it runs outside it and is not waited for.
+    if hostos.IS_WINDOWS:
+        argv = [hostos.PYTHON, str(source / 'deploy' / 'windows' / 'update.py')]
+    else:
+        argv = ['/bin/bash', str(source / 'deploy/update.sh')]
+    done = hostos.detached_job_start(UNIT, argv, paths['log'],
+                                     {'HEIMDALL_UPDATE_BRANCH': last['channel']}, runner=runner)
     if done.returncode != 0:
         raise UpdateError('HN-UPD-011', 'não foi possível iniciar a atualização: ' +
                           (done.stderr or '').strip()[:200])
