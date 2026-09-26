@@ -29,8 +29,11 @@ from pathlib import Path
 
 from . import _channel
 
+# Data lives in ProgramData; code in Program Files, where only administrators write.
 BASE = Path(os.environ.get('HEIMDALL_BASE_DIR')
             or Path(os.environ.get('ProgramData', r'C:\ProgramData')) / 'HeimdallNexus')
+APP_BASE = Path(os.environ.get('HEIMDALL_APP_BASE')
+                or Path(os.environ.get('ProgramFiles', r'C:\Program Files')) / 'HeimdallNexus')
 
 DEFAULTS = {
     'HEIMDALL_VALHEIM_DIR': str(BASE / 'valheim'),
@@ -44,7 +47,7 @@ DEFAULTS = {
     'HEIMDALL_MAINTENANCE_LOCK': str(BASE / 'run' / 'heimdall-maintenance.lock'),
     'HEIMDALL_WEB_DIR': str(BASE / 'web'),
     'HEIMDALL_WEB_BACKUP_DIR': str(BASE / 'backups' / 'web'),
-    'HEIMDALL_ROOT': str(BASE / 'app'),
+    'HEIMDALL_ROOT': str(APP_BASE / 'app'),
     'HEIMDALL_ENV_FILE': str(BASE / 'etc' / 'heimdall.env'),
     'HEIMDALL_LOG_DIR': str(BASE / 'logs'),
     'HEIMDALL_RUN_DIR': str(BASE / 'run'),
