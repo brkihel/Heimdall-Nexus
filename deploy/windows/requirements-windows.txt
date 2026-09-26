@@ -1,0 +1,4 @@
+# Windows-only additions to deploy/requirements-panel.txt.
+pywin32==310      # Windows services (the host layer's service control)
+psutil==7.0.0     # service memory and start time
+tzdata==2025.2    # time zones: Windows Python ships without the IANA database
