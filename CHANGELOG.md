@@ -2,7 +2,8 @@
 
 ## 1.2.0
 
-- **Aplicativo Heimdall Nexus para Windows.** Um único `.exe` faz tudo o que
+- **Aplicativo Heimdall Nexus para Windows 1.0.** Um único `.exe`
+  (`HeimdallNexus-Windows-1.0.exe`, na página da versão) faz tudo o que
   antes pedia comandos. Antes de instalar, ele explica o que vai acontecer e,
   com um clique, baixa o Heimdall e o Python do Heimdall, com barra de
   progresso, e abre o assistente no navegador, acompanhando cada etapa. Depois

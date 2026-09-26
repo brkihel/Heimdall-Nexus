@@ -71,20 +71,19 @@ Depois entre em `https://seu-dominio/jarl/entrar`. Passo a passo completo: [**In
 
 ### Windows
 
-Em **Windows 10 (1809+), 11 ou Server 2019/2022, 64 bits**, com o
-[Git para Windows](https://git-scm.com/download/win) instalado. Abra o
-**PowerShell como administrador**:
+Em **Windows 10 (1809+), 11 ou Server 2019/2022, 64 bits**, sem nenhum comando:
 
-```powershell
-git clone https://github.com/brkihel/Heimdall-Nexus.git C:\HeimdallNexus-src
-cd C:\HeimdallNexus-src
-powershell -ExecutionPolicy Bypass -File .\deploy\windows\install.ps1
-```
+1. Baixe o **`HeimdallNexus-Windows-1.0.exe`** na
+   [versão mais recente](https://github.com/brkihel/Heimdall-Nexus/releases/latest) e abra.
+2. Clique em **Iniciar instalação** e permita quando o Windows perguntar. O
+   aplicativo baixa o Heimdall e o Python dele, e abre o assistente no navegador.
+3. Quando terminar, o mesmo aplicativo vira a sua central: liga e desliga o
+   Heimdall e o servidor de Valheim, abre o painel e o site, e deixa você escolher
+   se algo liga sozinho. Nada liga até você mandar.
 
-O script instala um Python privado do Heimdall (fora do PATH) e abre o
-assistente no navegador do próprio PC. O servidor, o painel e o site viram
-serviços do Windows, cada um com uma conta própria e sem privilégios. O Caddy
-serve o site, com HTTPS automático. Depois entre em `http://seu-endereço/jarl/entrar`.
+O servidor, o painel e o site rodam como serviços do Windows, cada um com uma
+conta própria e sem privilégios. Para desinstalar, use **Configurações →
+Aplicativos** ou o próprio aplicativo; ele pergunta se os seus mundos ficam guardados.
 
 Passo a passo para quem está começando, com referência rápida para veteranos:
 [**Instalação no Windows**](https://github.com/brkihel/Heimdall-Nexus/wiki/Instalacao-Windows).
@@ -170,17 +169,10 @@ Pelo painel: **Jarl → Sobre e atualizações → Procurar atualizações**. Vo
 
 As capturas usam dados ilustrativos; não mostram um servidor real.
 
-Pelo terminal, num servidor já instalado:
+No Linux, dá para atualizar também pelo terminal do servidor:
 
 ```bash
 cd ~/Heimdall-Nexus && git pull --ff-only && sudo ./deploy/update.sh
-```
-
-No Windows, pelo PowerShell como administrador:
-
-```powershell
-cd C:\HeimdallNexus-src; git pull --ff-only
-& "$env:ProgramFiles\HeimdallNexus\venv\Scripts\python.exe" deploy\windows\update.py
 ```
 
 Atualiza o painel e as ferramentas sem mexer em mundos, mods ou conteúdo do site, e não reinicia o Valheim. Se a ponte Sagas mudou, reinicie o jogo quando for conveniente.

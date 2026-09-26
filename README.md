@@ -70,20 +70,19 @@ Then sign in at `https://your-domain/jarl/entrar`. Full walkthrough: [**Installa
 
 ### Windows
 
-On **Windows 10 (1809+), 11 or Server 2019/2022, 64-bit**, with
-[Git for Windows](https://git-scm.com/download/win) installed. Open
-**PowerShell as administrator**:
+On **Windows 10 (1809+), 11 or Server 2019/2022, 64-bit**, no commands needed:
 
-```powershell
-git clone https://github.com/brkihel/Heimdall-Nexus.git C:\HeimdallNexus-src
-cd C:\HeimdallNexus-src
-powershell -ExecutionPolicy Bypass -File .\deploy\windows\install.ps1
-```
+1. Download **`HeimdallNexus-Windows-1.0.exe`** from the
+   [latest release](https://github.com/brkihel/Heimdall-Nexus/releases/latest) and open it.
+2. Click **Start installation** and allow it when Windows asks. The app downloads
+   Heimdall and its own Python, then opens the wizard in your browser.
+3. When it finishes, the same app becomes your control center: turn Heimdall and
+   the Valheim server on and off, open the panel and the site, and choose whether
+   anything starts on its own. Nothing does until you say so.
 
-The script installs a private Python for Heimdall (outside PATH) and opens the
-wizard in the PC's own browser. The server, the panel and the site become
-Windows services, each with its own unprivileged account. Caddy serves the
-site, with automatic HTTPS. Then sign in at `http://your-address/jarl/entrar`.
+The server, the panel and the site run as Windows services, each with its own
+unprivileged account. Uninstall from **Settings → Apps**, or from the app itself;
+it asks whether to keep your worlds.
 
 A step-by-step for newcomers, with a quick reference for veterans:
 [**Installation on Windows**](https://github.com/brkihel/Heimdall-Nexus/wiki/Installation-Windows).
@@ -168,17 +167,10 @@ From the panel: **Jarl → Sobre e atualizações → Procurar atualizações**.
 
 Screenshots use illustrative data; they do not show a real server.
 
-From a terminal on an installed server:
+On Linux, you can also update from a terminal on the server:
 
 ```bash
 cd ~/Heimdall-Nexus && git pull --ff-only && sudo ./deploy/update.sh
-```
-
-On Windows, from PowerShell as administrator:
-
-```powershell
-cd C:\HeimdallNexus-src; git pull --ff-only
-& "$env:ProgramFiles\HeimdallNexus\venv\Scripts\python.exe" deploy\windows\update.py
 ```
 
 It updates the panel and tools without touching worlds, mods or site content, and does not restart Valheim. If the Sagas bridge changed, restart the game when convenient.
