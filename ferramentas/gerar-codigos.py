@@ -8,7 +8,7 @@ sys.path.insert(0, str(ROOT / 'servicos/painel'))
 import codigos  # noqa: E402
 
 AREAS = {'ATL': 'Geração do mapa Birds Eye',
-         'UPD': 'Atualizações pelo Jarl e `deploy/update.sh`',
+         'UPD': 'Atualizações pelo Jarl, `deploy/update.sh` e `deploy\\windows\\update.py`',
          'CFG': 'Server Config: admins, whitelist, banidos e modificadores de mundo',
          'MOD': 'Instalar, atualizar e remover mods pelo Jarl',
          'STO': 'Histórias das Sagas (OpenRouter, OpenAI, Anthropic, Gemini)'}
@@ -25,9 +25,12 @@ def render() -> str:
     lines += [f'| {area} | {meaning} |' for area, meaning in AREAS.items()]
     lines += ['', '| Código | O que houve | Como resolver |', '|---|---|---|']
     for code, info in codigos.CATALOGO.items():
-        lines.append(f"| `{code}` | {info['titulo']} | {info['solucao'].replace('|', chr(92) + '|')} |")
+        solution = codigos.SOLUCOES_LINUX.get(code, info['solucao'])
+        if code in codigos.SOLUCOES_WINDOWS:
+            solution = f'Linux: {solution}<br>Windows: {codigos.SOLUCOES_WINDOWS[code]}'
+        lines.append(f"| `{code}` | {info['titulo']} | {solution.replace('|', chr(92) + '|')} |")
     return '\n'.join(lines) + '\n'
 
 
 if __name__ == '__main__':
-    (ROOT / 'docs/CODIGOS-DE-ERRO.md').write_text(render())
+    (ROOT / 'docs/CODIGOS-DE-ERRO.md').write_text(render(), encoding='utf-8')

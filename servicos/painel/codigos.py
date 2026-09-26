@@ -135,6 +135,8 @@ SOLUCOES_WINDOWS = {
                   r'deploy\windows\update.py',
     'HN-STO-018': rf'Veja {LOGS_WINDOWS}\heimdall-sagas-jobs.',
 }
+# The Linux text, kept for the documentation, which lists both.
+SOLUCOES_LINUX = {codigo: CATALOGO[codigo]['solucao'] for codigo in SOLUCOES_WINDOWS}
 if sys.platform == 'win32':
     for _codigo, _solucao in SOLUCOES_WINDOWS.items():
         CATALOGO[_codigo] = {**CATALOGO[_codigo], 'solucao': _solucao}

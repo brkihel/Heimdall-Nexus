@@ -1,5 +1,27 @@
 # Heimdall Nexus — versões
 
+## Em desenvolvimento (branch dev/windows)
+
+- **Windows nativo.** O Heimdall Nexus agora instala e roda no Windows 10
+  (1809+), 11 e Server 2019/2022, sem WSL nem Docker: `install.ps1` instala um
+  Python privado e abre o mesmo assistente visual. O servidor, o painel e o
+  site viram serviços do Windows (WinSW), cada um com uma conta virtual própria
+  e só as pastas de que precisa; o Caddy serve o site com HTTPS automático.
+  Atualização pelo Jarl, `update.py`, `uninstall.ps1` (guarda os mundos, a
+  menos que peça) e `install-sagas.py` completam o ciclo.
+- **Uma base de código para os dois sistemas.** Tudo o que depende do sistema
+  passou para `servicos/painel/hostos`. No Linux o comportamento é o mesmo de
+  antes; no Windows, o executor fala com o painel em 127.0.0.1 com
+  autenticação mútua por segredo compartilhado, que nunca atravessa a conexão.
+- **Correções que valem para os dois sistemas:** as conexões do banco das
+  Sagas passam a ser fechadas no fim de cada bloco; um modpack `.zip` local é
+  reconhecido por qualquer caminho absoluto; a caixa de entrada das Sagas
+  recusa links também onde não existe `O_NOFOLLOW`; regravar um arquivo pelo
+  painel mantém as permissões do original.
+- **Documentação:** guias de instalação separados para Linux e Windows, com
+  referência rápida para veteranos, e os equivalentes do Windows em Operação,
+  Configuração e Sagas.
+
 ## 1.0.0
 
 Primeira versão estável. Reúne tudo o que veio nas 0.2.x:
