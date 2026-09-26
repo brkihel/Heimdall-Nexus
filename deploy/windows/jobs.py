@@ -19,6 +19,10 @@ import threading
 import time
 from pathlib import Path
 
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+import locations  # noqa: E402
+
 ROOT = Path(__file__).resolve().parents[2]
 
 # name: (group, script, first run after start in s, interval in s, timeout in s)
@@ -33,8 +37,7 @@ JOBS = {
 
 
 def state_dir() -> Path:
-    base = Path(os.environ.get('HEIMDALL_BASE_DIR')
-                or Path(os.environ.get('ProgramData', r'C:\ProgramData')) / 'HeimdallNexus')
+    base = locations.data_dir()
     return Path(os.environ.get('HEIMDALL_STATE_DIR') or base / 'state')
 
 

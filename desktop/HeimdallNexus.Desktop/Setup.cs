@@ -24,6 +24,8 @@ namespace HeimdallNexus.Desktop
         readonly WebWindow window = new WebWindow();
         Channel worker;
         bool installing, finished;
+        // Where to install: null for the Windows defaults on C:, or one HeimdallNexus folder.
+        string root;
 
         public static void Run() => Application.Run(new SetupFlow().window);
 
@@ -43,7 +45,14 @@ namespace HeimdallNexus.Desktop
             switch ((string)message["cmd"])
             {
                 case "ready":
+                    // An uninstall that kept the worlds left them where they were: start there.
+                    var previous = Heimdall.Recorded("Root");
+                    if (previous != null && Location.PreviousInstall(previous)) root = previous;
                     window.Post(new { type = "screen", name = "welcome" });
+                    ShowWhere();
+                    break;
+                case "where":
+                    Choose(message.TryGetValue("id", out var id) ? id as string : null);
                     break;
                 case "install":
                     Start(message.TryGetValue("desktopShortcut", out var s) && s is bool shortcut && shortcut);
@@ -67,6 +76,45 @@ namespace HeimdallNexus.Desktop
             }
         }
 
+        void ShowWhere()
+        {
+            var options = Location.Options();
+            var previous = Heimdall.Recorded("Root");
+            window.Post(new Dictionary<string, object>
+            {
+                ["type"] = "where",
+                ["path"] = root ?? Heimdall.DefaultAppDir,
+                ["custom"] = root != null,
+                ["note"] = previous != null && root != previous && Location.PreviousInstall(previous) ? T.PreviousFound(previous) : null,
+                ["options"] = options,
+            });
+        }
+
+        /// <summary>A disk from the list, "default", or "folder" for Windows' own folder picker.</summary>
+        void Choose(string id)
+        {
+            if (id == "default") root = null;
+            else if (id == "folder")
+            {
+                using (var picker = new FolderBrowserDialog { Description = T.PickFolder, ShowNewFolderButton = true })
+                {
+                    if (picker.ShowDialog(window) != DialogResult.OK) return;
+                    var chosen = Location.RootFor(picker.SelectedPath);
+                    var problem = Location.Check(chosen);
+                    if (problem != null) { window.Post(new { type = "error", text = problem }); return; }
+                    root = chosen;
+                }
+            }
+            else
+            {
+                var option = Location.Options().FirstOrDefault(o => o.id == id);
+                if (option == null) return;
+                if (!option.ok) { window.Post(new { type = "error", text = option.reason }); return; }
+                root = Location.RootFor(id + "\\");
+            }
+            ShowWhere();
+        }
+
         void Start(bool desktopShortcut)
         {
             if (installing) return;
@@ -77,7 +125,8 @@ namespace HeimdallNexus.Desktop
             }
             var name = Channel.NewName();
             worker = Channel.Serve(name);
-            var arguments = $"--install-worker --for {Heimdall.UserSid} --pipe {name}" + (desktopShortcut ? " --desktop-shortcut" : "");
+            var arguments = $"--install-worker --for {Heimdall.UserSid} --pipe {name}" + (desktopShortcut ? " --desktop-shortcut" : "") +
+                            (root != null ? $" --root \"{root}\"" : "");
             if (!Heimdall.RunElevated(Application.ExecutablePath, arguments))
             {
                 worker.Dispose();
@@ -121,16 +170,19 @@ namespace HeimdallNexus.Desktop
         string claimLink;
         volatile bool finished;
 
-        public static void Run(string pipe, string controllerSid, bool desktopShortcut)
+        public static void Run(string pipe, string controllerSid, bool desktopShortcut, string root)
         {
             Channel channel;
             try { channel = Channel.Connect(pipe); }
             catch (Exception) { return; } // the window is gone
-            new InstallWorker(channel, controllerSid, desktopShortcut).Install();
+            new InstallWorker(channel, controllerSid, desktopShortcut, root).Install();
         }
 
-        InstallWorker(Channel window, string controllerSid, bool desktopShortcut)
+        readonly string root;
+
+        InstallWorker(Channel window, string controllerSid, bool desktopShortcut, string root)
         {
+            this.root = root;
             this.window = window;
             this.controllerSid = controllerSid;
             this.desktopShortcut = desktopShortcut;
@@ -173,9 +225,13 @@ namespace HeimdallNexus.Desktop
                 var os = Environment.OSVersion.Version;
                 if (!Environment.Is64BitOperatingSystem || os.Major < 10 || (os.Major == 10 && os.Build < 17763))
                     throw new SetupError(T.NeedsWindows);
-                var drive = new DriveInfo(Path.GetPathRoot(Heimdall.ProgramData));
+                // Everything that follows is written under the chosen folder, created
+                // locked before the first file lands in it.
+                if (root != null) Location.Prepare(root);
+                Heimdall.InstallInto(root);
+                var drive = new DriveInfo(Path.GetPathRoot(Heimdall.DataDir));
                 long freeGb = drive.AvailableFreeSpace / (1024L * 1024 * 1024);
-                if (freeGb < 10) throw new SetupError(T.NeedsSpace(freeGb));
+                if (freeGb < 10) throw new SetupError(T.NeedsSpace(freeGb, drive.Name.TrimEnd('\\')));
                 ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
 
                 stage = StageDownload;
@@ -192,15 +248,15 @@ namespace HeimdallNexus.Desktop
                 }
                 if (Directory.Exists(setup)) Directory.Delete(setup, true);
                 ZipFile.ExtractToDirectory(package, setup);
-                var root = Directory.GetDirectories(setup).FirstOrDefault(d => File.Exists(Path.Combine(d, "deploy", "setup_server.py")))
-                           ?? setup;
+                var source = Directory.GetDirectories(setup).FirstOrDefault(d => File.Exists(Path.Combine(d, "deploy", "setup_server.py")))
+                             ?? setup;
 
                 stage = StagePython;
                 var python = Path.Combine(Heimdall.AppDir, "python", "python.exe");
                 if (!File.Exists(python)) InstallPython(python);
 
                 Show(stage = StageWizard, T.StepWizard, "", 420);
-                StartWizard(python, root);
+                StartWizard(python, source);
                 Follow();
             }
             catch (SetupError error) { Fail(error.Message, stage); }
@@ -259,18 +315,22 @@ namespace HeimdallNexus.Desktop
                 return BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "").ToLowerInvariant();
         }
 
-        void StartWizard(string python, string root)
+        void StartWizard(string python, string source)
         {
             var info = new ProcessStartInfo(python,
-                $"-X utf8 \"{Path.Combine(root, "deploy", "setup_server.py")}\" --port {WizardPort} --no-browser")
+                $"-X utf8 \"{Path.Combine(source, "deploy", "setup_server.py")}\" --port {WizardPort} --no-browser")
             {
                 UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true,
-                RedirectStandardError = true, WorkingDirectory = root,
+                RedirectStandardError = true, WorkingDirectory = source,
             };
             info.EnvironmentVariables["HEIMDALL_CONTROLLER_SID"] = controllerSid;
             info.EnvironmentVariables["HEIMDALL_DESKTOP_EXE"] = Application.ExecutablePath;
             info.EnvironmentVariables["HEIMDALL_DESKTOP_SHORTCUT"] = desktopShortcut ? "1" : "0";
             info.EnvironmentVariables["PYTHONUTF8"] = "1";
+            // Always explicit, so an old installation's record never decides where this one goes.
+            info.EnvironmentVariables["HEIMDALL_BASE_DIR"] = Heimdall.DataDir;
+            info.EnvironmentVariables["HEIMDALL_APP_BASE"] = Heimdall.AppDir;
+            info.EnvironmentVariables["HEIMDALL_INSTALL_ROOT"] = root ?? "";
             wizard = Process.Start(info);
             var linkFound = new ManualResetEventSlim();
             var output = new StringBuilder();

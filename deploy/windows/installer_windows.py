@@ -6,6 +6,8 @@ Windows conventions:
 - code and its Python in %ProgramFiles%\\HeimdallNexus (only administrators write there);
 - data in %ProgramData%\\HeimdallNexus, with inheritance cut at the top so only
   SYSTEM and administrators get in by default;
+- or, chosen in the desktop app, both under one folder on another disk
+  (<root>\\program and <root>\\data), locked the same way (see locations.py);
 - each service with the smallest account that works: the executor and the
   SYSTEM jobs as LocalSystem; the panel, the game, the Sagas jobs and the web
   server as their own virtual accounts, each granted only its folders;
@@ -37,14 +39,61 @@ sys.path.insert(0, str(HERE.parent))
 import installer as common  # noqa: E402  (Choices, downloads, BepInEx extraction)
 import modpack as server_modpack  # noqa: E402
 import services  # noqa: E402
+sys.path.insert(0, str(HERE))
+import locations  # noqa: E402
 
 InstallError = common.InstallError
 Choices = common.Choices
 
 PROGRAM_DATA = Path(os.environ.get('ProgramData', r'C:\ProgramData'))
 PROGRAM_FILES = Path(os.environ.get('ProgramFiles', r'C:\Program Files'))
-BASE = Path(os.environ.get('HEIMDALL_BASE_DIR') or PROGRAM_DATA / 'HeimdallNexus')
-APP_BASE = Path(os.environ.get('HEIMDALL_APP_BASE') or PROGRAM_FILES / 'HeimdallNexus')
+BASE = locations.data_dir()
+APP_BASE = locations.app_base()
+# One folder for everything, when the desktop app installs on another disk.
+# The desktop app always says where (empty: the Windows defaults), so an old record never decides.
+ROOT = os.environ['HEIMDALL_INSTALL_ROOT'] if 'HEIMDALL_INSTALL_ROOT' in os.environ else locations.recorded('Root')
+USERS_SID = '*S-1-5-32-545'
+README = {
+    'pt': """Heimdall Nexus
+==============
+
+Esta pasta guarda tudo do Heimdall Nexus neste computador.
+
+  program\\          O programa: o painel, o site, o Python e as ferramentas.
+                    Não mexa aqui: as atualizações pelo painel cuidam disso.
+  data\\             Os seus dados:
+    valheim\\saves\\       os mundos
+    valheim\\backups\\     os backups dos mundos
+    valheim\\current\\     o servidor de Valheim e os mods (BepInEx\\plugins)
+    state\\site\\          as páginas do site
+    logs\\                os registros de cada serviço
+    etc\\                 as configurações
+
+Só administradores podem alterar esta pasta, para que nenhum outro programa
+consiga mexer no Heimdall. Para desinstalar, use o aplicativo Heimdall Nexus ou
+Configurações > Aplicativos > Heimdall Nexus. Não apague esta pasta à mão
+enquanto o Heimdall estiver instalado.
+""",
+    'en': """Heimdall Nexus
+==============
+
+This folder holds everything from Heimdall Nexus on this computer.
+
+  program\\          The program: the panel, the website, Python and the tools.
+                    Leave it alone: updates from the panel take care of it.
+  data\\             Your data:
+    valheim\\saves\\       the worlds
+    valheim\\backups\\     the world backups
+    valheim\\current\\     the Valheim server and the mods (BepInEx\\plugins)
+    state\\site\\          the website's pages
+    logs\\                each service's logs
+    etc\\                 the settings
+
+Only administrators can change this folder, so no other program can tamper with
+Heimdall. To uninstall, use the Heimdall Nexus app or Settings > Apps >
+Heimdall Nexus. Do not delete this folder by hand while Heimdall is installed.
+""",
+}
 
 STEAMCMD_URL = 'https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip'
 CADDY_URL = 'https://github.com/caddyserver/caddy/releases/download/v2.11.4/caddy_2.11.4_windows_amd64.zip'
@@ -79,8 +128,9 @@ def is_admin() -> bool:
 class Layout:
     """Every path of a Windows installation, in one place."""
 
-    def __init__(self, base: Path = BASE, app_base: Path = APP_BASE):
+    def __init__(self, base: Path = BASE, app_base: Path = APP_BASE, root: str = ROOT):
         self.base, self.app_base = base, app_base
+        self.root = Path(root) if root else None
         self.app = app_base / 'app'
         self.venv = app_base / 'venv'
         self.python = self.venv / 'Scripts' / 'python.exe'
@@ -178,9 +228,26 @@ class WindowsInstaller:
                        paths.backups / 'panel', paths.backups / 'web', paths.caddy,
                        paths.service_files, paths.cache, paths.app_base, paths.tools):
             folder.mkdir(parents=True, exist_ok=True)
+        if paths.root:
+            self.own_folder(paths.root)
         # Only SYSTEM and administrators by default; each service gets its folders later.
         self.icacls(paths.base, '/inheritance:r', '/grant:r', f'{SYSTEM_SID}:(OI)(CI)F',
                     f'{ADMINS_SID}:(OI)(CI)F')
+        locations.record(paths.app_base, paths.base, paths.root)
+
+    def own_folder(self, root: Path) -> None:
+        """The one-folder install: locked like Program Files, with a note on what is where."""
+        if root.name != 'HeimdallNexus' or root != self.paths.base.parent or root != self.paths.app_base.parent \
+                or self.paths.base.name != 'data' or self.paths.app_base.name != 'program':
+            raise InstallError('The data and program folders must be inside the installation folder.')
+        # Owned by Administrators and cut from the disk's permissions, where any
+        # user may write: only administrators change it, everyone may read and run.
+        self.icacls(root, '/setowner', ADMINS_SID)
+        self.icacls(root, '/inheritance:r', '/grant:r', f'{SYSTEM_SID}:(OI)(CI)F',
+                    f'{ADMINS_SID}:(OI)(CI)F', f'{USERS_SID}:(OI)(CI)RX')
+        self.icacls(self.paths.app_base, '/setowner', ADMINS_SID, '/T', '/C')
+        (root / 'LEIA-ME.txt').write_text(README['pt'], encoding='utf-8-sig')
+        (root / 'README.txt').write_text(README['en'], encoding='utf-8-sig')
 
     def runtime_code(self) -> None:
         target = self.paths.app
@@ -593,7 +660,7 @@ class WindowsInstaller:
                                 winreg.KEY_WRITE | winreg.KEY_WOW64_64KEY) as key:
             version = json.loads(paths.desktop_info.read_text(encoding='utf-8'))['version']
             for name, value in (('DisplayName', 'Heimdall Nexus'), ('DisplayVersion', version),
-                                ('Publisher', 'BRKiHeL'), ('InstallLocation', str(paths.app_base)),
+                                ('Publisher', 'BRKiHeL'), ('InstallLocation', str(paths.root or paths.app_base)),
                                 ('DisplayIcon', str(paths.desktop_app)),
                                 ('UninstallString', f'"{paths.desktop_app}" --uninstall'),
                                 ('URLInfoAbout', 'https://github.com/brkihel/Heimdall-Nexus')):

@@ -21,6 +21,10 @@
       factSpace: '10 GB livres', factSpaceHint: 'para o jogo, os mundos e os backups',
       promise: 'Nada do Heimdall liga sozinho com o Windows. Depois de instalar, você escolhe isso aqui mesmo.',
       shortcut: 'Criar um atalho na área de trabalho',
+      whereTitle: 'Onde instalar', whereChange: 'Alterar',
+      whereChooseTitle: 'Onde instalar o Heimdall?',
+      whereChooseText: 'Em outro disco, tudo fica numa pasta só, HeimdallNexus: o programa, o jogo, os mundos e os backups. No padrão do Windows, o programa vai para Arquivos de Programas e os dados para ProgramData, no disco C:.',
+      whereFolder: 'Outra pasta…', whereFolderHint: 'Escolha uma pasta; o Heimdall cria a HeimdallNexus dentro dela.',
       startInstall: 'Iniciar instalação', uac: 'O Windows vai pedir permissão uma única vez.',
       installingWord: 'instalando', doneWord: 'concluído', stoppedWord: 'parou',
       stageCheck: 'Conferir o computador', stageDownload: 'Baixar o Heimdall Nexus', stagePython: 'Preparar o Python do Heimdall',
@@ -73,6 +77,10 @@
       factSpace: '10 GB free', factSpaceHint: 'for the game, worlds and backups',
       promise: 'Nothing from Heimdall starts with Windows by itself. After installing, you choose that right here.',
       shortcut: 'Create a desktop shortcut',
+      whereTitle: 'Where to install', whereChange: 'Change',
+      whereChooseTitle: 'Where to install Heimdall?',
+      whereChooseText: "On another disk, everything goes in one folder, HeimdallNexus: the program, the game, the worlds and the backups. With the Windows default, the program goes to Program Files and the data to ProgramData, on drive C:.",
+      whereFolder: 'Another folder…', whereFolderHint: 'Pick a folder; Heimdall creates HeimdallNexus inside it.',
       startInstall: 'Start installation', uac: 'Windows will ask for permission just once.',
       installingWord: 'installing', doneWord: 'done', stoppedWord: 'stopped',
       stageCheck: 'Check the computer', stageDownload: 'Download Heimdall Nexus', stagePython: "Prepare Heimdall's Python",
@@ -223,12 +231,45 @@
   $('start-install').onclick = () => { $('start-install').disabled = true; host.send({ cmd: 'install', desktopShortcut: $('desktop-shortcut').checked }); };
   $('reopen-browser').onclick = () => host.send({ cmd: 'reopenBrowser' });
 
+  // ---------------------------------------------------------------- where to install
+  let where = null;
+  function showWhere(data) {
+    where = data;
+    $('where-path').textContent = data.path;
+    $('where-note').textContent = data.note || '';
+    $('where-note').hidden = !data.note;
+  }
+  function option(title, detail, reason, current, disabled, pick) {
+    const button = document.createElement('button');
+    button.className = 'option' + (current ? ' current' : '');
+    button.disabled = disabled;
+    const name = document.createElement('b'); name.textContent = title;
+    const more = document.createElement('small'); more.textContent = detail;
+    button.append(name, more);
+    if (reason) { const why = document.createElement('small'); why.className = 'reason'; why.textContent = reason; button.append(why); }
+    button.onclick = () => { $('modal').hidden = true; pick(); };
+    return button;
+  }
+  $('where-change').onclick = () => {
+    if (!where) return;
+    ask(t('whereChooseTitle'), t('whereChooseText'), [[t('cancel'), 'ghost']]);
+    const list = document.createElement('div');
+    list.className = 'options';
+    for (const o of where.options) {
+      const current = o.id === 'default' ? !where.custom : where.custom && where.path.toUpperCase().startsWith(o.id.toUpperCase() + '\\');
+      list.append(option(o.title, o.detail, o.ok ? '' : o.reason, current, !o.ok, () => host.send({ cmd: 'where', id: o.id })));
+    }
+    list.append(option(t('whereFolder'), t('whereFolderHint'), '', false, false, () => host.send({ cmd: 'where', id: 'folder' })));
+    $('modal-extra').replaceChildren(list);
+  };
+
   // ---------------------------------------------------------------- modal and toast
   let onEscape = null;
   function ask(title, text, choices, escape) {
     onEscape = escape || null;
     $('modal-title').textContent = title;
     $('modal-text').textContent = text;
+    $('modal-extra').replaceChildren();
     $('modal-choices').replaceChildren(...choices.map(([label, style, action]) => {
       const button = document.createElement('button');
       button.className = style; button.textContent = label;
@@ -279,6 +320,7 @@
     else if (msg.type === 'confirmCancel')
       ask(t('cancelTitle'), t('cancelText'), [[t('cancelNo'), 'ghost'], [t('cancelYes'), 'cta danger', () => host.send({ cmd: 'cancelInstall' })]]);
     else if (msg.type === 'welcomeError') { $('start-install').disabled = false; ask('Heimdall Nexus', msg.text, [[t('close'), 'cta']]); }
+    else if (msg.type === 'where') showWhere(msg);
     else if (msg.type === 'state') center(msg);
     else if (msg.type === 'toast') toast(msg.text);
     else if (msg.type === 'error') ask('Heimdall Nexus', msg.text, [[t('close'), 'cta']]);
@@ -339,11 +381,22 @@
         setTimeout(() => listener({ type: 'install', percent, stage, title, detail, browser }), index * 1100));
       setTimeout(() => listener({ type: 'install', percent: 100, stage: 7, done: true }), steps.length * 1100);
     }
+    let demoRoot = null;
+    function demoWhere() {
+      return { type: 'where', path: demoRoot || 'C:\\Program Files\\HeimdallNexus', custom: !!demoRoot, note: null, options: [
+        { id: 'default', title: 'Padrão do Windows (C:)', detail: '38 GB livres · C:\\Program Files\\HeimdallNexus', ok: true },
+        { id: 'D:', title: 'Jogos (D:)', detail: '812 GB livres · D:\\HeimdallNexus', ok: true },
+        { id: 'E:', title: 'Backup (E:)', detail: '4 GB livres · E:\\HeimdallNexus', ok: false, reason: 'Menos de 10 GB livres' }] };
+    }
     function busy(key, word, then) { live[key] = word; push(); setTimeout(() => { then(); push(); }, 2200); }
     return {
       listen: fn => { listener = fn; },
       send: msg => {
-        if (msg.cmd === 'ready') emit({ type: 'screen', name: 'welcome' });
+        if (msg.cmd === 'ready') { emit({ type: 'screen', name: 'welcome' }); emit(demoWhere()); }
+        if (msg.cmd === 'where') {
+          demoRoot = msg.id === 'default' ? null : msg.id === 'folder' ? 'E:\\Jogos\\HeimdallNexus' : msg.id + '\\HeimdallNexus';
+          emit(demoWhere());
+        }
         if (msg.cmd === 'close') emit({ type: 'toast', text: 'Aqui a janela fecharia.' });
         if (msg.cmd === 'install') runInstall();
         if (msg.cmd === 'openCenter') push();

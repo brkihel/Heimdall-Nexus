@@ -19,6 +19,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+import locations  # noqa: E402
+
 HERE = Path(__file__).resolve().parent
 GAME = 'NT SERVICE\\heimdall-valheim'
 
@@ -35,7 +39,7 @@ def main() -> None:
     bridge = Path(sys.argv[1]).resolve()
     if bridge.name != 'HeimdallSagas.Bridge.dll' or bridge.read_bytes()[:2] != b'MZ':
         raise SystemExit('Expected a built HeimdallSagas.Bridge.dll.')
-    base = Path(os.environ.get('HEIMDALL_BASE_DIR') or Path(os.environ['ProgramData']) / 'HeimdallNexus')
+    base = locations.data_dir()
     sys.path.insert(0, str(HERE))
     import run
     env = run.load_env(base / 'etc' / 'heimdall.env')

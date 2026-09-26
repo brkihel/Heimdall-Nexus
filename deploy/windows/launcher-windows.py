@@ -25,6 +25,10 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+import locations  # noqa: E402
+
 SERVICE = os.environ.get('HEIMDALL_GAME_SERVICE') or 'heimdall-valheim'
 # The options Valheim's own "host a server" screen offers; nothing else passes.
 MODIFIERS = {
@@ -133,8 +137,7 @@ def _rotate(log: Path) -> None:
 
 
 def main() -> int:
-    base = Path(os.environ.get('HEIMDALL_BASE_DIR')
-                or Path(os.environ.get('ProgramData', r'C:\ProgramData')) / 'HeimdallNexus')
+    base = locations.data_dir()
     valheim = Path(os.environ.get('HEIMDALL_VALHEIM_DIR') or base / 'valheim')
     logs = Path(os.environ.get('HEIMDALL_LOG_DIR') or base / 'logs')
     runs = Path(os.environ.get('HEIMDALL_RUN_DIR') or base / 'run')

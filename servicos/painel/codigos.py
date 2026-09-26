@@ -138,7 +138,17 @@ SOLUCOES_WINDOWS = {
 # The Linux text, kept for the documentation, which lists both.
 SOLUCOES_LINUX = {codigo: CATALOGO[codigo]['solucao'] for codigo in SOLUCOES_WINDOWS}
 if sys.platform == 'win32':
+    # The texts name the default folders; an installation on another disk has its own.
+    try:
+        from hostos import _windows as _host
+        _lugares = ((r'$env:ProgramFiles\HeimdallNexus', str(_host.APP_BASE)),
+                    (r'C:\ProgramData\HeimdallNexus', str(_host.BASE)),
+                    (r'disco de C:\Program Files', 'disco de ' + str(_host.APP_BASE)))
+    except ImportError:
+        _lugares = ()
     for _codigo, _solucao in SOLUCOES_WINDOWS.items():
+        for _padrao, _real in _lugares:
+            _solucao = _solucao.replace(_padrao, _real)
         CATALOGO[_codigo] = {**CATALOGO[_codigo], 'solucao': _solucao}
 
 

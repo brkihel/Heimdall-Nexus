@@ -11,6 +11,8 @@
   code in "%ProgramFiles%\HeimdallNexus". Worlds, backups, the site and
   settings in "%ProgramData%\HeimdallNexus" are kept unless -RemoveData is
   given, and Heimdall's private Python is kept unless -RemovePython is given.
+  An installation in one folder on another disk (<root>\program and
+  <root>\data) is found through HKLM\SOFTWARE\HeimdallNexus.
 
   -RemoveData    also erase worlds, backups, the site and every setting
   -RemovePython  also uninstall Heimdall's private Python
@@ -23,8 +25,21 @@ $identity = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIden
 if (-not $identity.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     throw 'Open PowerShell as administrator and run this script again.'
 }
-$appBase = Join-Path $env:ProgramFiles 'HeimdallNexus'
-$dataBase = Join-Path $env:ProgramData 'HeimdallNexus'
+$recorded = Get-ItemProperty 'HKLM:\SOFTWARE\HeimdallNexus' -ErrorAction SilentlyContinue
+$appBase = if ($recorded.AppBase) { $recorded.AppBase } else { Join-Path $env:ProgramFiles 'HeimdallNexus' }
+$dataBase = if ($recorded.DataDir) { $recorded.DataDir } else { Join-Path $env:ProgramData 'HeimdallNexus' }
+$root = $recorded.Root
+# Never remove anything but Heimdall's own folders, whatever the registry says.
+$expected = @{ $appBase = 'HeimdallNexus', 'program'; $dataBase = 'HeimdallNexus', 'data' }
+foreach ($path in $expected.Keys) {
+    if (-not (Split-Path $path -Parent) -or $expected[$path] -notcontains (Split-Path $path -Leaf)) {
+        throw "Refusing to remove $path, which is not a Heimdall Nexus folder."
+    }
+}
+if ($root -and ((Split-Path $root -Leaf) -ne 'HeimdallNexus' -or
+                (Split-Path $appBase -Parent) -ne $root -or (Split-Path $dataBase -Parent) -ne $root)) {
+    throw "Refusing to remove $root, which is not a Heimdall Nexus folder."
+}
 
 if (-not $Yes) {
     "This removes the Heimdall Nexus services and code from this computer."
@@ -108,5 +123,15 @@ if ($RemoveData -and (Test-Path $dataBase)) {
     Get-ChildItem $dataBase -Recurse -Force -Attributes ReparsePoint -ErrorAction SilentlyContinue |
         ForEach-Object { $_.Delete() }
     Remove-Item $dataBase -Recurse -Force
+}
+
+# Where Heimdall is stays recorded while its data is kept, so a new installation
+# finds the worlds again.
+if ($RemoveData -or -not (Test-Path $dataBase)) {
+    Remove-Item 'HKLM:\SOFTWARE\HeimdallNexus' -Recurse -ErrorAction SilentlyContinue
+}
+if ($root -and (Test-Path $root)) {
+    $left = Get-ChildItem $root -Force | Where-Object { 'LEIA-ME.txt', 'README.txt' -notcontains $_.Name }
+    if (-not $left) { Remove-Item $root -Recurse -Force }
 }
 'Heimdall Nexus was removed.'

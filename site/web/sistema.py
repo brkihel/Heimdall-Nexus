@@ -9,9 +9,24 @@ import os
 import sys
 from pathlib import Path
 
+
+def _recorded_app() -> str:
+    """Windows: where the installer put the code, possibly on another disk (HKLM, admin-only)."""
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\HeimdallNexus', 0,
+                            winreg.KEY_READ | winreg.KEY_WOW64_64KEY) as key:
+            value = winreg.QueryValueEx(key, 'AppBase')[0]
+        return str(Path(value) / 'app') if isinstance(value, str) and value else ''
+    except (ImportError, OSError):
+        return ''
+
+
 _CANDIDATES = [os.environ.get('HEIMDALL_ROOT'), Path(__file__).resolve().parents[2],
-               '/opt/heimdall-nexus',
+               '/opt/heimdall-nexus', _recorded_app(),
                Path(os.environ.get('ProgramFiles', r'C:\Program Files')) / 'HeimdallNexus' / 'app']
+
+
 def _has_layer(folder: Path) -> bool:
     try:
         return (folder / 'hostos' / '__init__.py').is_file()

@@ -175,3 +175,69 @@ def test_desktop_screens_start_hidden():
     page = (ROOT / 'desktop' / 'ui' / 'index.html').read_text(encoding='utf-8')
     screens = re.findall(r'<section class="screen"[^>]*>', page)
     assert len(screens) == 4 and all(' hidden' in tag for tag in screens), screens
+
+
+def test_locations_prefer_the_environment_then_the_windows_defaults(monkeypatch):
+    locations = load('locations_test', 'locations.py')
+    monkeypatch.setenv('ProgramData', r'C:\ProgramData')
+    monkeypatch.setenv('ProgramFiles', r'C:\Program Files')
+    monkeypatch.delenv('HEIMDALL_BASE_DIR', raising=False)
+    monkeypatch.delenv('HEIMDALL_APP_BASE', raising=False)
+    assert locations.recorded('DataDir') == ''  # no registry here
+    assert str(locations.data_dir()).endswith('HeimdallNexus')
+    monkeypatch.setenv('HEIMDALL_BASE_DIR', r'D:\HeimdallNexus\data')
+    monkeypatch.setenv('HEIMDALL_APP_BASE', r'D:\HeimdallNexus\program')
+    assert locations.data_dir() == Path(r'D:\HeimdallNexus\data')
+    assert locations.app_base() == Path(r'D:\HeimdallNexus\program')
+    # Every script finds the installation the same way.
+    for script in ('jobs.py', 'launcher-windows.py', 'update.py', 'run.py', 'install-sagas.py', 'installer_windows.py'):
+        text = (WINDOWS / script).read_text(encoding='utf-8')
+        assert 'locations.data_dir()' in text or 'locations.app_base()' in text, script
+        assert "'ProgramData'" not in text.replace("os.environ.get('ProgramData', r'C:\\ProgramData')", ''), script
+
+
+def test_one_folder_install_is_locked_and_explained(tmp_path):
+    installer_windows = load('installer_windows_folder', 'installer_windows.py')
+    root = tmp_path / 'HeimdallNexus'
+    layout = installer_windows.Layout(base=root / 'data', app_base=root / 'program', root=str(root))
+    (root / 'program').mkdir(parents=True)
+    calls = []
+    engine = installer_windows.WindowsInstaller.__new__(installer_windows.WindowsInstaller)
+    engine.paths, engine.report = layout, lambda *a: None
+    engine.icacls = lambda path, *arguments: calls.append((Path(path), arguments))
+    engine.own_folder(root)
+    owner, locked = calls[0], calls[1]
+    assert owner == (root, ('/setowner', '*S-1-5-32-544'))
+    assert locked[1][0] == '/inheritance:r' and '*S-1-5-32-545:(OI)(CI)RX' in locked[1]
+    assert not any('(M)' in a or ':(OI)(CI)F' in a for a in locked[1] if a.startswith('*S-1-5-32-545'))
+    for note in ('LEIA-ME.txt', 'README.txt'):
+        text = (root / note).read_text(encoding='utf-8-sig')
+        assert 'program\\' in text and 'valheim\\saves' in text
+    # Nothing but <root>\program and <root>\data, in a folder named HeimdallNexus.
+    wrong = installer_windows.Layout(base=tmp_path / 'elsewhere', app_base=root / 'program', root=str(root))
+    engine.paths = wrong
+    try:
+        engine.own_folder(root)
+    except installer_windows.InstallError:
+        pass
+    else:
+        raise AssertionError('a data folder outside the installation folder was accepted')
+
+
+def test_uninstall_only_removes_heimdall_folders():
+    script = (WINDOWS / 'uninstall.ps1').read_text(encoding='utf-8')
+    assert "HKLM:\\SOFTWARE\\HeimdallNexus" in script
+    assert 'Refusing to remove' in script
+    assert script.index('Refusing to remove') < script.index("'Stopping and removing the services...'")
+
+
+def test_the_app_checks_the_folder_before_writing_to_it():
+    app = ROOT / 'desktop' / 'HeimdallNexus.Desktop'
+    location = (app / 'Location.cs').read_text(encoding='utf-8')
+    setup = (app / 'Setup.cs').read_text(encoding='utf-8')
+    assert 'SetAccessRuleProtection(true, false)' in location and 'SetOwner(Administrators)' in location
+    assert 'DriveFormat' in location and 'NTFS' in location
+    # The elevated worker checks again and locks the folder before the first download.
+    install = setup[setup.index('void Install()'):]
+    assert install.index('Location.Prepare(root)') < install.index('Download(')
+    assert 'HEIMDALL_INSTALL_ROOT' in setup

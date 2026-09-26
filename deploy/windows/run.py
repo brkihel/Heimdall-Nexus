@@ -15,8 +15,11 @@ import runpy
 import sys
 from pathlib import Path
 
-BASE = Path(os.environ.get('HEIMDALL_BASE_DIR')
-            or Path(os.environ.get('ProgramData', r'C:\ProgramData')) / 'HeimdallNexus')
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+import locations  # noqa: E402
+
+BASE = locations.data_dir()
 
 
 def load_env(path: Path) -> dict[str, str]:

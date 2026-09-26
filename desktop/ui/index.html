@@ -36,6 +36,14 @@
         <div><b data-t="factSpace"></b><small data-t="factSpaceHint"></small></div>
       </div>
       <p class="promise" data-t="promise"></p>
+      <div class="where" id="where">
+        <div>
+          <small data-t="whereTitle"></small>
+          <b id="where-path"></b>
+          <p class="where-note" id="where-note" hidden></p>
+        </div>
+        <button class="ghost" id="where-change" data-t="whereChange"></button>
+      </div>
       <label class="toggle-row small">
         <input type="checkbox" id="desktop-shortcut" checked><span class="switch"></span>
         <span data-t="shortcut"></span>
@@ -139,6 +147,7 @@
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <h2 id="modal-title"></h2>
     <p id="modal-text"></p>
+    <div id="modal-extra"></div>
     <div class="modal-choices" id="modal-choices"></div>
   </div>
 </div>

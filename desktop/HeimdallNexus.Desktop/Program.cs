@@ -37,7 +37,8 @@ namespace HeimdallNexus.Desktop
             if (args.Contains("--install-worker"))
             {
                 if (Heimdall.IsAdmin && Value("--pipe") != null)
-                    InstallWorker.Run(Value("--pipe"), Value("--for") ?? Heimdall.UserSid, args.Contains("--desktop-shortcut"));
+                    InstallWorker.Run(Value("--pipe"), Value("--for") ?? Heimdall.UserSid, args.Contains("--desktop-shortcut"),
+                                      Value("--root"));
                 return;
             }
             if (args.Contains("--uninstall-worker"))

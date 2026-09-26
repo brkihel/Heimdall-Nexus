@@ -28,6 +28,35 @@ namespace HeimdallNexus.Desktop
             "O WebView2 não ficou disponível. Reinicie o computador e abra o Heimdall Nexus de novo.",
             "WebView2 did not become available. Restart the computer and open Heimdall Nexus again.");
 
+        // ---------------------------------------------------------------- where to install
+        public static string LocalDisk => P("Disco local", "Local disk");
+        public static string WindowsDefault(string letter) => P($"Padrão do Windows ({letter})", $"Windows default ({letter})");
+        public static string FreeSpace(long gb) => P($"{gb} GB livres", $"{gb} GB free");
+        public static string NeedsSpaceShort => P("Menos de 10 GB livres", "Less than 10 GB free");
+        public static string NotFixedDisk => P(
+            "Escolha um disco fixo do computador. Pen drives, discos externos e pastas de rede não servem.",
+            "Choose a disk inside the computer. USB drives, external disks and network folders will not do.");
+        public static string NotNtfs(string format) => P(
+            $"Este disco usa o formato {format}, que não permite proteger a pasta do Heimdall. Escolha um disco NTFS.",
+            $"This disk uses the {format} format, which cannot protect Heimdall's folder. Choose an NTFS disk.");
+        public static string SystemFolder => P(
+            "Essa pasta é do Windows ou da sua conta. Para instalar no disco C:, use o padrão do Windows.",
+            "That folder belongs to Windows or to your account. To install on drive C:, use the Windows default.");
+        public static string FolderNotEmpty(string root) => P(
+            $"A pasta {root} já existe e tem outros arquivos. Escolha outro lugar ou esvazie essa pasta.",
+            $"The folder {root} already exists and holds other files. Choose another place or empty that folder.");
+        public static string UnsafeFolder(string path) => P(
+            $"A pasta {path} pode ser alterada por qualquer usuário deste computador, e o Heimdall precisa de um lugar que só " +
+            "administradores mudem. Escolha a raiz de um disco (como D:\\), e o Heimdall cria a pasta HeimdallNexus lá.",
+            $"The folder {path} can be changed by any user of this computer, and Heimdall needs a place only administrators " +
+            "change. Choose the root of a disk (like D:\\), and Heimdall creates the HeimdallNexus folder there.");
+        public static string PreviousFound(string root) => P(
+            $"Seus mundos guardados estão em {root}. Instale nesse mesmo lugar para continuar de onde parou.",
+            $"Your kept worlds are in {root}. Install in that same place to pick up where you left off.");
+        public static string PickFolder => P(
+            "Escolha onde instalar. O Heimdall cria uma pasta HeimdallNexus dentro dela.",
+            "Choose where to install. Heimdall creates a HeimdallNexus folder inside it.");
+
         // ---------------------------------------------------------------- installing
         public static string NeedsPermission => P(
             "A instalação precisa da permissão do Windows. Clique em Iniciar instalação de novo e escolha Sim quando o Windows perguntar.",
@@ -56,9 +85,9 @@ namespace HeimdallNexus.Desktop
         public static string NeedsWindows => P(
             "O Heimdall Nexus precisa do Windows 10 (versão 1809 ou mais nova), Windows 11 ou Windows Server 2019, de 64 bits.",
             "Heimdall Nexus needs 64-bit Windows 10 (version 1809 or newer), Windows 11 or Windows Server 2019.");
-        public static string NeedsSpace(long gb) => P(
-            $"São precisos pelo menos 10 GB livres no disco C:. Agora há {gb} GB.",
-            $"At least 10 GB must be free on drive C:. There are {gb} GB now.");
+        public static string NeedsSpace(long gb, string drive) => P(
+            $"São precisos pelo menos 10 GB livres no disco {drive}. Agora há {gb} GB.",
+            $"At least 10 GB must be free on drive {drive}. There are {gb} GB now.");
         public static string BadDownload => P(
             "O arquivo baixado não confere com o original. Pode ter sido um problema de internet: tente de novo.",
             "The downloaded file does not match the original. It may have been a network problem: try again.");

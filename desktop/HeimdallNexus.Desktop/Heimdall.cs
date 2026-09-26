@@ -9,6 +9,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Security.Principal;
 using System.ServiceProcess;
 using System.Web.Script.Serialization;
+using Microsoft.Win32;
 
 namespace HeimdallNexus.Desktop
 {
@@ -17,10 +18,40 @@ namespace HeimdallNexus.Desktop
     {
         public static readonly string ProgramData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
         public static readonly string ProgramFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-        public static readonly string DataDir = Path.Combine(ProgramData, "HeimdallNexus");
-        public static readonly string AppDir = Path.Combine(ProgramFiles, "HeimdallNexus");
-        public static readonly string InstalledExe = Path.Combine(AppDir, "HeimdallNexus.exe");
-        static readonly string DesktopInfo = Path.Combine(AppDir, "desktop.json");
+        public static readonly string DefaultDataDir = Path.Combine(ProgramData, "HeimdallNexus");
+        public static readonly string DefaultAppDir = Path.Combine(ProgramFiles, "HeimdallNexus");
+
+        // Where Heimdall is: recorded by the installer in HKLM, which only administrators
+        // change (deploy/windows/locations.py). While installing, the folder being installed.
+        const string LocationKey = @"SOFTWARE\HeimdallNexus";
+        static bool installing;
+        static string installRoot;
+
+        public static string Recorded(string name)
+        {
+            try
+            {
+                using (var hive = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64))
+                using (var key = hive.OpenSubKey(LocationKey))
+                    return key?.GetValue(name) is string value && value.Length > 0 ? value : null;
+            }
+            catch (Exception) { return null; }
+        }
+
+        /// <summary>The installation in progress goes here: one folder, or null for the Windows defaults.</summary>
+        public static void InstallInto(string root)
+        {
+            installing = true;
+            installRoot = root;
+        }
+
+        public static string InstallRoot => installing ? installRoot : Recorded("Root");
+        public static string DataDir => installing ? (installRoot == null ? DefaultDataDir : Path.Combine(installRoot, "data"))
+                                                   : Recorded("DataDir") ?? DefaultDataDir;
+        public static string AppDir => installing ? (installRoot == null ? DefaultAppDir : Path.Combine(installRoot, "program"))
+                                                  : Recorded("AppBase") ?? DefaultAppDir;
+        public static string InstalledExe => Path.Combine(AppDir, "HeimdallNexus.exe");
+        static string DesktopInfo => Path.Combine(AppDir, "desktop.json");
         public static readonly string PrefsFile = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "HeimdallNexus", "desktop-app.json");
 

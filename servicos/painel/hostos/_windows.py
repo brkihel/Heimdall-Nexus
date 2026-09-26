@@ -29,10 +29,24 @@ from pathlib import Path
 
 from . import _channel
 
-# Data lives in ProgramData; code in Program Files, where only administrators write.
-BASE = Path(os.environ.get('HEIMDALL_BASE_DIR')
+
+def _recorded(name: str) -> str:
+    """Where the installer put Heimdall (deploy/windows/locations.py): HKLM, admin-only."""
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\HeimdallNexus', 0,
+                            winreg.KEY_READ | winreg.KEY_WOW64_64KEY) as key:
+            value, kind = winreg.QueryValueEx(key, name)
+        return value if kind == winreg.REG_SZ and isinstance(value, str) else ''
+    except (ImportError, OSError):
+        return ''
+
+
+# Data in ProgramData and code in Program Files, where only administrators write,
+# unless the desktop app installed everything under one folder on another disk.
+BASE = Path(os.environ.get('HEIMDALL_BASE_DIR') or _recorded('DataDir')
             or Path(os.environ.get('ProgramData', r'C:\ProgramData')) / 'HeimdallNexus')
-APP_BASE = Path(os.environ.get('HEIMDALL_APP_BASE')
+APP_BASE = Path(os.environ.get('HEIMDALL_APP_BASE') or _recorded('AppBase')
                 or Path(os.environ.get('ProgramFiles', r'C:\Program Files')) / 'HeimdallNexus')
 
 DEFAULTS = {

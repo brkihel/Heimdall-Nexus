@@ -25,6 +25,10 @@ import sys
 import time
 from pathlib import Path
 
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+import locations  # noqa: E402
+
 ROOT = Path(__file__).resolve().parents[2]
 TOTAL_STEPS = 7
 PYTHON_SERVICES = ('heimdall-panel', 'heimdall-sagas-jobs', 'heimdall-jobs', 'heimdall-executor')
@@ -93,10 +97,9 @@ def main() -> None:
     if not admin:
         print('Run PowerShell as administrator.', file=sys.stderr)
         fail('HN-UPD-100', 'not-admin')
-    base = Path(os.environ.get('HEIMDALL_BASE_DIR')
-                or Path(os.environ.get('ProgramData', r'C:\ProgramData')) / 'HeimdallNexus')
+    base = locations.data_dir()
     env = load_env(base / 'etc' / 'heimdall.env')
-    runtime = Path(env.get('HEIMDALL_ROOT') or Path(os.environ['ProgramFiles']) / 'HeimdallNexus' / 'app')
+    runtime = Path(env.get('HEIMDALL_ROOT') or locations.app_base() / 'app')
     app_base = runtime.parent
     state = Path(env.get('HEIMDALL_STATE_DIR') or base / 'state')
     if not (state / 'installed.json').is_file() or not (runtime / '.heimdall-nexus-runtime').is_file():
