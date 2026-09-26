@@ -6,10 +6,8 @@ from __future__ import annotations
 
 import datetime as dt
 from contextlib import contextmanager
-import fcntl
 import json
 import os
-import pwd
 import re
 import shutil
 import subprocess
@@ -18,17 +16,18 @@ import tempfile
 import uuid
 
 import codigos
+import hostos
 from pathlib import Path
 
 
-GAME = Path(os.environ.get('HEIMDALL_VALHEIM_DIR', '/srv/valheim'))
-STATE = Path(os.environ.get('HEIMDALL_PANEL_STATE_DIR', '/var/lib/heimdall-panel'))
+GAME = hostos.env_path('HEIMDALL_VALHEIM_DIR')
+STATE = hostos.env_path('HEIMDALL_PANEL_STATE_DIR')
 SERVICE = os.environ.get('HEIMDALL_GAME_SERVICE') or 'heimdall-valheim'
 ENV = GAME / 'server.env'
 PROFILE = GAME / 'server-profile.json'
 SCHEDULES = STATE / 'schedules.json'
 BACKUPS = GAME / 'backups'
-MAINTENANCE_LOCK = Path(os.environ.get('HEIMDALL_MAINTENANCE_LOCK', '/run/lock/heimdall-maintenance.lock'))
+MAINTENANCE_LOCK = hostos.env_path('HEIMDALL_MAINTENANCE_LOCK')
 NAME = re.compile(r'^[^\x00-\x1f]{1,80}$')
 WORLD = re.compile(r'^[A-Za-z0-9_ -]{1,40}$')
 ID = re.compile(r'^[0-9a-f]{32}$')
@@ -66,7 +65,8 @@ def _write(path: Path, content: str, mode=0o600):
     try:
         if path.exists():
             st = path.stat()
-            os.chown(temp, st.st_uid, st.st_gid)
+            hostos.chown(temp, st.st_uid, st.st_gid)
+            hostos.copy_access(path, temp)
             mode = st.st_mode & 0o777
         os.chmod(temp, mode)
         os.replace(temp, path)
@@ -77,14 +77,13 @@ def _write(path: Path, content: str, mode=0o600):
 def _system(action: str):
     if action not in {'start', 'stop', 'restart'}:
         raise Problem('ação de serviço inválida')
-    result = subprocess.run(['systemctl', action, SERVICE], capture_output=True,
-                            text=True, timeout=300)
+    result = hostos.service_action(action, SERVICE, timeout=300)
     if result.returncode:
         raise Problem(result.stderr.strip()[-300:] or 'systemd recusou a operação')
 
 
 def online():
-    return subprocess.run(['systemctl', 'is-active', '--quiet', SERVICE]).returncode == 0
+    return hostos.service_is_active(SERVICE)
 
 
 def _env():
@@ -101,10 +100,7 @@ def _env():
 
 
 def _launcher():
-    result = subprocess.run(['systemctl', 'show', SERVICE, '-p', 'ExecStart', '--value'],
-                            capture_output=True, text=True, timeout=15)
-    match = re.search(r'path=([^ ;}]+)', result.stdout)
-    return Path(match.group(1)) if match else None
+    return hostos.service_launcher(SERVICE)
 
 
 # Mods that let players join a server with no password. Vanilla Valheim does
@@ -390,8 +386,7 @@ def backup_delete(name: str):
 @contextmanager
 def _maintenance():
     MAINTENANCE_LOCK.parent.mkdir(parents=True, exist_ok=True)
-    with MAINTENANCE_LOCK.open('a+') as stream:
-        fcntl.flock(stream, fcntl.LOCK_EX)
+    with hostos.exclusive_lock(MAINTENANCE_LOCK, blocking=True):
         yield
 
 
@@ -470,15 +465,13 @@ def _backup_restore(name: str):
             if target.exists():
                 target.rename(previous)
             source.rename(target)
-            if name in ('saves', 'config'):
-                import pwd
-                account = pwd.getpwnam('valheim')
+            if name in ('saves', 'config') and hostos.account_exists('valheim'):
+                account = hostos.account_ids('valheim')
                 for item in [target, *target.rglob('*')]:
                     if not item.is_symlink():
-                        os.chown(item, account.pw_uid, account.pw_gid)
-            elif name == 'server.env':
-                import grp
-                os.chown(target, 0, grp.getgrnam('valheim').gr_gid)
+                        hostos.chown(item, *account)
+            elif name == 'server.env' and hostos.account_exists('valheim'):
+                hostos.chown(target, 0, hostos.group_id('valheim'))
                 os.chmod(target, 0o640)
             if previous.exists():
                 if previous.is_dir():
@@ -491,8 +484,7 @@ def _backup_restore(name: str):
 def schedules_tick():
     """Called by a systemd timer, once per minute. Idempotent per local minute."""
     SCHEDULES.parent.mkdir(parents=True, exist_ok=True)
-    with (SCHEDULES.parent / 'schedules.lock').open('a+') as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+    with hostos.exclusive_lock(SCHEDULES.parent / 'schedules.lock', blocking=True):
         now = dt.datetime.now().replace(second=0, microsecond=0)
         marker = now.isoformat()
         entries = schedules_list()
@@ -605,7 +597,7 @@ def _write_list(path: Path, header: str, comments: list[str], active, off=()) ->
         lines.append(f'// heimdall-off: {player} {name}'.rstrip())
     lines += [player for player, _ in active]
     content = '\n'.join(lines) + '\n'
-    game = pwd.getpwnam('valheim') if _user_exists('valheim') else None
+    game = hostos.account_ids('valheim') if hostos.account_exists('valheim') else None
     with tempfile.NamedTemporaryFile('w', encoding='utf-8', dir=path.parent,
                                      prefix='.heimdall-', delete=False) as stream:
         temp = Path(stream.name)
@@ -613,21 +605,16 @@ def _write_list(path: Path, header: str, comments: list[str], active, off=()) ->
     try:
         # The game must own its lists: in-game ban/permit commands rewrite them.
         if game:
-            os.chown(temp, game.pw_uid, game.pw_gid)
+            hostos.chown(temp, *game)
         os.chmod(temp, 0o644)
         if path.is_symlink():
             raise Problem(codigos.com_codigo('HN-CFG-006', f'{path.name} é um link simbólico'))
+        if path.exists():
+            hostos.copy_access(path, temp)
         os.replace(temp, path)
     finally:
         temp.unlink(missing_ok=True)
 
-
-def _user_exists(name: str) -> bool:
-    try:
-        pwd.getpwnam(name)
-        return True
-    except KeyError:
-        return False
 
 
 def access_save(data: dict) -> dict:

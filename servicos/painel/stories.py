@@ -409,7 +409,7 @@ def public_list(path: Path, world: str, limit: int = 6) -> list[dict]:
     if not path.is_file() or not load_config(state)['enabled'] or \
             not settings['enabled'] or not settings['events']:
         return []
-    with sqlite3.connect(f'file:{path}?mode=ro', uri=True, timeout=3) as db:
+    with sagas.read_only(path) as db:
         db.row_factory = sqlite3.Row
         if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='stories'").fetchone():
             return []
@@ -445,7 +445,7 @@ def admin_status(state: Path) -> dict:
     attempts_today = 0
     path = state / 'sagas.sqlite3'
     if path.is_file():
-        with sqlite3.connect(f'file:{path}?mode=ro', uri=True, timeout=3) as db:
+        with sagas.read_only(path) as db:
             db.row_factory = sqlite3.Row
             if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='story_attempts'").fetchone():
                 row = db.execute('SELECT count FROM story_attempts WHERE day=?',
@@ -545,7 +545,7 @@ def diagnostics(state: Path) -> dict:
     path = state / 'sagas.sqlite3'
     if not path.is_file():
         return result
-    with sqlite3.connect(f'file:{path}?mode=ro', uri=True, timeout=3) as db:
+    with sagas.read_only(path) as db:
         tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         if not {'events', 'players', 'story_triggers', 'story_trigger_tries'} <= tables:
             return result

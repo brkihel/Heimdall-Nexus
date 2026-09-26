@@ -23,6 +23,39 @@
     en: {worldMods:'World modifiers', gameDefault:'Game default', systemAccount:'Linux account', panelLogin:'Panel login', yes:'Yes', no:'No', vanilla:'Vanilla', site:'Site', address:'Game address', server:'Server', world:'World', port:'UDP port', mods:'Mods', serverMods:'server mods', siteOnly:'site list only', live:'Live data', https:'HTTPS', gameStart:'Start game', passwordMismatch:'The panel passwords do not match.', ipHttps:'Automatic HTTPS requires a public domain, not an IP. Disable HTTPS to use an IP.', started:'Installation is in progress…', failed:'Installation stopped. Fix the problem and retry in this wizard.', panel:'Open panel', openSite:'Open site', retry:'Retry', installFailed:'Installation failed', modpackRead:'Modpack found:', modpackUnknown:'This link was not recognized. Paste the modpack page address from Thunderstore or Hexium.'}
   };
   const t = key => words[language][key] || key;
+  // Windows: no Linux account to choose, Caddy instead of Nginx, other folders.
+  const windowsText = {
+    pt: {localOnly:'Assistente temporário · só neste computador',
+         httpsHint:'Só com um domínio público apontando para esta máquina e as portas 80 e 443 liberadas no roteador. O Caddy pede e renova o certificado Let’s Encrypt sozinho. Com um IP ou localhost, deixe desligado.',
+         stepAdminHint:'Login do painel', domainHint:'O assistente configura o servidor web (Caddy) para este endereço.',
+         siteNote:'O assistente está aberto só neste computador. Guarde o endereço com token em privado.',
+         gameIntro:'O SteamCMD baixa o servidor oficial. O mundo fica em C:\\ProgramData\\HeimdallNexus\\valheim\\saves, separado dos arquivos do jogo.',
+         adminIntro:'Escolha o login do painel. Cada serviço roda com uma conta própria do Windows, criada sozinha. A senha do painel é guardada como hash.',
+         reviewNote:'SteamCMD, Valheim Dedicated Server, serviços do Windows, Caddy, site e painel. BepInEx será incluído se você o selecionou.'},
+    en: {localOnly:'Temporary wizard · this computer only',
+         httpsHint:'Only with a public domain pointing at this machine and ports 80 and 443 forwarded by the router. Caddy requests and renews the Let’s Encrypt certificate by itself. With an IP or localhost, leave it off.',
+         stepAdminHint:'Panel login', domainHint:'The wizard configures the web server (Caddy) for this address.',
+         siteNote:'The wizard is open on this computer only. Keep the token URL private.',
+         gameIntro:'SteamCMD downloads the official dedicated server. Your world is saved in C:\\ProgramData\\HeimdallNexus\\valheim\\saves, separate from game files.',
+         adminIntro:'Choose the panel login. Each service runs with its own Windows account, created automatically. The panel password is stored as a hash.',
+         reviewNote:'SteamCMD, Valheim Dedicated Server, Windows services, Caddy, site and panel. BepInEx is included if you selected it.'},
+  };
+  let windows = false;
+  let platformApplied = false;
+  function applyPlatform() {
+    if (!windows) return;
+    if (!platformApplied) {
+      // Most Windows installs use an IP or localhost, where HTTPS cannot work.
+      platformApplied = true;
+      $('tls').checked = false;
+      $('tls').dispatchEvent(new Event('change'));
+    }
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const text = windowsText[language][el.dataset.i18n];
+      if (text) el.textContent = text;
+    });
+    $('system_user').closest('.field').hidden = true;
+  }
 
   function translate() {
     document.documentElement.lang = language === 'pt' ? 'pt-BR' : 'en';
@@ -36,6 +69,7 @@
     if (step === 4) review();
     // translate() also runs before the modifier definitions below exist.
     if (modsReady) buildModifiers();
+    applyPlatform();
   }
   document.querySelectorAll('[data-i18n]').forEach(el => el.dataset.pt = el.textContent);
   document.querySelectorAll('[data-lang]').forEach(button => button.addEventListener('click', () => {
@@ -197,7 +231,7 @@
     const c = collect(), list = $('summary');
     const rows = [[t('site'),c.domain],[t('address'),c.server_address || c.domain],[t('server'),c.server_name],
       [t('world'),c.world],[t('port'),String(c.port)],[t('mods'),c.bepinex ? 'BepInEx' + (c.modpack ? ` · ${c.modpack} · ${c.install_modpack ? t('serverMods') : t('siteOnly')}` : '') : t('vanilla')],
-      [t('live'),c.features.join(', ') || '—'],[t('systemAccount'),c.system_user],[t('panelLogin'),c.panel_user],[t('https'),c.tls ? t('yes') : t('no')],
+      [t('live'),c.features.join(', ') || '—'],...(windows ? [] : [[t('systemAccount'),c.system_user]]),[t('panelLogin'),c.panel_user],[t('https'),c.tls ? t('yes') : t('no')],
       [t('worldMods'),modsSummary().join(' · ') || t('gameDefault')],
       [t('gameStart'),c.start_game ? t('yes') : t('no')]];
     list.replaceChildren();
@@ -258,5 +292,5 @@
   });
   translate(); showStep(0);
   $('progress-title').dataset.running = $('progress-title').textContent;
-  state().then(data=>{ if(data.running||data.done||data.error){ renderStatus(data); if(data.running) polling=setInterval(poll,1500); } }).catch(()=>{});
+  state().then(data=>{ windows = data.platform === 'windows'; applyPlatform(); if(data.running||data.done||data.error){ renderStatus(data); if(data.running) polling=setInterval(poll,1500); } }).catch(()=>{});
 })();

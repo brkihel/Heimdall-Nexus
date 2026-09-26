@@ -16,12 +16,15 @@ import stat
 import struct
 import tempfile
 import time
+import urllib.request
 import zlib
 from contextlib import nullcontext
+
+import hostos
 from datetime import datetime, timezone
 from pathlib import Path
 
-STATE = Path(os.environ.get('HEIMDALL_SAGAS_DIR', '/var/lib/heimdall-nexus/sagas'))
+STATE = hostos.env_path('HEIMDALL_SAGAS_DIR')
 INBOX = STATE / 'inbox'
 REJECTED = STATE / 'rejected'
 DATABASE = STATE / 'sagas.sqlite3'
@@ -364,9 +367,39 @@ CREATE TABLE IF NOT EXISTS maintenance (key TEXT PRIMARY KEY, value INTEGER NOT 
 """
 
 
-def connect(path: Path = DATABASE) -> sqlite3.Connection:
+class Connection(sqlite3.Connection):
+    """Closes when the outermost `with` ends.
+
+    sqlite3's own `with` only commits and leaves the file open. On Linux that
+    goes unnoticed; on Windows an open handle locks the database, so backups,
+    restores and cleanup of the Sagas folder would fail. Nested `with` blocks
+    (`with connect() as db, db:`) close only at the outer one.
+    """
+
+    _depth = 0
+
+    def __enter__(self):
+        self._depth += 1
+        return super().__enter__()
+
+    def __exit__(self, *error):
+        self._depth -= 1
+        try:
+            return super().__exit__(*error)
+        finally:
+            if self._depth == 0:
+                self.close()
+
+
+def read_only(path: Path, timeout: float = 3) -> Connection:
+    """Read-only connection; the URI form works for Windows paths too."""
+    uri = 'file:' + urllib.request.pathname2url(str(path)) + '?mode=ro'
+    return sqlite3.connect(uri, uri=True, timeout=timeout, factory=Connection)
+
+
+def connect(path: Path = DATABASE) -> Connection:
     path.parent.mkdir(parents=True, exist_ok=True)
-    db = sqlite3.connect(path, timeout=10)
+    db = sqlite3.connect(path, timeout=10, factory=Connection)
     db.row_factory = sqlite3.Row
     db.execute('PRAGMA busy_timeout=10000')
     db.executescript(SCHEMA)
@@ -497,7 +530,7 @@ def import_cartography(state: Path) -> None:
         try:
             if not match:
                 raise ValueError('invalid meta')
-            descriptor = os.open(meta_path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            descriptor = hostos.open_untrusted(meta_path)
             with os.fdopen(descriptor, 'rb') as source:
                 info = os.fstat(source.fileno())
                 if not stat.S_ISREG(info.st_mode) or info.st_size > 1024:
@@ -510,7 +543,7 @@ def import_cartography(state: Path) -> None:
             target.mkdir(parents=True, mode=0o750, exist_ok=True)
             for layer, path in layers.items():
                 expected = n * CARTOGRAPHY_LAYERS[layer]
-                descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+                descriptor = hostos.open_untrusted(path)
                 with os.fdopen(descriptor, 'rb') as source:
                     info = os.fstat(source.fileno())
                     if not stat.S_ISREG(info.st_mode) or info.st_size != expected:
@@ -603,7 +636,7 @@ def import_media(state: Path) -> int:
             if not match:
                 raise ValueError('unexpected name')
             kind, media_id = match.groups()
-            descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            descriptor = hostos.open_untrusted(path)
             with os.fdopen(descriptor, 'rb') as source:
                 if not stat.S_ISREG(os.fstat(source.fileno()).st_mode):
                     raise ValueError('not a regular file')
@@ -660,7 +693,7 @@ def media_file(world: str, actor: str, media_id: str, path: Path = DATABASE) -> 
     file = path.parent / 'media' / f'{media_id}.png'
     if file.is_symlink() or not file.is_file() or not path.is_file():
         return None
-    with sqlite3.connect(f'file:{path}?mode=ro', uri=True, timeout=3) as db:
+    with read_only(path) as db:
         db.row_factory = sqlite3.Row
         row = db.execute('''SELECT gear_json, hotbar_json, portrait FROM players
                             WHERE world=? AND id=? AND share_profile=1''', (world, actor)).fetchone()
@@ -692,7 +725,7 @@ def process_inbox(state: Path = STATE, limit: int = MAX_BATCH) -> dict:
             if index >= limit:
                 break
             try:
-                descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+                descriptor = hostos.open_untrusted(path)
                 with os.fdopen(descriptor, 'rb') as source:
                     if not stat.S_ISREG(os.fstat(source.fileno()).st_mode):
                         raise InvalidPacket('not a regular file')
@@ -752,7 +785,7 @@ def viking_view(world: str, actor: str, path: Path = DATABASE) -> dict | None:
     if not path.is_file() or not settings['enabled'] or not IDENTIFIER.fullmatch(world or '') or \
             not IDENTIFIER.fullmatch(actor or ''):
         return None
-    with sqlite3.connect(f'file:{path}?mode=ro', uri=True, timeout=3) as db:
+    with read_only(path) as db:
         db.row_factory = sqlite3.Row
         row = db.execute('''SELECT id, name, online, share_position, x, z, seen_at, gear_json,
                             hotbar_json, portrait, vitals_json FROM players
@@ -786,7 +819,7 @@ def public_view(path: Path = DATABASE, world: str = '', limit: int = 50,
     if not path.is_file() or not settings['enabled']:
         return {'available': False, 'worlds': [], 'players': [], 'events': []}
     limit = max(1, min(100, limit))
-    with sqlite3.connect(f'file:{path}?mode=ro', uri=True, timeout=3) as db:
+    with read_only(path) as db:
         db.row_factory = sqlite3.Row
         worlds = [dict(r) for r in db.execute(
             'SELECT id, name, day, fraction, clock_at FROM worlds ORDER BY clock_at DESC, id')]
@@ -852,7 +885,7 @@ def admin_status(state: Path = STATE, game: Path | None = None) -> dict:
         result['bridge'] = (game / 'current/BepInEx/plugins/HeimdallSagas/HeimdallSagas.Bridge.dll').is_file()
     if database.is_file():
         try:
-            with sqlite3.connect(f'file:{database}?mode=ro', uri=True, timeout=3) as db:
+            with read_only(database) as db:
                 for name in ('worlds', 'players', 'events'):
                     result[name] = db.execute(f'SELECT count(*) FROM {name}').fetchone()[0]
                 result['profiles'] = db.execute(

@@ -5,15 +5,15 @@
 ### The all-seeing guardian for your Valheim server
 
 Install a Valheim dedicated server, a browser admin panel and a website you edit visually —<br>
-from one guided wizard, on a fresh Ubuntu or Debian machine.
+from one guided wizard, on Linux (Ubuntu or Debian) or Windows.
 
 [**Quick start**](#quick-start) · [**Wiki**](https://github.com/brkihel/Heimdall-Nexus/wiki) · [**Leia em português**](README.pt-BR.md)
 
 [![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-c8a45c?style=flat-square&labelColor=0d151d)](LICENSE)
 [![Valheim](https://img.shields.io/badge/Valheim-dedicated%20server-c8a45c?style=flat-square&labelColor=0d151d)](https://valheim.com/support/a-guide-to-dedicated-servers/)
-[![Platform](https://img.shields.io/badge/Ubuntu%20%7C%20Debian-x86--64-c8a45c?style=flat-square&labelColor=0d151d)](#quick-start)
+[![Platform](https://img.shields.io/badge/Ubuntu%20%7C%20Debian%20%7C%20Windows-x86--64-c8a45c?style=flat-square&labelColor=0d151d)](#quick-start)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-c8a45c?style=flat-square&labelColor=0d151d)](https://www.python.org/)
-[![Version](https://img.shields.io/badge/version-1.0.0-c8a45c?style=flat-square&labelColor=0d151d)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.1.0-c8a45c?style=flat-square&labelColor=0d151d)](CHANGELOG.md)
 
 </div>
 
@@ -21,7 +21,7 @@ from one guided wizard, on a fresh Ubuntu or Debian machine.
 
 ## Install it from your browser
 
-The installer runs on your server and opens in your own browser. Five screens: site address, world and password, mods and live data, admin account, review. It downloads SteamCMD and Valheim, installs BepInEx and your modpack if you want them, and shows every step as it happens.
+The installer runs on your server, Linux or Windows, and opens in your own browser. Five screens: site address, world and password, mods and live data, admin account, review. It downloads SteamCMD and Valheim, installs BepInEx and your modpack if you want them, and shows every step as it happens.
 
 <img src=".github/assets/installer.webp" alt="Heimdall Nexus visual installer" width="100%">
 
@@ -43,6 +43,12 @@ A fast site with live server status, players online, world time and your mod lis
 
 ## Quick start
 
+Linux and Windows are both fully supported: Heimdall installs the same thing on either, with the same wizard, and the panel, site and Sagas work the same way. Not
+sure which? On a rented VPS, prefer Linux; on your own Windows PC, use
+Windows. The full comparison is in [**Installation**](https://github.com/brkihel/Heimdall-Nexus/wiki/Installation).
+
+### Linux (Ubuntu or Debian)
+
 On a fresh **Ubuntu or Debian x86-64** machine with Python 3.10+:
 
 ```bash
@@ -60,7 +66,27 @@ The terminal prints a private link to the installer. Open it in your browser and
 | `install.sh --direct` | A machine on a network you trust, such as a VM on your LAN. Plain HTTP link to its IP. |
 | `install.sh --local-only` | No external service. Forward the port with `ssh -L 8765:127.0.0.1:8765 user@server`. |
 
-Then sign in at `https://your-domain/jarl/entrar`. Full walkthrough: [**Installation**](https://github.com/brkihel/Heimdall-Nexus/wiki/Installation).
+Then sign in at `https://your-domain/jarl/entrar`. Full walkthrough: [**Installation on Linux**](https://github.com/brkihel/Heimdall-Nexus/wiki/Installation-Linux).
+
+### Windows
+
+On **Windows 10 (1809+), 11 or Server 2019/2022, 64-bit**, with
+[Git for Windows](https://git-scm.com/download/win) installed. Open
+**PowerShell as administrator**:
+
+```powershell
+git clone https://github.com/brkihel/Heimdall-Nexus.git C:\HeimdallNexus-src
+cd C:\HeimdallNexus-src
+powershell -ExecutionPolicy Bypass -File .\deploy\windows\install.ps1
+```
+
+The script installs a private Python for Heimdall (outside PATH) and opens the
+wizard in the PC's own browser. The server, the panel and the site become
+Windows services, each with its own unprivileged account. Caddy serves the
+site, with automatic HTTPS. Then sign in at `http://your-address/jarl/entrar`.
+
+A step-by-step for newcomers, with a quick reference for veterans:
+[**Installation on Windows**](https://github.com/brkihel/Heimdall-Nexus/wiki/Installation-Windows).
 
 ## Features
 
@@ -69,7 +95,7 @@ Then sign in at `https://your-domain/jarl/entrar`. Full walkthrough: [**Installa
 <td width="50%" valign="top">
 
 **Game server**
-- Valheim Dedicated Server through SteamCMD, as a systemd service
+- Valheim Dedicated Server through SteamCMD, as a systemd or Windows service
 - Optional BepInEx, with modpacks from Thunderstore or Hexium (paste the link)
 - Your own `.zip` modpack with private mods
 - Server Config: name, world, port, password, world modifiers, admins, allowlist and bans, with the resulting launch options on view
@@ -128,7 +154,7 @@ See the [release notes](CHANGELOG.md).
 ## Documentation
 
 Everything lives in the [**wiki**](https://github.com/brkihel/Heimdall-Nexus/wiki), in English and Portuguese:
-[Installation](https://github.com/brkihel/Heimdall-Nexus/wiki/Installation) ·
+[Installation](https://github.com/brkihel/Heimdall-Nexus/wiki/Installation) ([Linux](https://github.com/brkihel/Heimdall-Nexus/wiki/Installation-Linux), [Windows](https://github.com/brkihel/Heimdall-Nexus/wiki/Installation-Windows)) ·
 [Configuration](https://github.com/brkihel/Heimdall-Nexus/wiki/Configuration) ·
 [Operations](https://github.com/brkihel/Heimdall-Nexus/wiki/Operations) ·
 [Visual Editor](https://github.com/brkihel/Heimdall-Nexus/wiki/Visual-Editor) ·
@@ -146,6 +172,13 @@ From a terminal on an installed server:
 
 ```bash
 cd ~/Heimdall-Nexus && git pull --ff-only && sudo ./deploy/update.sh
+```
+
+On Windows, from PowerShell as administrator:
+
+```powershell
+cd C:\HeimdallNexus-src; git pull --ff-only
+& "$env:ProgramFiles\HeimdallNexus\venv\Scripts\python.exe" deploy\windows\update.py
 ```
 
 It updates the panel and tools without touching worlds, mods or site content, and does not restart Valheim. If the Sagas bridge changed, restart the game when convenient.

@@ -11,10 +11,9 @@ Tudo que passa por aqui vai para a auditoria, inclusive o que foi recusado.
 import getpass
 import atlas
 import hashlib
-import grp
+import hostos
 import json
 import os
-import pwd
 import shutil
 import socket
 import socketserver
@@ -35,17 +34,17 @@ import stories
 from datetime import datetime, timezone
 from pathlib import Path
 
-VALHEIM_ROOT = Path(os.environ.get('HEIMDALL_VALHEIM_DIR', '/srv/valheim'))
-HEIMDALL_STATE_ROOT = Path(os.environ.get('HEIMDALL_STATE_DIR', '/var/lib/heimdall-nexus'))
-PANEL_STATE_ROOT = Path(os.environ.get('HEIMDALL_PANEL_STATE_DIR', '/var/lib/heimdall-panel'))
-SOCKET = Path(os.environ.get('HEIMDALL_PANEL_SOCKET', '/run/heimdall-panel/executor.sock'))
-AUDITORIA = Path(os.environ.get('HEIMDALL_PANEL_AUDIT_FILE', '/var/log/heimdall-panel/auditoria.jsonl'))
+VALHEIM_ROOT = hostos.env_path('HEIMDALL_VALHEIM_DIR')
+HEIMDALL_STATE_ROOT = hostos.env_path('HEIMDALL_STATE_DIR')
+PANEL_STATE_ROOT = hostos.env_path('HEIMDALL_PANEL_STATE_DIR')
+SOCKET = hostos.env_value('HEIMDALL_PANEL_SOCKET')
+AUDITORIA = hostos.env_path('HEIMDALL_PANEL_AUDIT_FILE')
 GRUPO = os.environ.get('HEIMDALL_PANEL_OS_USER', 'painel')
 
 # Onde o gerenciador de arquivos pode pisar. Fora daqui, nao existe.
 RAIZES = [VALHEIM_ROOT, HEIMDALL_STATE_ROOT]
 # Guardadas antes de qualquer gravacao ou remocao.
-COPIAS = Path(os.environ.get('HEIMDALL_PANEL_BACKUP_DIR', '/var/backups/heimdall-panel'))
+COPIAS = hostos.env_path('HEIMDALL_PANEL_BACKUP_DIR')
 TAMANHO_MAX = 8 * 1024 * 1024        # arquivo que o painel aceita ler ou gravar
 
 GAME_SERVICE = os.environ.get('HEIMDALL_GAME_SERVICE') or 'heimdall-valheim'
@@ -144,12 +143,9 @@ def _jogo_pronto(invocacao: str) -> bool:
     if _PRONTO_POR_EXECUCAO.get(invocacao):
         return True
     try:
-        saida = subprocess.run(
-            ['journalctl', '_SYSTEMD_INVOCATION_ID=' + invocacao, '--grep=Game server connected',
-             '-n', '1', '--no-pager', '-o', 'cat'], capture_output=True, text=True, timeout=10)
+        pronto = hostos.service_logged_since_start(GAME_SERVICE, 'Game server connected', invocacao)
     except (OSError, subprocess.TimeoutExpired):
         return False
-    pronto = saida.returncode == 0 and 'Game server connected' in saida.stdout
     if pronto:
         _PRONTO_POR_EXECUCAO.clear()
         _PRONTO_POR_EXECUCAO[invocacao] = True
@@ -160,12 +156,9 @@ def v_servico_estado(dados):
     nome = dados.get('servico', GAME_SERVICE)
     if nome not in SERVICOS:
         raise Recusa(f'serviço desconhecido: {nome}')
-    saida = subprocess.run(
-        ['systemctl', 'show', nome, '--no-page',
-         '--property=ActiveState,SubState,ExecMainStartTimestamp,ActiveEnterTimestamp,'
-         'MemoryCurrent,NRestarts,InvocationID'],
-        capture_output=True, text=True, timeout=15).stdout
-    campos = dict(linha.split('=', 1) for linha in saida.strip().splitlines() if '=' in linha)
+    campos = hostos.service_show(nome, ['ActiveState', 'SubState', 'ExecMainStartTimestamp',
+                                         'ActiveEnterTimestamp', 'MemoryCurrent', 'NRestarts',
+                                         'InvocationID'])
     if nome == GAME_SERVICE and campos.get('ActiveState') == 'active':
         campos['Pronto'] = _jogo_pronto(campos.get('InvocationID', ''))
     return {'servico': nome, **campos}
@@ -178,8 +171,7 @@ def v_servico_acao(dados):
         raise Recusa(f'serviço desconhecido: {nome}')
     if acao not in ('start', 'stop', 'restart'):
         raise Recusa('ação precisa ser start, stop ou restart')
-    resultado = subprocess.run(['systemctl', acao, nome],
-                               capture_output=True, text=True, timeout=240)
+    resultado = hostos.service_action(acao, nome, timeout=240)
     if resultado.returncode != 0:
         raise Recusa(resultado.stderr.strip()[:200] or 'o systemd recusou')
     return {'servico': nome, 'acao': acao}
@@ -191,11 +183,8 @@ def v_log(dados):
         raise Recusa(f'serviço desconhecido: {nome}')
     linhas = min(max(int(dados.get('linhas', 200)), 1), 2000)
     desde = dados.get('desde')
-    comando = ['journalctl', '-u', nome, '--no-pager', '-n', str(linhas), '-o', 'short-iso']
-    if desde:
-        comando += ['--since', str(desde)[:40]]
-    saida = subprocess.run(comando, capture_output=True, text=True, timeout=30).stdout
-    return {'servico': nome, 'linhas': saida.splitlines()}
+    linhas_log = hostos.service_logs(nome, linhas, str(desde)[:40] if desde else None)
+    return {'servico': nome, 'linhas': linhas_log}
 
 
 def v_arquivo_listar(dados):
@@ -247,13 +236,14 @@ def v_arquivo_gravar(dados):
     tmp = alvo.with_name('.' + alvo.name + '.painel')
     tmp.write_text(texto, encoding='utf-8')
     if dono:
-        os.chown(tmp, dono.st_uid, dono.st_gid)
+        hostos.chown(tmp, dono.st_uid, dono.st_gid)
         os.chmod(tmp, dono.st_mode & 0o7777)
+        hostos.copy_access(alvo, tmp)
     else:
         # Arquivo novo herda o dono da pasta: dentro de /srv/valheim isso mantem
         # tudo pertencendo ao usuario valheim, que e o que o jogo exige.
         pai = alvo.parent.stat()
-        os.chown(tmp, pai.st_uid, pai.st_gid)
+        hostos.chown(tmp, pai.st_uid, pai.st_gid)
         os.chmod(tmp, 0o644)
     os.replace(tmp, alvo)
     return {'caminho': str(alvo), 'copia': copia}
@@ -283,7 +273,7 @@ def v_arquivo_pasta(dados):
         raise Recusa('já existe')
     alvo.mkdir(parents=False)
     pai = alvo.parent.stat()
-    os.chown(alvo, pai.st_uid, pai.st_gid)
+    hostos.chown(alvo, pai.st_uid, pai.st_gid)
     return {'caminho': str(alvo)}
 
 
@@ -319,7 +309,7 @@ def _entrega_ao_dono(alvo: Path, uid: int, gid: int):
     servidor cai em loop (ver a memória 'config do servidor é do usuário valheim')."""
     caminhos = [alvo] + (list(alvo.rglob('*')) if alvo.is_dir() and not alvo.is_symlink() else [])
     for p in caminhos:
-        os.lchown(p, uid, gid)
+        hostos.lchown(p, uid, gid)
         if not p.is_symlink():
             os.chmod(p, 0o755 if p.is_dir() else 0o644)
 
@@ -464,7 +454,7 @@ def v_arquivo_preparar_download(dados):
     TROCA.mkdir(parents=True, exist_ok=True)
     _limpa_troca()
     _cabe_no_disco(total, TROCA)
-    painel = pwd.getpwnam(GRUPO)
+    painel_uid, painel_gid = hostos.account_ids(GRUPO)
     ficha = uuid.uuid4().hex
     pasta = TROCA / ficha
     pasta.mkdir(mode=0o700)
@@ -483,7 +473,7 @@ def v_arquivo_preparar_download(dados):
         shutil.rmtree(pasta, ignore_errors=True)
         raise
     for p in (pasta, pasta / nome):
-        os.chown(p, painel.pw_uid, painel.pw_gid)
+        hostos.chown(p, painel_uid, painel_gid)
     return {'ficha': ficha, 'nome': nome, 'tamanho': (pasta / nome).stat().st_size}
 
 
@@ -506,8 +496,10 @@ def v_arquivo_receber(dados):
     tmp = pasta / f'.{nome}.painel'
     shutil.move(str(origem), str(tmp))
     uid, gid = _dono_da_pasta(pasta)
-    os.chown(tmp, uid, gid)
+    hostos.chown(tmp, uid, gid)
     os.chmod(tmp, 0o644)
+    if alvo.exists():
+        hostos.copy_access(alvo, tmp)
     os.replace(tmp, alvo)
     shutil.rmtree(ficha, ignore_errors=True)
     return {'caminho': str(alvo), 'copia': copia, 'tamanho': alvo.stat().st_size}
@@ -765,7 +757,7 @@ def v_mods_catalogo_atualizar(_):
     vier íntegro e não encolher; a Thunderstore falhar não desfaz o Hexium."""
     resposta = _atualiza_hexium()
     try:
-        feito = subprocess.run(['/usr/bin/python3', str(FERRAMENTAS / 'catalogo-thunderstore.py')],
+        feito = subprocess.run([hostos.PYTHON, str(FERRAMENTAS / 'catalogo-thunderstore.py')],
                                cwd=str(FERRAMENTAS), capture_output=True, text=True, timeout=240)
         if feito.returncode == 0:
             resposta['thunderstore'] = int(feito.stdout.strip().splitlines()[-1])
@@ -815,7 +807,7 @@ def _atualiza_hexium():
     # clicasse em atualizar. Dono e permissao se resolvem explicitamente.
     try:
         anterior = CATALOGO.stat()
-        os.chown(tmp, anterior.st_uid, anterior.st_gid)
+        hostos.chown(tmp, anterior.st_uid, anterior.st_gid)
         os.chmod(tmp, anterior.st_mode & 0o7777)
     except OSError:
         os.chmod(tmp, 0o644)
@@ -929,7 +921,7 @@ def v_mods_instalar(dados):
         anota(f'baixando {nome} {versao} do Hexium…')
         caminho = _baixa(nome, versao)
         anota(f'zip conferido: {caminho.name} ({caminho.stat().st_size} bytes)')
-        _roda(['/usr/bin/python3', str(FERRAMENTAS / 'instalar-mods.py'),
+        _roda([hostos.PYTHON, str(FERRAMENTAS / 'instalar-mods.py'),
                f'{nome}={caminho.name}'], anota)
 
     return {'tarefa': _tarefa(f'instalar {nome} {versao}', [passos])}
@@ -945,7 +937,7 @@ def v_mods_atualizar(dados):
         anota(f'baixando {nome} {versao} do Hexium…')
         caminho = _baixa(nome, versao)
         anota(f'zip conferido: {caminho.name}')
-        _roda(['/usr/bin/python3', str(FERRAMENTAS / 'atualizar-mods.py'),
+        _roda([hostos.PYTHON, str(FERRAMENTAS / 'atualizar-mods.py'),
                f'{nome}={versao}'], anota)
 
     return {'tarefa': _tarefa(f'atualizar {nome} para {versao}', [passos])}
@@ -962,7 +954,7 @@ def v_mods_remover(dados):
               VALHEIM_ROOT / 'current/package-docs' / nome]
 
     def passos(anota):
-        subprocess.run(['systemctl', 'stop', GAME_SERVICE], timeout=240)
+        hostos.service_action('stop', GAME_SERVICE, timeout=240)
         anota('servidor parado')
         carimbo = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
         for pasta in pastas:
@@ -972,7 +964,7 @@ def v_mods_remover(dados):
                 shutil.copytree(pasta, guarda)
                 shutil.rmtree(pasta)
                 anota(f'removido {pasta} (cópia em {guarda})')
-        _roda(['/usr/bin/python3', str(FERRAMENTAS / 'relock.py')], anota)
+        _roda([hostos.PYTHON, str(FERRAMENTAS / 'relock.py')], anota)
         anota('servidor permanece parado; inicie-o pelo painel quando quiser')
 
     return {'tarefa': _tarefa(f'remover {nome}', [passos])}
@@ -989,7 +981,7 @@ def v_mods_varredura(_):
         shutil.copyfile(LOCK, retrato)
         anota(f'retrato do lock refeito: {len(_instalados())} pacotes')
         anota('perguntando ao Hexium e a Thunderstore, pacote por pacote...')
-        _roda(['/usr/bin/python3', str(FERRAMENTAS / 'varredura.py')], anota)
+        _roda([hostos.PYTHON, str(FERRAMENTAS / 'varredura.py')], anota)
 
     return {'tarefa': _tarefa('procurar atualizações em todas as lojas', [passos])}
 
@@ -1027,7 +1019,7 @@ WIPES = VALHEIM / 'wipes'
 CONFIG_BEPINEX = VALHEIM / 'config/BepInEx'
 PERFIS = Path(os.environ.get('HEIMDALL_PROFILES_DIR', str(HEIMDALL_STATE_ROOT / 'perfis')))
 BACKUP = FERRAMENTAS / 'backup.py'
-TRAVA_MANUTENCAO = os.environ.get('HEIMDALL_MAINTENANCE_LOCK', '/run/lock/heimdall-maintenance.lock')
+TRAVA_MANUTENCAO = str(hostos.env_path('HEIMDALL_MAINTENANCE_LOCK'))
 
 
 def _nome_do_mundo() -> str:
@@ -1046,8 +1038,22 @@ def _fwl_atual(pasta: Path):
     return candidatos[-1] if candidatos else None
 
 
+def _servidor_usa_riverheim() -> bool:
+    """Whether the server's mods include Riverheim (the terrain generator)."""
+    try:
+        if any('riverheim' in nome.lower() for nome in _instalados()):
+            return True
+    except Recusa:
+        pass
+    plugins = VALHEIM_ROOT / 'current' / 'BepInEx' / 'plugins'
+    try:
+        return any('riverheim' in item.name.lower() for item in plugins.iterdir())
+    except OSError:
+        return False
+
+
 def _servidor_ativo() -> bool:
-    return subprocess.run(['systemctl', 'is-active', '--quiet', GAME_SERVICE]).returncode == 0
+    return hostos.service_is_active(GAME_SERVICE)
 
 
 def _personagens():
@@ -1090,7 +1096,7 @@ def _para_servidor(anota) -> bool:
         return False
     marca = time.time() - 5
     anota('parando o servidor (ele salva o mundo ao sair)…')
-    subprocess.run(['systemctl', 'stop', GAME_SERVICE], timeout=300)
+    hostos.service_action('stop', GAME_SERVICE, timeout=300)
     if operacoes.online():
         raise Recusa('o servidor não parou')
     frescos = [p for p in MUNDOS.rglob('*.ok') if p.stat().st_mtime >= marca]
@@ -1215,12 +1221,10 @@ def v_mundo_wipe(dados):
         _operacao(operacoes._modifier_changes, modifiers)
 
     def passos(anota):
-        import fcntl
         _para_servidor(anota)
         anota('backup completo antes de mexer (backup.py)…')
-        _roda(['/usr/bin/python3', str(BACKUP)], anota)
-        trava = open(TRAVA_MANUTENCAO, 'w')
-        fcntl.flock(trava, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        _roda([hostos.PYTHON, str(BACKUP)], anota)
+        trava = hostos.exclusive_lock(TRAVA_MANUTENCAO)
         try:
             if novo_nome != nome and (MUNDOS / novo_nome).exists():
                 raise Recusa('já existe um mundo com esse nome; escolha outro')
@@ -1280,17 +1284,16 @@ def v_mundo_instalar(dados):
                 raise Recusa(f'arquivo fora do lugar no zip: {i.filename}')
         maior = max(metas, key=lambda i: int(re.search(r'_main\.(\d+)\.fwl2', i.filename).group(1)))
         meta = fwl.Fwl(z.read(maior))
-    if not meta.riverheim and not dados.get('sem_riverheim'):
+    # Only a server that generates terrain with Riverheim needs a Riverheim world.
+    if _servidor_usa_riverheim() and not meta.riverheim and not dados.get('sem_riverheim'):
         raise Recusa('esse mundo não foi gerado com o Riverheim: o terreno seria o do jogo '
                      'padrão. Gere com o modpack instalado.')
 
     def passos(anota):
-        import fcntl
         _para_servidor(anota)
         anota('backup completo antes de mexer (backup.py)…')
-        _roda(['/usr/bin/python3', str(BACKUP)], anota)
-        trava = open(TRAVA_MANUTENCAO, 'w')
-        fcntl.flock(trava, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        _roda([hostos.PYTHON, str(BACKUP)], anota)
+        trava = hostos.exclusive_lock(TRAVA_MANUTENCAO)
         caixa = _abre_caixa('mundo-enviado', seed_enviada=meta.seed, nome_no_arquivo=meta.nome)
         try:
             anterior = _arquiva_mundo(nome, caixa, anota)
@@ -1411,7 +1414,7 @@ def _site_values(manifest, page) -> list[dict]:
     script = SITE_DIR / 'values.py'
     if script.is_file():
         owner = SITE_DIR.stat()
-        run = subprocess.run(['/usr/bin/python3', str(script), '--json'], cwd=str(SITE_DIR),
+        run = subprocess.run([hostos.PYTHON, str(script), '--json'], cwd=str(SITE_DIR),
                              user=owner.st_uid, group=owner.st_gid, capture_output=True,
                              text=True, timeout=30)
         try:
@@ -1464,7 +1467,7 @@ def _write_as_owner(path: Path, text: str):
     info = path.stat()
     tmp = path.with_name('.' + path.name + '.painel')
     tmp.write_text(text, encoding='utf-8')
-    os.chown(tmp, info.st_uid, info.st_gid)
+    hostos.chown(tmp, info.st_uid, info.st_gid)
     os.chmod(tmp, info.st_mode & 0o7777)
     os.replace(tmp, path)
 
@@ -1495,7 +1498,7 @@ def _site_build(page, base: Path | None = None, publish: bool = True) -> list[st
     if publish and targets:
         if not all(SITE_TARGET.match(t) for t in targets):
             raise Recusa('alvo de publicação inválido no site-pages.json')
-        run = subprocess.run(['/usr/bin/python3', str(SITE_DIR / 'publicar.py'), *targets],
+        run = subprocess.run([hostos.PYTHON, str(SITE_DIR / 'publicar.py'), *targets],
                              cwd=str(SITE_DIR), capture_output=True, text=True, timeout=120)
         output.append(f'$ publicar.py {" ".join(targets)}\n{run.stdout}{run.stderr}'.strip())
         if run.returncode != 0:
@@ -1746,9 +1749,9 @@ def v_site_previa(dados):
         base = Path(tmp) / 'site'
         shutil.copytree(SITE_DIR, base, ignore=BUILD_SKIP)
         for folder, _, files in os.walk(base):
-            os.chown(folder, owner.st_uid, owner.st_gid)
+            hostos.chown(folder, owner.st_uid, owner.st_gid)
             for name in files:
-                os.chown(os.path.join(folder, name), owner.st_uid, owner.st_gid)
+                hostos.chown(os.path.join(folder, name), owner.st_uid, owner.st_gid)
         writes, changed, summary = _site_compute(manifest, page, dados, base)
         for path, text in writes.items():
             path.write_text(text, encoding='utf-8')
@@ -1989,17 +1992,17 @@ def _new_site_file(path: Path, data: bytes):
     """Create a file in the site dir with the same owner/mode as the manifest."""
     ref = (SITE_DIR / sitetext.MANIFEST).stat()
     path.parent.mkdir(parents=True, exist_ok=True)
-    os.chown(path.parent, ref.st_uid, ref.st_gid)
+    hostos.chown(path.parent, ref.st_uid, ref.st_gid)
     os.chmod(path.parent, 0o750)
     tmp = path.with_name('.' + path.name + '.painel')
     tmp.write_bytes(data)
-    os.chown(tmp, ref.st_uid, ref.st_gid)
+    hostos.chown(tmp, ref.st_uid, ref.st_gid)
     os.chmod(tmp, ref.st_mode & 0o666)
     os.replace(tmp, path)
 
 
 def _publish(targets: list[str]) -> list[str]:
-    run = subprocess.run(['/usr/bin/python3', str(SITE_DIR / 'publicar.py'), *targets],
+    run = subprocess.run([hostos.PYTHON, str(SITE_DIR / 'publicar.py'), *targets],
                          cwd=str(SITE_DIR), capture_output=True, text=True, timeout=300)
     if run.returncode != 0:
         raise Recusa(f'a publicação falhou: {(run.stderr or run.stdout).strip()[-300:]}')
@@ -2193,7 +2196,7 @@ def v_server_reinstall(dados):
     if not nucleo.confere_senha(str(dados.get('senha_admin') or ''),
                                nucleo.le_config().get('senha', '')):
         raise Recusa('senha do administrador incorreta')
-    steam = VALHEIM_ROOT / 'steamcmd/steamcmd.sh'
+    steam = VALHEIM_ROOT / 'steamcmd' / hostos.STEAMCMD
     game = VALHEIM_ROOT / 'current'
     if not steam.is_file() or not game.is_dir():
         raise Recusa('SteamCMD ou pasta do jogo não encontrados')
@@ -2204,9 +2207,9 @@ def v_server_reinstall(dados):
             if operacoes.online():
                 raise Recusa('o servidor não parou; reinstalação cancelada')
         anota('Reinstalando arquivos oficiais pelo SteamCMD; dados persistentes preservados.')
-        result = subprocess.run(['runuser', '-u', 'valheim', '--', str(steam),
+        result = subprocess.run(hostos.run_as_game([str(steam),
                                  '+force_install_dir', str(game), '+login', 'anonymous',
-                                 '+app_update', '896660', 'validate', '+quit'],
+                                 '+app_update', '896660', 'validate', '+quit']),
                                 capture_output=True, text=True, timeout=3600)
         if result.returncode:
             raise Recusa((result.stderr or result.stdout)[-500:])
@@ -2257,16 +2260,14 @@ def v_sagas_status(_):
     database = HEIMDALL_STATE_ROOT / 'sagas/sagas.sqlite3'
     if database.is_file():
         try:
-            with sqlite3.connect(f'file:{database}?mode=ro', uri=True, timeout=3) as db:
+            with sagas.read_only(database) as db:
                 status['external_atlas'] = sum(
                     atlas._external(row[0]) is not None
                     for row in db.execute('SELECT id FROM worlds LIMIT 100'))
         except sqlite3.Error:
             pass
     try:
-        status['importer_timer_active'] = subprocess.run(
-            ['systemctl', 'is-active', '--quiet', 'heimdall-sagas-ingest.timer'],
-            timeout=3, check=False).returncode == 0
+        status['importer_timer_active'] = hostos.timer_is_active('heimdall-sagas-ingest')
     except (OSError, subprocess.TimeoutExpired):
         status['importer_timer_active'] = False
     return status
@@ -2294,14 +2295,16 @@ def v_sagas_settings_gravar(dados):
     temporary = state / ('.settings-' + uuid.uuid4().hex + '.tmp')
     descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o640)
     try:
-        os.fchown(descriptor, pwd.getpwnam(GRUPO).pw_uid,
-                  grp.getgrnam('heimdall-sagas').gr_gid)
+        hostos.fchown(descriptor, hostos.account_ids(GRUPO)[0],
+                      hostos.group_id('heimdall-sagas'))
         with os.fdopen(descriptor, 'w', encoding='utf-8') as file:
             descriptor = -1
             json.dump(settings, file, ensure_ascii=False, separators=(',', ':'))
             file.write('\n')
             file.flush()
             os.fsync(file.fileno())
+        if target.exists():  # on Windows the game's read access lives on this file
+            hostos.copy_access(target, temporary)
         os.replace(temporary, target)
     finally:
         if descriptor >= 0:
@@ -2315,8 +2318,7 @@ def _sagas_story_write(state, name, content):
     temporary = state / ('.story-' + uuid.uuid4().hex + '.tmp')
     descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     try:
-        owner = pwd.getpwnam(GRUPO)
-        os.fchown(descriptor, owner.pw_uid, owner.pw_gid)
+        hostos.fchown(descriptor, *hostos.account_ids(GRUPO))
         with os.fdopen(descriptor, 'w', encoding='utf-8') as file:
             descriptor = -1
             file.write(content)
@@ -2332,9 +2334,7 @@ def _sagas_story_write(state, name, content):
 def v_sagas_story_status(_):
     status = stories.admin_status(HEIMDALL_STATE_ROOT / 'sagas')
     try:
-        status['worker_timer_active'] = subprocess.run(
-            ['systemctl', 'is-active', '--quiet', 'heimdall-sagas-story.timer'],
-            timeout=3, check=False).returncode == 0
+        status['worker_timer_active'] = hostos.timer_is_active('heimdall-sagas-story')
     except (OSError, subprocess.TimeoutExpired):
         status['worker_timer_active'] = False
     return status
@@ -2388,8 +2388,8 @@ def v_sagas_story_request(dados):
     if queue.is_symlink():
         raise Recusa('fila de histórias inválida')
     queue.mkdir(mode=0o700, exist_ok=True)
-    owner = pwd.getpwnam(GRUPO)
-    os.chown(queue, owner.pw_uid, owner.pw_gid)
+    owner = hostos.account_ids(GRUPO)
+    hostos.chown(queue, *owner)
     os.chmod(queue, 0o700)
     if sum(1 for _ in queue.glob('*.json')) >= 5:
         raise Recusa('fila de histórias cheia')
@@ -2397,7 +2397,7 @@ def v_sagas_story_request(dados):
     temporary = queue / ('.' + name + '.tmp')
     descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     try:
-        os.fchown(descriptor, owner.pw_uid, owner.pw_gid)
+        hostos.fchown(descriptor, *owner)
         with os.fdopen(descriptor, 'w', encoding='utf-8') as file:
             descriptor = -1
             json.dump(dados, file, separators=(',', ':'))
@@ -2575,24 +2575,18 @@ class Atendente(socketserver.StreamRequestHandler):
         self.wfile.write(json.dumps(corpo, ensure_ascii=False).encode('utf-8') + b'\n')
 
 
-class Servidor(socketserver.ThreadingUnixStreamServer):
-    daemon_threads = True
-    allow_reuse_address = True
-
-
 def main():
-    if os.geteuid() != 0:
-        sys.exit('o executor precisa rodar como root — é ele que tem o privilégio')
-    SOCKET.parent.mkdir(parents=True, exist_ok=True)
-    if SOCKET.exists():
-        SOCKET.unlink()
-    servidor = Servidor(str(SOCKET), Atendente)
-    # So o grupo do painel fala com o executor.
-    os.chown(SOCKET, 0, grp.getgrnam(GRUPO).gr_gid)
-    os.chmod(SOCKET, 0o660)
+    if not hostos.is_privileged():
+        sys.exit('o executor precisa rodar como root (SYSTEM no Windows) — é ele que tem o privilégio')
+    # Only the panel's account can talk to the executor: through the socket's
+    # group on Linux, through the shared secret on Windows.
+    servidor = hostos.ExecutorServer(SOCKET, Atendente, GRUPO)
     audita('executor', 'iniciou', {}, 'feito')
     print(f'executor ouvindo em {SOCKET}', flush=True)
-    servidor.serve_forever()
+    try:
+        servidor.serve_forever()
+    except KeyboardInterrupt:  # a Windows service stop arrives as Ctrl+C
+        print('executor encerrado', flush=True)
 
 
 if __name__ == '__main__':

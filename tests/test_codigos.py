@@ -22,7 +22,7 @@ class CodeTests(unittest.TestCase):
         spec = importlib.util.spec_from_file_location('gerar', ROOT / 'ferramentas/gerar-codigos.py')
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        self.assertEqual((ROOT / 'docs/CODIGOS-DE-ERRO.md').read_text(), module.render(),
+        self.assertEqual((ROOT / 'docs/CODIGOS-DE-ERRO.md').read_text(encoding='utf-8'), module.render(),
                          'run: python3 ferramentas/gerar-codigos.py')
 
     def test_every_code_used_in_code_exists(self):

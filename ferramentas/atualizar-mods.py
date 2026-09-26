@@ -5,22 +5,20 @@ Diferente do instalar-mods.py, aqui a pasta antiga do plugin e substituida. Os
 arquivos de config existentes NUNCA sao sobrescritos — varios pacotes trazem uma
 pasta config/ com os padroes, e ela so serve para a primeira instalacao.
 """
-import datetime, fcntl, grp, hashlib, json, os, pwd, shutil, stat, subprocess, sys, tarfile, time, zipfile
+import datetime, hashlib, json, os, shutil, stat, subprocess, sys, tarfile, time, zipfile
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'servicos' / 'painel'))
+import hostos  # noqa: E402
 SERVICE = os.environ.get('HEIMDALL_GAME_SERVICE', 'heimdall-valheim')
 
 BASE = Path(os.environ.get('HEIMDALL_DATA_DIR', str(Path(__file__).resolve().parent.parent / 'dados')))
-ROOT = Path(os.environ.get('HEIMDALL_VALHEIM_DIR', '/srv/valheim'))
+ROOT = hostos.env_path('HEIMDALL_VALHEIM_DIR')
 DOCS = {'manifest.json','icon.png','readme.md','changelog.md','license.md','license.txt'}
 def run(*a): return subprocess.run(a, check=True, capture_output=True, text=True).stdout
 
 def estado_do_servico(nome=SERVICE):
-    """O estado, sem explodir. 'systemctl is-active' sai com codigo 3 quando o
-    servico esta parado, e o nosso run() usa check=True — entao perguntar o
-    estado com ele derrubava o script justamente quando o servidor ja estava
-    desligado de proposito."""
-    return subprocess.run(['systemctl', 'is-active', nome],
-                          capture_output=True, text=True).stdout.strip()
+    """The state as text, without raising when the service is stopped."""
+    return 'active' if hostos.service_is_active(nome) else 'inactive'
 
 
 
@@ -64,8 +62,7 @@ for pasta, nova in alvos:
     print(f'  {pasta:34s} {atual:>9s} -> {nova:<9s} sha {sha[:12]}')
 if pulados: print(f'  configs preservadas (nao sobrescritas): {sorted(set(pulados))}')
 
-trava = open('/run/lock/heimdall-maintenance.lock','w')
-fcntl.flock(trava, fcntl.LOCK_EX | fcntl.LOCK_NB)
+trava = hostos.exclusive_lock(hostos.env_path('HEIMDALL_MAINTENANCE_LOCK'))
 # Maintenance leaves the game stopped until the administrator starts it.
 ativo_antes = estado_do_servico() == 'active'
 if not ativo_antes:
@@ -75,8 +72,8 @@ backup = ROOT/'backups'/f'{carimbo}-atualizacao.tar.gz'
 marca = time.time()-2; guardadas={}
 try:
     if ativo_antes:
-        run('systemctl','stop',SERVICE)
-    assert subprocess.run(['systemctl','is-active','--quiet',SERVICE]).returncode!=0
+        hostos.service_action('stop', SERVICE, timeout=300)
+    assert not hostos.service_is_active(SERVICE)
     # O que precisa ser verdade e que a ultima geracao do mundo esteja COMPLETA,
     # nao que ela seja nova. Com o servidor vazio o relogio do Valheim fica parado
     # (ZNet.UpdateNetTime so anda com jogador conectado), entao nada muda e o
@@ -105,7 +102,7 @@ try:
         for item in ['saves','config','server.env','run.sh']:
             if (ROOT/item).exists(): tar.add(ROOT/item, arcname=item)
         tar.add(lock_rel, arcname='release/mods.lock.json')
-        tar.add(f'/etc/systemd/system/{SERVICE}.service', arcname=f'service/{SERVICE}.service')
+        if hostos.service_file(SERVICE).is_file(): tar.add(hostos.service_file(SERVICE), arcname=f'service/{hostos.service_file(SERVICE).name}')
         for pasta,_ in alvos:
             for sub in ('BepInEx/plugins','BepInEx/patchers','package-docs'):
                 d = release/sub/pasta
@@ -121,11 +118,11 @@ try:
             d = release/sub/pasta
             if d.is_dir():
                 guardadas[d] = Path(str(d)+'.antiga'); shutil.move(str(d), str(guardadas[d]))
-    uid,gid = pwd.getpwnam('valheim').pw_uid, grp.getgrnam('valheim').gr_gid
+    uid, gid = hostos.account_ids('valheim') if hostos.account_exists('valheim') else (-1, -1)
     for destino,dados in carga.items():
         destino.parent.mkdir(parents=True, exist_ok=True)
-        os.chown(destino.parent,uid,gid); os.chmod(destino.parent,0o755)
-        destino.write_bytes(dados); os.chown(destino,uid,gid); os.chmod(destino,0o644)
+        hostos.chown(destino.parent,uid,gid); os.chmod(destino.parent,0o755)
+        destino.write_bytes(dados); hostos.chown(destino,uid,gid); os.chmod(destino,0o644)
     for pasta,_ in alvos:
         reg = registros[pasta]
         reg['dlls'] = sorted(d.name for d in carga if d.suffix=='.dll' and d.parent.name==pasta)
@@ -133,7 +130,7 @@ try:
         for k in ('site','origem_versao'):
             if k in antiga: reg[k] = antiga[k]
         lock['packages'][pasta] = reg
-    lock_rel.write_text(json.dumps(lock,indent=2,sort_keys=True)+'\n'); os.chown(lock_rel,uid,gid)
+    lock_rel.write_text(json.dumps(lock,indent=2,sort_keys=True)+'\n'); hostos.chown(lock_rel,uid,gid)
     for d in guardadas.values(): shutil.rmtree(d)
     print(f'atualizado; {len(lock["packages"])} pacotes no lock')
 except BaseException as e:

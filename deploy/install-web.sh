@@ -198,6 +198,7 @@ install -D -m 0640 "$ROOT/site/web/values.py" "$SITE_DIR/values.py"
 install -D -m 0640 "$ROOT/site/web/sync_modpack.py" "$SITE_DIR/sync_modpack.py"
 install -D -m 0640 "$ROOT/site/web/identidade.py" "$SITE_DIR/identidade.py"
 install -D -m 0640 "$ROOT/site/web/navegacao.py" "$SITE_DIR/navegacao.py"
+install -D -m 0640 "$ROOT/site/web/sistema.py" "$SITE_DIR/sistema.py"
 python3 "$ROOT/site/web/migrar-paginas.py" "$ROOT/site/web" "$SITE_DIR"
 for template in "$ROOT"/site/web/modelos-pagina/*.html; do
   [[ -e "$SITE_DIR/modelos-pagina/$(basename "$template")" ]] || \

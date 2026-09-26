@@ -1,16 +1,18 @@
 #!/usr/bin/python3
 """Consistent local backup; immutable release referenced by absolute path."""
-import datetime,fcntl,hashlib,json,os,pathlib,subprocess,tarfile,time
-root=pathlib.Path(os.environ.get('HEIMDALL_VALHEIM_DIR','/srv/valheim'))
+import datetime,hashlib,json,os,pathlib,sys,tarfile,time
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'servicos' / 'painel'))
+import hostos  # noqa: E402
+root=hostos.env_path('HEIMDALL_VALHEIM_DIR')
 service_name=os.environ.get('HEIMDALL_GAME_SERVICE') or 'heimdall-valheim'
-service_file=pathlib.Path(os.environ.get('HEIMDALL_GAME_SERVICE_FILE',f'/etc/systemd/system/{service_name}.service'))
-lock=open(os.environ.get('HEIMDALL_MAINTENANCE_LOCK','/run/lock/heimdall-maintenance.lock'),'w');fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-def run(*args): return subprocess.run(args,check=True,text=True,capture_output=True).stdout.strip()
-active=subprocess.run(['systemctl','is-active','--quiet',service_name]).returncode==0
+service_file=hostos.service_file(service_name)
+lock=hostos.exclusive_lock(hostos.env_path('HEIMDALL_MAINTENANCE_LOCK'))
+active=hostos.service_is_active(service_name)
 if active:
  mark=time.time()-5
- subprocess.run(['systemctl','stop',service_name],check=False,capture_output=True)
- if subprocess.run(['systemctl','is-active','--quiet',service_name]).returncode==0:
+ hostos.service_action('stop',service_name,timeout=300)
+ if hostos.service_is_active(service_name):
   raise SystemExit('Service still running after stop; refusing backup.')
  # O que importa nao e o Result do systemd (o plugin ServerRestart encerra o
  # processo a forca depois de salvar, o que reporta Result=signal), e sim se o
@@ -31,7 +33,7 @@ try:
    tar.add(root/name,arcname=name)
   tar.add(release/'mods.lock.json',arcname='mods.lock.json')
   tar.add(release/'steamapps/appmanifest_896660.acf',arcname='appmanifest_896660.acf')
-  if service_file.is_file(): tar.add(service_file,arcname=f'service/{service_name}.service')
+  if service_file.is_file(): tar.add(service_file,arcname=f'service/{service_file.name}')
   for item in ('run.sh','server.env'):
    if (root/item).is_file(): tar.add(root/item,arcname=f'service/{item}')
  with tarfile.open(tmp) as tar:

@@ -313,7 +313,7 @@ def tile(state: Path, world: str, revision_id: str, z: int, x: int, y: int,
     if info['mode'] == 'full':
         return content
     from PIL import Image, ImageDraw
-    with sqlite3.connect(f'file:{state / "sagas.sqlite3"}?mode=ro', uri=True, timeout=3) as db:
+    with sagas.read_only(state / 'sagas.sqlite3') as db:
         points = _points(db, world)
     size = 256 * 2 ** z
     radius = 700 * size / SPAN

@@ -29,13 +29,10 @@ def test_readiness_is_per_run_and_cached():
     executor._PRONTO_POR_EXECUCAO.clear()
     calls = []
 
-    def fake_run(command, **_):
-        calls.append(command)
-        class Done:
-            returncode = 0
-            stdout = 'Game server connected\n' if 'a' * 32 in command[1] else ''
-        return Done()
-    with patch.object(executor.subprocess, 'run', side_effect=fake_run):
+    def fake_search(service, text, invocation):
+        calls.append(invocation)
+        return text == 'Game server connected' and invocation == 'a' * 32
+    with patch.object(executor.hostos, 'service_logged_since_start', side_effect=fake_search):
         assert executor._jogo_pronto('a' * 32)
         assert executor._jogo_pronto('a' * 32)
         assert not executor._jogo_pronto('b' * 32)

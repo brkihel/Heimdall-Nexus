@@ -24,7 +24,7 @@ def game(tmp_path, monkeypatch):
     monkeypatch.setattr(operacoes, 'PROFILE', tmp_path / 'profile.json')
     monkeypatch.setattr(operacoes, '_launcher', lambda: launcher)
     monkeypatch.setattr(operacoes, 'online', lambda: False)
-    monkeypatch.setattr(operacoes, '_user_exists', lambda name: False)
+    monkeypatch.setattr(operacoes.hostos, 'account_exists', lambda name: False)
     return saves
 
 
@@ -103,6 +103,7 @@ def test_modifiers_roundtrip_and_validation(game):
     assert '-resetmodifiers' not in off['comando']
 
 
+@pytest.mark.skipif(sys.platform == 'win32', reason='the bash launcher is the Linux one')
 def test_launcher_passes_only_known_modifiers(tmp_path):
     import os
     import subprocess
@@ -124,6 +125,7 @@ def test_launcher_passes_only_known_modifiers(tmp_path):
     assert '-resetmodifiers' not in run(VH_MODIFIERS='combat=hard')
 
 
+@pytest.mark.skipif(sys.platform == 'win32', reason='the Linux installer and launcher')
 def test_panel_installer_and_launcher_offer_the_same_modifiers():
     import re
     root = Path(__file__).resolve().parents[1]
@@ -138,3 +140,58 @@ def test_panel_installer_and_launcher_offer_the_same_modifiers():
     assert allowed == expected
     keys = re.search(r'\n\s*(playerevents[^)]*)\)', launcher).group(1).split('|')
     assert tuple(keys) == operacoes.WORLD_KEYS
+
+
+def _windows_launcher():
+    import importlib.util
+    path = Path(__file__).resolve().parents[1] / 'deploy/windows/launcher-windows.py'
+    spec = importlib.util.spec_from_file_location('launcher_windows', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_windows_launcher_offers_the_panel_modifiers():
+    launcher = _windows_launcher()
+    expected = {name: tuple(v for v in values if v != 'default') for name, values in operacoes.MODIFIERS.items()}
+    assert launcher.MODIFIERS == expected
+    assert launcher.WORLD_KEYS == operacoes.WORLD_KEYS
+    source = (Path(__file__).resolve().parents[1] / 'deploy/windows/launcher-windows.py').read_text(encoding='utf-8')
+    assert 'VH_MODIFIERS_MANAGED' in source and 'VH_PASSWORD' in source
+
+
+def test_windows_launcher_passes_only_known_modifiers():
+    launcher = _windows_launcher()
+    base = {'VH_NAME': 'N', 'VH_PORT': '2456', 'VH_WORLD': 'W', 'VH_SAVEDIR': 'C:/s'}
+    ignored = []
+    args = launcher.build_arguments({**base, 'VH_MODIFIERS_MANAGED': '1',
+                                     'VH_MODIFIERS': 'combat=hard,evil=$(id),raids=none',
+                                     'VH_SETKEYS': 'nomap,rm -rf /'}, ignored.append)
+    assert args[args.index('-resetmodifiers'):] == ['-resetmodifiers', '-modifier', 'combat', 'hard',
+                                                    '-modifier', 'raids', 'none', '-setkey', 'nomap']
+    assert len(ignored) == 2
+    assert '-resetmodifiers' not in launcher.build_arguments({**base, 'VH_MODIFIERS': 'combat=hard'})
+    with pytest.raises(launcher.LaunchError):
+        launcher.build_arguments({**base, 'VH_NAME': ''})
+
+
+def test_windows_launcher_reads_server_env_like_systemd():
+    launcher = _windows_launcher()
+    env = launcher.parse_env('# comment\nVH_NAME="Meu \\"Servidor\\""\nVH_WORLD="Mundo \u00e9"\n'
+                             "VH_PASSWORD='abc'\nVH_PORT=2456\n")
+    assert env == {'VH_NAME': 'Meu "Servidor"', 'VH_WORLD': 'Mundo é', 'VH_PASSWORD': 'abc', 'VH_PORT': '2456'}
+    args = launcher.build_arguments({**env, 'VH_SAVEDIR': 'C:/s', 'VH_PASSWORD': 'segredo', 'VH_CROSSPLAY': '1'})
+    assert args[args.index('-password') + 1] == 'segredo' and args[-1] == '-crossplay'
+
+
+def test_windows_launcher_never_loads_mods_that_were_not_selected(tmp_path):
+    launcher = _windows_launcher()
+    assert launcher.bepinex_arguments(tmp_path, False) == []
+    (tmp_path / 'winhttp.dll').write_bytes(b'')
+    assert launcher.bepinex_arguments(tmp_path, False) == ['--doorstop-enabled', 'false']
+    with pytest.raises(launcher.LaunchError):
+        launcher.bepinex_arguments(tmp_path, True)
+    preloader = tmp_path / 'BepInEx/core/BepInEx.Preloader.dll'
+    preloader.parent.mkdir(parents=True)
+    preloader.write_bytes(b'')
+    assert launcher.bepinex_arguments(tmp_path, True)[:2] == ['--doorstop-enabled', 'true']
