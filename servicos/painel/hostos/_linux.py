@@ -223,3 +223,33 @@ def executor_connect(address, timeout: float) -> socket.socket:
         connection.close()
         raise
     return connection
+
+
+# ---------------------------------------------------------------- the web server
+WEB_CONFIG = Path('/etc/nginx/sites-available/heimdall-nexus')
+
+
+def web_config_replace(path: Path, text: str) -> None:
+    """Writes the new site configuration and keeps it only if nginx -t accepts it."""
+    old = path.read_text(encoding='utf-8')
+    stat = path.stat()
+    temporary = path.with_name(path.name + '.novo')
+    temporary.write_text(text, encoding='utf-8')
+    os.chown(temporary, stat.st_uid, stat.st_gid)
+    os.chmod(temporary, stat.st_mode & 0o7777)
+    os.replace(temporary, path)
+    check = subprocess.run(['nginx', '-t'], capture_output=True, text=True, timeout=60)
+    if check.returncode != 0:
+        path.write_text(old, encoding='utf-8')
+        last = next((line for line in reversed(check.stderr.splitlines()) if line.strip()), 'nginx -t falhou')
+        raise ValueError(f'o Nginx recusou o novo endereço ({last.strip()[:200]}); nada mudou')
+
+
+def web_reload() -> None:
+    done = subprocess.run(['systemctl', 'reload', 'nginx.service'], capture_output=True, text=True, timeout=60)
+    if done.returncode != 0:
+        raise ValueError('o Nginx não recarregou: ' + (done.stderr.strip()[-200:] or 'sem detalhes'))
+
+
+def desktop_links(site_url: str) -> None:
+    """Only Windows has a desktop app to point at the new address."""

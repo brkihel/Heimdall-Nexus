@@ -86,5 +86,11 @@ copy_access = _impl.copy_access
 is_privileged = _impl.is_privileged
 
 # ---------------------------------------------------------------- executor channel
+# The web server (Nginx on Linux, Caddy on Windows).
+WEB_CONFIG: Path = _impl.WEB_CONFIG
+web_config_replace = _impl.web_config_replace
+web_reload = _impl.web_reload
+desktop_links = _impl.desktop_links
+
 ExecutorServer = _impl.ExecutorServer
 executor_connect = _impl.executor_connect

@@ -491,3 +491,44 @@ class ExecutorServer(_channel.LoopbackExecutorServer):
 
 def executor_connect(address, timeout: float) -> socket.socket:
     return _channel.connect(address, timeout, _setting('HEIMDALL_EXECUTOR_KEY_FILE'))
+
+
+# ---------------------------------------------------------------- the web server
+WEB_CONFIG = BASE / 'caddy' / 'Caddyfile'
+
+
+def web_config_replace(path: Path, text: str) -> None:
+    """Writes the new Caddyfile only after Caddy itself accepts it."""
+    candidate = path.with_name(path.name + '.novo')
+    candidate.write_text(text, encoding='utf-8')
+    caddy = APP_BASE / 'tools' / 'caddy.exe'
+    check = subprocess.run([str(caddy), 'validate', '--config', str(candidate), '--adapter', 'caddyfile'],
+                           capture_output=True, text=True, errors='replace', timeout=60,
+                           creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+    if check.returncode != 0:
+        candidate.unlink(missing_ok=True)
+        last = next((line for line in reversed((check.stderr or check.stdout).splitlines()) if line.strip()),
+                    'caddy validate falhou')
+        raise ValueError(f'o Caddy recusou o novo endereço ({last.strip()[:200]}); nada mudou')
+    copy_access(path, candidate)
+    os.replace(candidate, path)
+
+
+def web_reload() -> None:
+    """Caddy also carries this very request: restart it just after the answer leaves."""
+    import threading
+    threading.Timer(2.0, lambda: service_action('restart', 'heimdall-web', timeout=60)).start()
+
+
+def desktop_links(site_url: str) -> None:
+    """The desktop app's Open the panel and Open the website buttons."""
+    info = APP_BASE / 'desktop.json'
+    try:
+        data = json.loads(info.read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return
+    data.update(panel=site_url + '/jarl/', site=site_url + '/')
+    candidate = info.with_name(info.name + '.novo')
+    candidate.write_text(json.dumps(data, indent=2) + '\n', encoding='utf-8')
+    copy_access(info, candidate)
+    os.replace(candidate, info)

@@ -73,3 +73,4 @@ dele (`python3 ferramentas/gerar-codigos.py`) e um teste confere que as duas bat
 | `HN-CFG-007` | Modificador de mundo inválido | Recarregue a página e escolha uma das opções mostradas. |
 | `HN-CFG-008` | O lançador instalado não aceita modificadores | Atualize o Heimdall em Sobre e atualizações. |
 | `HN-CFG-009` | Dados de acesso inválidos | Recarregue a página e tente de novo. |
+| `HN-CFG-010` | Endereço não mudou | Use um domínio (meuservidor.com.br) ou um IP (192.168.0.25), sem http:// nem barras. Se o servidor do site recusou, o endereço antigo continua valendo. |

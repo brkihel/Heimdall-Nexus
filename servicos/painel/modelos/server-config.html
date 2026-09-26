@@ -19,6 +19,16 @@
   <div class="acoes"><button id="salvar" class="btn principal">Salvar</button><button id="reiniciar" class="btn" hidden>Reiniciar para aplicar</button></div>
   <p id="mensagem" role="status"></p>
 </div>
+<div class="cartao" style="max-width:850px" id="cartao-endereco">
+  <h2>Endereço</h2>
+  <p>Onde o site e o painel abrem, e o endereço que o site mostra aos jogadores para entrar no Valheim. Mudar aqui não reinicia o jogo.</p>
+  <div class="grade-cfg">
+    <label>Endereço do site e do painel<input id="end-site" maxlength="253" spellcheck="false" autocomplete="off" placeholder="meuservidor.com.br ou 192.168.0.25"></label>
+    <label>Endereço de conexão do jogo<input id="end-jogo" maxlength="253" spellcheck="false" autocomplete="off" placeholder="Em branco: o mesmo do site"></label>
+  </div>
+  <p class="nota-cfg" id="end-nota"></p>
+  <div class="acoes"><button id="end-salvar" class="btn principal" type="button">Salvar endereço</button></div>
+</div>
 <div class="cartao" style="max-width:850px" id="cartao-modificadores">
   <div class="mod-topo">
     <div><h2>Modificadores de mundo</h2><p class="nota-cfg">Os ajustes da tela "Hospedar servidor" do Valheim.</p></div>
@@ -260,7 +270,29 @@ $('acesso-salvar').onclick=async()=>{
     avisar({tipo:'ok',titulo:'Acesso salvo',texto:'O servidor aplica em cerca de 10 segundos, sem reiniciar.'});
   }catch(e){avisoErro(e,'Não foi possível salvar o acesso');}
 };
-montaModificadores();carregaAcesso();
+let endereco=null;
+async function carregaEndereco(){
+  try{endereco=await api('site.endereco');
+    $('end-site').value=endereco.site||'';$('end-jogo').value=endereco.jogo&&endereco.jogo!==endereco.site?endereco.jogo:'';
+    $('end-site').disabled=!endereco.pode_mudar_site;
+    $('end-nota').textContent=[endereco.pode_mudar_site?'':endereco.motivo_site,
+      endereco.https?'O site usa HTTPS: o endereço do site precisa ser um domínio.':'Sem HTTPS, o site também abre por qualquer outro endereço deste computador; este é o que os links e o aplicativo usam.',
+      'O endereço de conexão aparece no site em alguns minutos, na próxima atualização do status.'].filter(Boolean).join(' ');
+  }catch(e){$('end-nota').textContent=e.message}
+}
+$('end-salvar').onclick=async()=>{
+  if(!endereco)return;
+  const site=$('end-site').value.trim(),jogo=$('end-jogo').value.trim();
+  if(site!==endereco.site&&!await confirmar(`Mudar o endereço do site e do painel para ${site}? Depois de salvar, o painel passa a abrir por ele.`,{titulo:'Mudar o endereço',acao:'Mudar'}))return;
+  try{const d=await api('site.endereco.gravar',{site,jogo});
+    const novo=d.url+ROOT+'/';
+    const partes=[d.mudou.site?`O site e o painel agora abrem em ${d.url}.`:'',d.mudou.jogo?'O site mostra o novo endereço de conexão em alguns minutos.':'',d.aviso||''].filter(Boolean);
+    avisar({tipo:d.aviso?'info':'ok',titulo:d.mudou.site||d.mudou.jogo?'Endereço salvo':'Nada mudou',texto:partes.join(' ')||'Os endereços já eram esses.'});
+    await carregaEndereco();
+    if(d.mudou.site&&endereco.https&&location.host!==d.site)setTimeout(()=>{location.href=novo},2500);
+  }catch(e){avisoErro(e,'Não foi possível mudar o endereço');}
+};
+montaModificadores();carregaAcesso();carregaEndereco();
 load();
 </script>
 {% endblock %}

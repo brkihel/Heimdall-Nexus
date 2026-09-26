@@ -554,7 +554,8 @@ async def api_administracao(pedido: Request):
         return JSONResponse({'ok': False, 'erro': 'pedido inválido'}, status_code=400)
     body = await pedido.json()
     verb = body.get('verbo')
-    if verb not in {'server.config', 'server.acesso', 'server.reinstall', 'schedules', 'backups'}:
+    if verb not in {'server.config', 'server.acesso', 'server.reinstall', 'schedules', 'backups',
+                    'site.endereco', 'site.endereco.gravar'}:
         return JSONResponse({'ok': False, 'erro': 'ação inválida'}, status_code=400)
     try:
         return {'ok': True, **await nucleo.pede_async(verb, body.get('dados') or {}, usuario)}

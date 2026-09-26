@@ -1011,6 +1011,7 @@ def v_mods_tarefas(_):
 import fwl  # noqa: E402  (mora ao lado deste arquivo)
 import sitetext  # noqa: E402  (lives next to this file)
 import operacoes  # noqa: E402
+import endereco  # noqa: E402
 
 VALHEIM = VALHEIM_ROOT
 MUNDOS = VALHEIM / 'saves/worlds_local'
@@ -2027,6 +2028,24 @@ def v_site_identidade(_):
             'paletas': module.PALETAS, 'paginas_personalizadas': custom}
 
 
+def v_site_endereco(_):
+    return endereco.ler()
+
+
+def v_site_endereco_gravar(dados):
+    """New site and game addresses; the site's own link and pages follow the site's."""
+    try:
+        feito = endereco.gravar(dados if isinstance(dados, dict) else {})
+    except endereco.Problema as erro:
+        raise Recusa(str(erro)) from erro
+    if feito['mudou']['site']:
+        try:
+            v_site_identidade_gravar({'url': feito['url']})
+        except Recusa as erro:
+            feito['aviso'] = f'O endereço mudou, mas o link do site não foi republicado: {erro}'
+    return feito
+
+
 def v_site_identidade_gravar(dados):
     """Save identity, apply it to every page source and publish the whole site."""
     module = _identity_module()
@@ -2461,6 +2480,8 @@ VERBOS = {
     'ping': v_ping,
     'site.paginas': v_site_paginas,
     'site.identidade': v_site_identidade,
+    'site.endereco': v_site_endereco,
+    'site.endereco.gravar': v_site_endereco_gravar,
     'site.identidade.gravar': v_site_identidade_gravar,
     'site.navegacao': v_site_navegacao,
     'site.navegacao.gravar': v_site_navegacao_gravar,
@@ -2562,7 +2583,7 @@ class Atendente(socketserver.StreamRequestHandler):
                            'mods.instalados', 'mods.procurar', 'mods.tarefa', 'mods.tarefas',
                            'cronica.sessoes', 'cronica.ler', 'mundo.estado', 'mundo.seed', 'config.listar',
                            'arquivo.preparar_download', 'site.paginas', 'site.campos',
-                           'site.versoes', 'site.versao.ver', 'site.previa.ler', 'site.identidade',
+                           'site.versoes', 'site.versao.ver', 'site.previa.ler', 'site.identidade', 'site.endereco',
                            'site.navegacao', 'site.modpack', 'site.modpack.verificar')
             silenciosos += ('sagas.settings', 'sagas.status', 'sagas.story.status', 'sistema.estado')
             if verbo not in silenciosos and not (

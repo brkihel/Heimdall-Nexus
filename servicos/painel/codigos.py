@@ -111,6 +111,9 @@ CATALOGO: dict[str, dict[str, str]] = {
                    'solucao': 'Atualize o Heimdall em Sobre e atualizações.'},
     'HN-CFG-009': {'titulo': 'Dados de acesso inválidos',
                    'solucao': 'Recarregue a página e tente de novo.'},
+    'HN-CFG-010': {'titulo': 'Endereço não mudou',
+                   'solucao': 'Use um domínio (meuservidor.com.br) ou um IP (192.168.0.25), sem http:// nem '
+                              'barras. Se o servidor do site recusou, o endereço antigo continua valendo.'},
 }
 
 
