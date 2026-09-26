@@ -168,3 +168,10 @@ def test_browser_engine_never_runs_as_administrator():
     program = (ROOT / 'desktop' / 'HeimdallNexus.Desktop' / 'Program.cs').read_text(encoding='utf-8')
     workers = program.index('args.Contains("--install-worker")'), program.index('args.Contains("--uninstall-worker")')
     assert all(index < program.index('Runtime.Prepare()') for index in workers)
+
+
+def test_desktop_screens_start_hidden():
+    # The app opens on any of them (welcome, control center, uninstall); one left visible shows through.
+    page = (ROOT / 'desktop' / 'ui' / 'index.html').read_text(encoding='utf-8')
+    screens = re.findall(r'<section class="screen"[^>]*>', page)
+    assert len(screens) == 4 and all(' hidden' in tag for tag in screens), screens
