@@ -34,3 +34,8 @@ site/web/assets/mods/*.webp
 .claude/
 .serena/
 .mcp.json
+
+# Desktop app build output
+desktop/HeimdallNexus.Desktop/bin/
+desktop/HeimdallNexus.Desktop/obj/
+dist/windows/

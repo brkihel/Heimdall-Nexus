@@ -1,0 +1,4 @@
+deploy/COMMIT export-subst
+.github/art export-ignore
+tests export-ignore
+desktop export-ignore

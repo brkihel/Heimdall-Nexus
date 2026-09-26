@@ -70,6 +70,12 @@ if ($RemovePython) {
     }
 }
 
+'Removing the shortcuts and the Windows apps entry...'
+$links = (Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs\Heimdall Nexus.lnk'),
+         (Join-Path $env:PUBLIC 'Desktop\Heimdall Nexus.lnk')
+$links | Where-Object { Test-Path $_ } | Remove-Item -Force
+Remove-Item 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\HeimdallNexus' -Recurse -ErrorAction SilentlyContinue
+
 'Removing the code...'
 $keep = if ($RemovePython) { @() } else { @('python') }
 if (Test-Path $appBase) {

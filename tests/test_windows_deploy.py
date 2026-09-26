@@ -27,8 +27,12 @@ def test_services_run_with_the_smallest_account():
     for name in ('heimdall-panel', 'heimdall-valheim', 'heimdall-sagas-jobs'):
         assert services.account_of(by_name[name]) == f'NT SERVICE\\{name}'
     assert by_name['heimdall-panel'].depends == ('heimdall-executor',)
-    assert by_name['heimdall-valheim'].start == 'Manual'
-    assert services.definitions(game_autostart=True)[2].start == 'Automatic'
+    # Nothing starts with Windows unless the person turns it on in the desktop app.
+    assert {service.start for service in services.definitions()} == {'Manual'}
+    assert {service.start for service in services.definitions(game_autostart=True)} == {'Manual'}
+    booted = {service.name: service.start for service in services.definitions(boot=True)}
+    assert booted['heimdall-panel'] == 'Automatic' and booted['heimdall-valheim'] == 'Manual'
+    assert {s.name: s.start for s in services.definitions(boot=True, game_autostart=True)}['heimdall-valheim'] == 'Automatic'
 
 
 def test_service_definition_quotes_paths_and_keeps_logs_apart():
@@ -106,3 +110,41 @@ def test_update_and_sagas_scripts_compile_and_keep_update_markers():
 def test_launcher_hands_server_env_to_the_game():
     source = (WINDOWS / 'launcher-windows.py').read_text(encoding='utf-8')
     assert "environment = {**os.environ, **settings, 'SteamAppId': '892970'}" in source
+
+
+def test_installing_never_turns_anything_on_by_itself():
+    installer_windows = load('installer_windows', 'installer_windows.py')
+    source = (WINDOWS / 'installer_windows.py').read_text(encoding='utf-8')
+    assert "definitions = services.definitions()" in source
+    assert "(), start='Manual', stop_seconds=20)" in source          # the web server too
+    assert "heimdall-valheim.exe'), 'start'" not in source           # the installer never starts the game
+    assert installer_windows.CONTROLLER_RIGHTS == 'CCLCSWRPWPLORCDC'  # query, start, stop, start type
+    assert set(installer_windows.CORE_SERVICES) >= {'heimdall-panel', 'heimdall-valheim', 'heimdall-web'}
+    for sid in ('S-1-5-21-111-222-333-1001', 'S-1-5-18'):
+        assert installer_windows.SID.fullmatch(sid)
+    for bad in ('S-1-1-0', 'S-1-5-21-1;(A;;GA;;;WD)', ''):
+        assert not installer_windows.SID.fullmatch(bad)
+    assert re.fullmatch(r'[0-9a-f]{64}', installer_windows.MINGIT_SHA256)
+
+
+def test_the_wizard_can_leave_the_browser_to_the_desktop_app():
+    source = (ROOT / 'deploy' / 'setup_server.py').read_text(encoding='utf-8')
+    assert "'--no-browser'" in source and 'if not args.no_browser:' in source
+
+
+def test_release_packages_carry_their_commit():
+    attributes = (ROOT / '.gitattributes').read_text(encoding='utf-8')
+    assert 'deploy/COMMIT export-subst' in attributes
+    assert (ROOT / 'deploy' / 'COMMIT').read_text(encoding='ascii').strip() == '$Format:%H$'
+
+
+def test_desktop_app_is_complete():
+    app = ROOT / 'desktop' / 'HeimdallNexus.Desktop'
+    for name in ('Program.cs', 'SetupForm.cs', 'CenterForm.cs', 'Heimdall.cs', 'Uninstall.cs', 'Texts.cs',
+                 'Theme.cs', 'app.manifest', 'heimdall.ico', 'HeimdallNexus.Desktop.csproj'):
+        assert (app / name).is_file(), name
+    manifest = (app / 'app.manifest').read_text(encoding='utf-8')
+    assert 'level="asInvoker"' in manifest   # daily use without the administrator prompt
+    texts = (app / 'Texts.cs').read_text(encoding='utf-8')
+    for option in ('OnOpenHint', 'WithWindowsHint', 'ServerWithHeimdallHint'):
+        assert option in texts                   # every switch explains what it does

@@ -55,6 +55,9 @@
       if (text) el.textContent = text;
     });
     $('system_user').closest('.field').hidden = true;
+    // Whether and when Valheim starts is chosen later, in the Heimdall Nexus app.
+    $('start_game').checked = false;
+    $('start_game').closest('label').hidden = true;
   }
 
   function translate() {
@@ -233,7 +236,7 @@
       [t('world'),c.world],[t('port'),String(c.port)],[t('mods'),c.bepinex ? 'BepInEx' + (c.modpack ? ` · ${c.modpack} · ${c.install_modpack ? t('serverMods') : t('siteOnly')}` : '') : t('vanilla')],
       [t('live'),c.features.join(', ') || '—'],...(windows ? [] : [[t('systemAccount'),c.system_user]]),[t('panelLogin'),c.panel_user],[t('https'),c.tls ? t('yes') : t('no')],
       [t('worldMods'),modsSummary().join(' · ') || t('gameDefault')],
-      [t('gameStart'),c.start_game ? t('yes') : t('no')]];
+      ...(windows ? [] : [[t('gameStart'),c.start_game ? t('yes') : t('no')]])];
     list.replaceChildren();
     rows.forEach(([label,value]) => { const dt=document.createElement('dt'),dd=document.createElement('dd'); dt.textContent=label; dd.textContent=value; list.append(dt,dd); });
   }

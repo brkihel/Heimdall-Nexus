@@ -107,6 +107,8 @@ def main() -> None:
         print(f'Run this from your Git checkout, not from {runtime}.', file=sys.stderr)
         fail('HN-UPD-100', 'runtime-dir')
     site = Path(env.get('HEIMDALL_SITE_DIR') or state / 'site')
+    # The installer's private Git, for the version record below.
+    os.environ['PATH'] = str(app_base / 'git' / 'cmd') + os.pathsep + os.environ.get('PATH', '')
     web = Path(env.get('HEIMDALL_WEB_DIR') or base / 'web')
     venv_python = app_base / 'venv' / 'Scripts' / 'python.exe'
 

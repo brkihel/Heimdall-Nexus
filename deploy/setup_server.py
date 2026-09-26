@@ -255,6 +255,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--port', type=int, default=8765)
     parser.add_argument('--local-only', action='store_true', help='skip temporary public HTTPS link')
+    parser.add_argument('--no-browser', action='store_true',
+                        help='print the link without opening a browser (the desktop app opens it)')
     parser.add_argument('--direct', action='store_true',
                         help='also listen on this machine\'s network addresses (plain HTTP)')
     args = parser.parse_args()
@@ -293,8 +295,9 @@ def main():
         if sys.platform == 'win32' and not args.direct:
             link = f'http://127.0.0.1:{args.port}/claim?token={server.token}'
             print(f'Open this link on this computer: {link}', flush=True)
-            import webbrowser
-            webbrowser.open(link)
+            if not args.no_browser:
+                import webbrowser
+                webbrowser.open(link)
         print('Keep this terminal open until the installation finishes.', flush=True)
         server.serve_forever()
     except KeyboardInterrupt:

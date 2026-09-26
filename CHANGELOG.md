@@ -1,5 +1,27 @@
 # Heimdall Nexus — versões
 
+## 1.2.0
+
+- **Aplicativo Heimdall Nexus para Windows.** Um único `.exe` faz tudo o que
+  antes pedia comandos. Antes de instalar, ele explica o que vai acontecer e,
+  com um clique, baixa o Heimdall e o Python do Heimdall, com barra de
+  progresso, e abre o assistente no navegador, acompanhando cada etapa. Depois
+  de instalado, vira a central do dia a dia: liga e desliga o Heimdall e o
+  servidor de Valheim (salvando o mundo), mostra quantos jogadores estão
+  online e abre o painel e o site. Três chaves, cada uma explicada, decidem
+  quando as coisas ligam: ao abrir o aplicativo, junto com o Windows e se o
+  servidor liga junto com o Heimdall. Todas começam desligadas.
+- **Nada liga sozinho no Windows sem você escolher.** A instalação deixa todos
+  os serviços em modo manual e nunca liga o Valheim; quem decide é o
+  aplicativo. A conta que instalou pode ligar, desligar e escolher o início
+  dos serviços sem ser administradora.
+- **Sem Git e sem PowerShell para o usuário.** O Git que o painel usa para se
+  atualizar vem embutido e escondido, como o Python. O pacote de cada versão
+  leva o próprio commit, então o Jarl sabe exatamente o que está instalado.
+- **Desinstalar pelo Windows.** O Heimdall aparece em Configurações →
+  Aplicativos, com janelas de confirmação que perguntam se os mundos ficam
+  guardados.
+
 ## 1.1.1
 
 - **Correção da atualização no Linux:** a publicação do site, no passo 5 da

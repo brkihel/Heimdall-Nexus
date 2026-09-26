@@ -37,27 +37,29 @@ class Service:
     working_directory: str = ''       # relative to the app root
 
 
-def definitions(game_autostart: bool = False) -> list[Service]:
+def definitions(game_autostart: bool = False, boot: bool = False) -> list[Service]:
+    """Heimdall's services. Nothing starts with Windows unless `boot` is chosen."""
+    start = 'Automatic' if boot else 'Manual'
     return [
         Service('heimdall-executor', 'Heimdall Nexus - executor',
                 'The only privileged part of the Heimdall panel: a fixed list of actions.',
-                ('servicos/painel/executor.py',), account=SYSTEM),
+                ('servicos/painel/executor.py',), account=SYSTEM, start=start),
         Service('heimdall-panel', 'Heimdall Nexus - panel (Jarl)',
                 'The Heimdall administration panel, on 127.0.0.1:8791.',
                 ('-m', 'uvicorn', 'app:app', '--host', '127.0.0.1', '--port', '8791',
                  '--proxy-headers', '--forwarded-allow-ips=127.0.0.1'),
-                depends=('heimdall-executor',), working_directory='servicos/painel'),
+                depends=('heimdall-executor',), working_directory='servicos/painel', start=start),
         Service('heimdall-valheim', 'Heimdall Nexus - Valheim server',
                 'Valheim dedicated server (Heimdall Nexus).',
                 ('deploy/windows/launcher-windows.py',),
-                start='Automatic' if game_autostart else 'Manual', stop_seconds=150,
+                start='Automatic' if boot and game_autostart else 'Manual', stop_seconds=150,
                 own_log=True, env={'HEIMDALL_LOG_DIR': '{VALHEIM}\\logs', 'HEIMDALL_RUN_DIR': '{VALHEIM}\\run'}),
         Service('heimdall-jobs', 'Heimdall Nexus - periodic jobs',
                 'Public status, saga feed and Jarl scheduled tasks.',
-                ('deploy/windows/jobs.py', 'system'), account=SYSTEM),
+                ('deploy/windows/jobs.py', 'system'), account=SYSTEM, start=start),
         Service('heimdall-sagas-jobs', 'Heimdall Nexus - Sagas jobs',
                 'Optional Heimdall Sagas import, stories and map.',
-                ('deploy/windows/jobs.py', 'sagas')),
+                ('deploy/windows/jobs.py', 'sagas'), start=start),
     ]
 
 

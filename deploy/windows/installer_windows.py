@@ -22,6 +22,7 @@ import http.client
 import io
 import json
 import os
+import re
 import secrets
 import shutil
 import subprocess
@@ -48,6 +49,17 @@ APP_BASE = Path(os.environ.get('HEIMDALL_APP_BASE') or PROGRAM_FILES / 'Heimdall
 STEAMCMD_URL = 'https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip'
 CADDY_URL = 'https://github.com/caddyserver/caddy/releases/download/v2.11.4/caddy_2.11.4_windows_amd64.zip'
 CADDY_SHA256 = '1708333f79e274c7697285afe6d592ab39314e0b131e9ec6bea08ad27df62ebf'
+# Git for the panel's self-update; private, like the Python.
+MINGIT_URL = ('https://github.com/git-for-windows/git/releases/download/v2.55.0.windows.5/'
+              'MinGit-2.55.0.5-64-bit.zip')
+MINGIT_SHA256 = '56d7b226b7693196cfc71fef26568f536c4a021ab6c37ff2db4287bed908e96e'
+UNINSTALL_KEY = r'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\HeimdallNexus'
+SID = re.compile(r'^S-1-5-21(-\d+){4}$|^S-1-5-(18|32-544)$')
+# What the person who installed may do with each Heimdall service, without
+# being an administrator: query, start, stop and choose its start type.
+CONTROLLER_RIGHTS = 'CCLCSWRPWPLORCDC'
+CORE_SERVICES = ('heimdall-executor', 'heimdall-panel', 'heimdall-web', 'heimdall-jobs',
+                 'heimdall-sagas-jobs', 'heimdall-valheim')
 SYSTEM_SID = '*S-1-5-18'
 ADMINS_SID = '*S-1-5-32-544'
 PANEL = 'NT SERVICE\\heimdall-panel'
@@ -73,6 +85,9 @@ class Layout:
         self.venv = app_base / 'venv'
         self.python = self.venv / 'Scripts' / 'python.exe'
         self.tools = app_base / 'tools'
+        self.git = app_base / 'git'
+        self.desktop_app = app_base / 'HeimdallNexus.exe'
+        self.desktop_info = app_base / 'desktop.json'
         self.etc = base / 'etc'
         self.panel_etc = self.etc / 'panel'
         self.env_file = self.etc / 'heimdall.env'
@@ -187,11 +202,21 @@ class WindowsInstaller:
                 raise InstallError(f'The checkout is missing {part}.')
         version = self.root / 'deploy' / 'VERSION'
         info = {'version': version.read_text(encoding='ascii').strip() if version.is_file() else ''}
+        # A release .zip has no .git: git archive writes its commit into deploy/COMMIT.
         try:
-            info['commit'] = subprocess.run(['git', '-C', str(self.root), 'rev-parse', 'HEAD'],
-                                            capture_output=True, text=True, errors='replace', timeout=10).stdout.strip()
-            info['branch'] = subprocess.run(['git', '-C', str(self.root), 'rev-parse', '--abbrev-ref', 'HEAD'],
-                                            capture_output=True, text=True, errors='replace', timeout=10).stdout.strip()
+            stamped = (self.root / 'deploy' / 'COMMIT').read_text(encoding='ascii').strip()
+            if re.fullmatch(r'[0-9a-f]{40}', stamped):
+                info.update(commit=stamped, branch='main')
+        except OSError:
+            pass
+        try:
+            commit = subprocess.run(['git', '-C', str(self.root), 'rev-parse', 'HEAD'],
+                                    capture_output=True, text=True, errors='replace', timeout=10).stdout.strip()
+            if re.fullmatch(r'[0-9a-f]{40}', commit):
+                info['commit'] = commit
+                info['branch'] = subprocess.run(['git', '-C', str(self.root), 'rev-parse', '--abbrev-ref', 'HEAD'],
+                                                capture_output=True, text=True, errors='replace',
+                                                timeout=10).stdout.strip()
         except OSError:
             pass
         (target / '.heimdall-version.json').write_text(json.dumps(info) + '\n', encoding='utf-8')
@@ -208,6 +233,21 @@ class WindowsInstaller:
         for file in requirements:
             argv += ['-r', str(file)]
         self.command('python', argv, timeout=1800)
+
+    def git_tools(self) -> None:
+        """A private Git, so Jarl can update this installation without one on the PC."""
+        if (self.paths.git / 'cmd' / 'git.exe').is_file():
+            return
+        self.report('python', 'Downloading Git for the panel updates…')
+        data = common.fetch_bytes(MINGIT_URL, 80_000_000)
+        if hashlib.sha256(data).hexdigest() != MINGIT_SHA256:
+            raise InstallError('The Git download does not match its pinned hash.')
+        with zipfile.ZipFile(io.BytesIO(data)) as bundle:
+            for member in bundle.infolist():
+                target = (self.paths.git / member.filename).resolve()
+                if not str(target).startswith(str(self.paths.git.resolve())):
+                    raise InstallError('The Git archive has an unsafe path.')
+            bundle.extractall(self.paths.git)
 
     def steamcmd(self) -> None:
         executable = self.paths.steamcmd / 'steamcmd.exe'
@@ -434,10 +474,11 @@ class WindowsInstaller:
         self.report('services', 'Registering the Windows services…')
         paths = self.paths
         winsw = services.fetch_winsw(paths.cache)
-        definitions = services.definitions(game_autostart=self.choices.start_game)
+        # Nothing starts with Windows by itself: the desktop app's switches decide that.
+        definitions = services.definitions()
         definitions.append(services.Service(
             'heimdall-web', 'Heimdall Nexus - web server', 'Caddy: the public site and the panel proxy.',
-            (), start='Automatic', stop_seconds=20))
+            (), start='Manual', stop_seconds=20))
         for service in definitions:
             if service.name == 'heimdall-web':
                 self._register_caddy(service, winsw)
@@ -494,6 +535,72 @@ class WindowsInstaller:
                 self.icacls(secret, '/inheritance:r', '/grant:r', f'{SYSTEM_SID}:F', f'{ADMINS_SID}:F',
                             f'{PANEL}:{"R" if secret == p.executor_key else "M"}')
 
+    def controller_sid(self) -> str:
+        """Who installed: the desktop app passes its user, even when elevated as another admin."""
+        sid = os.environ.get('HEIMDALL_CONTROLLER_SID', '')
+        if not sid:
+            output = subprocess.run(['whoami', '/user', '/fo', 'csv', '/nh'], capture_output=True, text=True,
+                                    errors='replace', timeout=30).stdout
+            sid = output.strip().rsplit(',', 1)[-1].strip().strip('"')
+        if not SID.fullmatch(sid):
+            raise InstallError('Could not tell which Windows account is installing Heimdall.')
+        return sid
+
+    def desktop_integration(self) -> None:
+        """Let the installing account run Heimdall from the desktop app, without admin rights."""
+        paths, selected = self.paths, self.choices
+        self.report('desktop', 'Preparing the Heimdall Nexus app and its shortcuts…')
+        sid = self.controller_sid()
+        for name in CORE_SERVICES:
+            current = subprocess.run(['sc.exe', 'sdshow', name], capture_output=True, text=True,
+                                     errors='replace', timeout=30).stdout.strip()
+            if not current.startswith('D:'):
+                raise InstallError(f'Could not read the permissions of {name}.')
+            ace = f'(A;;{CONTROLLER_RIGHTS};;;{sid})'
+            if ace not in current:
+                dacl, separator, sacl = current.partition('S:')
+                self.command('desktop', ['sc.exe', 'sdset', name, dacl + ace + separator + sacl], timeout=30)
+        # The app shows players online from the public status feed.
+        self.grant(paths.web / 'api', f'*{sid}', '(RX)')
+        scheme = 'https://' if selected.tls else 'http://'
+        paths.desktop_info.write_text(json.dumps({
+            'version': (paths.app / 'deploy' / 'VERSION').read_text(encoding='ascii').strip(),
+            'panel': scheme + selected.domain + '/jarl/', 'site': scheme + selected.domain + '/',
+            'status': str(paths.web / 'api' / 'status.json')}, indent=2) + '\n', encoding='utf-8')
+        source = os.environ.get('HEIMDALL_DESKTOP_EXE', '')
+        if source and Path(source).is_file() and Path(source).resolve() != paths.desktop_app.resolve():
+            shutil.copyfile(source, paths.desktop_app)
+        if not paths.desktop_app.is_file():
+            self.report('desktop', 'The desktop app was not provided; shortcuts are skipped.')
+            return
+        start_menu = PROGRAM_DATA / 'Microsoft' / 'Windows' / 'Start Menu' / 'Programs'
+        links = [start_menu / 'Heimdall Nexus.lnk']
+        if os.environ.get('HEIMDALL_DESKTOP_SHORTCUT') == '1':
+            links.append(Path(os.environ.get('PUBLIC', r'C:\Users\Public')) / 'Desktop' / 'Heimdall Nexus.lnk')
+        for link in links:
+            script = ("$s = (New-Object -ComObject WScript.Shell).CreateShortcut($env:HN_LINK); "
+                      "$s.TargetPath = $env:HN_TARGET; $s.WorkingDirectory = $env:HN_DIR; "
+                      "$s.IconLocation = $env:HN_TARGET + ',0'; "
+                      "$s.Description = 'Liga, desliga e abre o Heimdall Nexus'; $s.Save()")
+            done = subprocess.run(['powershell.exe', '-NoProfile', '-NonInteractive', '-Command', script],
+                                  env={**os.environ, 'HN_LINK': str(link), 'HN_TARGET': str(paths.desktop_app),
+                                       'HN_DIR': str(paths.app_base)},
+                                  capture_output=True, text=True, errors='replace', timeout=60)
+            if done.returncode:
+                raise InstallError(f'Could not create the shortcut {link.name}: {done.stderr.strip()[-200:]}')
+        import winreg
+        with winreg.CreateKeyEx(winreg.HKEY_LOCAL_MACHINE, UNINSTALL_KEY, 0,
+                                winreg.KEY_WRITE | winreg.KEY_WOW64_64KEY) as key:
+            version = json.loads(paths.desktop_info.read_text(encoding='utf-8'))['version']
+            for name, value in (('DisplayName', 'Heimdall Nexus'), ('DisplayVersion', version),
+                                ('Publisher', 'BRKiHeL'), ('InstallLocation', str(paths.app_base)),
+                                ('DisplayIcon', str(paths.desktop_app)),
+                                ('UninstallString', f'"{paths.desktop_app}" --uninstall'),
+                                ('URLInfoAbout', 'https://github.com/brkihel/Heimdall-Nexus')):
+                winreg.SetValueEx(key, name, 0, winreg.REG_SZ, value)
+            for name, value in (('NoModify', 1), ('NoRepair', 1), ('EstimatedSize', 2_600_000)):
+                winreg.SetValueEx(key, name, 0, winreg.REG_DWORD, value)
+
     def firewall(self) -> None:
         self.report('firewall', 'Opening the game ports in Windows Firewall…')
         if self.firewall_profile not in ('any', 'private', 'domain', 'public', 'private,domain'):
@@ -518,12 +625,10 @@ class WindowsInstaller:
             self.command('services', [str(self.paths.service_files / f'{name}.exe'), 'start'], timeout=120,
                          ok_codes=(0, 1))
         self._verify_web_routes()
-        if self.choices.start_game:
-            self.report('game-start', 'Starting Valheim…')
-            self.command('game-start', [str(self.paths.service_files / 'heimdall-valheim.exe'), 'start'],
-                         timeout=180)
-        else:
-            self.report('game-start', 'Valheim is installed and ready. Start it from the panel when you choose.')
+        # On Windows the game is never started by the installer: the person starts it
+        # from the panel or the desktop app when they choose.
+        self.report('game-start', 'Valheim is installed and ready. Start it from the panel or the '
+                                  'Heimdall Nexus app when you choose.')
 
     def _verify_web_routes(self) -> None:
         self.report('services', 'Checking the site and panel through Caddy…')
@@ -551,6 +656,7 @@ class WindowsInstaller:
         self.folders()
         self.runtime_code()
         self.python_environment()
+        self.git_tools()
         self.steamcmd()
         self.game()
         self.bepinex()
@@ -562,6 +668,7 @@ class WindowsInstaller:
         self.panel_credentials()
         self.register_services()
         self.permissions()
+        self.desktop_integration()
         self.firewall()
         self.start()
         summary = self.choices.public_summary()

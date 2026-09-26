@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import subprocess
 import time
 from pathlib import Path
@@ -54,7 +55,9 @@ def _git(source: Path, *args: str, timeout: int = 30, allow_file: bool = False) 
         env.update({key: os.environ[key] for key in ('SYSTEMROOT', 'TEMP', 'TMP', 'USERPROFILE')
                     if key in os.environ})
     try:
-        done = subprocess.run(['git', *protocols, '-c', f'safe.directory={source}', *args],
+        # Windows looks programs up in this process's PATH, not in `env`: use the full path.
+        git = shutil.which('git', path=hostos.GIT_SEARCH_PATH) or 'git'
+        done = subprocess.run([git, *protocols, '-c', f'safe.directory={source}', *args],
                               cwd=source if source.is_dir() else source.parent,
                               env=env, capture_output=True, text=True, timeout=timeout)
     except FileNotFoundError as error:

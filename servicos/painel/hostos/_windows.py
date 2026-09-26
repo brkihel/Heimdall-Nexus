@@ -325,12 +325,13 @@ def detached_job_running(unit: str) -> bool:
         return False
 
 
-GIT_SEARCH_PATH = os.environ.get('PATH', '')
+# The installer's private Git first, then whatever the machine has.
+GIT_SEARCH_PATH = str(APP_BASE / 'git' / 'cmd') + os.pathsep + os.environ.get('PATH', '')
 
 
 def git_available() -> bool:
     import shutil
-    return shutil.which('git') is not None
+    return shutil.which('git', path=GIT_SEARCH_PATH) is not None
 
 
 # ---------------------------------------------------------------- files and accounts

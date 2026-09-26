@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The Heimdall Nexus desktop app for Windows: installs Heimdall, then turns it on and off.
+       .NET Framework 4.8 ships with every supported Windows, so the exe needs nothing else. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>HeimdallNexus</AssemblyName>
+    <RootNamespace>HeimdallNexus.Desktop</RootNamespace>
+    <ApplicationIcon>heimdall.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Product>Heimdall Nexus</Product>
+    <Company>BRKiHeL</Company>
+    <Copyright>BRKiHeL · PolyForm Noncommercial 1.0.0</Copyright>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.ServiceProcess" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="System.Web.Extensions" />
+    <EmbeddedResource Include="heimdall.ico" LogicalName="heimdall.ico" />
+  </ItemGroup>
+</Project>
