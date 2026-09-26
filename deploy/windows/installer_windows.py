@@ -107,6 +107,9 @@ class WindowsInstaller:
         self.choices, self.report = choices, report
         self.root = root or HERE.parents[1]
         self.paths = layout or Layout()
+        # A dedicated server answers on every network; a test on a home PC may
+        # limit the rules to private networks.
+        self.firewall_profile = os.environ.get('HEIMDALL_FIREWALL_PROFILE', 'any')
 
     # ------------------------------------------------------------ helpers
     def command(self, step: str, argv: list[str], timeout: int = 2400, ok_codes=(0,), cwd=None) -> str:
@@ -487,6 +490,8 @@ class WindowsInstaller:
 
     def firewall(self) -> None:
         self.report('firewall', 'Opening the game ports in Windows Firewall…')
+        if self.firewall_profile not in ('any', 'private', 'domain', 'public', 'private,domain'):
+            raise InstallError('Invalid firewall profile.')
         subprocess.run(['netsh', 'advfirewall', 'firewall', 'delete', 'rule', f'name={FIREWALL_GROUP} - Valheim'],
                        capture_output=True)
         port = self.choices.port
@@ -494,12 +499,12 @@ class WindowsInstaller:
                                   f'name={FIREWALL_GROUP} - Valheim', 'dir=in', 'action=allow',
                                   'protocol=UDP', f'localport={port}-{port + 1}',
                                   f'program={self.paths.game_files / "valheim_server.exe"}',
-                                  'profile=any'], timeout=60)
+                                  f'profile={self.firewall_profile}'], timeout=60)
         subprocess.run(['netsh', 'advfirewall', 'firewall', 'delete', 'rule', f'name={FIREWALL_GROUP} - Web'],
                        capture_output=True)
         self.command('firewall', ['netsh', 'advfirewall', 'firewall', 'add', 'rule',
                                   f'name={FIREWALL_GROUP} - Web', 'dir=in', 'action=allow', 'protocol=TCP',
-                                  'localport=80,443', 'profile=any'], timeout=60)
+                                  'localport=80,443', f'profile={self.firewall_profile}'], timeout=60)
 
     def start(self) -> None:
         self.report('services', 'Starting the panel, the site and the jobs…')
