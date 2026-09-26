@@ -137,7 +137,7 @@ class WindowsInstaller:
         if not is_admin():
             raise InstallError('Run the Windows installer as administrator.')
         import platform
-        if sys.maxsize < 2 ** 63 or platform.machine().upper() not in ('AMD64', 'X86_64', 'ARM64'):
+        if sys.maxsize <= 2 ** 32 or platform.machine().upper() not in ('AMD64', 'X86_64', 'ARM64'):
             raise InstallError('Heimdall Nexus needs 64-bit Windows.')
         if sys.version_info < (3, 10):
             raise InstallError('The installer needs Python 3.10 or newer.')
