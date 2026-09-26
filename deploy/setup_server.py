@@ -10,6 +10,7 @@ import ipaddress
 import re
 import secrets
 import socket
+import sys
 import subprocess
 import threading
 from http import HTTPStatus
@@ -20,6 +21,13 @@ from urllib.parse import parse_qs, urlsplit
 
 from installer import Choices, InstallError, Installer
 import quick_tunnel
+
+if sys.platform == 'win32':  # same wizard, Windows installation engine
+    sys.path.insert(0, str(Path(__file__).with_name('windows')))
+    from installer_windows import WindowsInstaller as Installer, is_admin  # noqa: F811
+else:
+    def is_admin() -> bool:
+        return os.geteuid() == 0
 
 
 ASSETS = Path(__file__).with_name('setup')
@@ -249,8 +257,10 @@ def main():
     parser.add_argument('--direct', action='store_true',
                         help='also listen on this machine\'s network addresses (plain HTTP)')
     args = parser.parse_args()
-    if os.geteuid() != 0:
-        parser.error('Run the visual installer with sudo.')
+    if not is_admin():
+        parser.error('Run the visual installer as administrator (sudo on Linux).')
+    if sys.platform == 'win32' and not args.direct:
+        args.local_only = True  # the person installing is usually at this machine
     server = SetupServer(args.port, direct=args.direct)
     holder: dict = {'process': None}
     stopping = threading.Event()
@@ -275,10 +285,15 @@ def main():
             _print_tunnel(server)
             threading.Thread(target=_keep_tunnel, args=(server, holder, stopping),
                              name='heimdall-tunnel-watch', daemon=True).start()
-        if not args.direct:
+        if not args.direct and sys.platform != 'win32':
             print('SSH forwarding alternative: on your computer run', flush=True)
             print(f'  ssh -L {args.port}:127.0.0.1:{args.port} user@your-server', flush=True)
             print(f'then open http://127.0.0.1:{args.port}/claim?token={server.token}', flush=True)
+        if sys.platform == 'win32' and not args.direct:
+            link = f'http://127.0.0.1:{args.port}/claim?token={server.token}'
+            print(f'Open this link on this computer: {link}', flush=True)
+            import webbrowser
+            webbrowser.open(link)
         print('Keep this terminal open until the installation finishes.', flush=True)
         server.serve_forever()
     except KeyboardInterrupt:

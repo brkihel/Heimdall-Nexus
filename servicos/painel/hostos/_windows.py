@@ -104,12 +104,19 @@ def _query(name: str) -> tuple[int, int] | None:
         ws.CloseServiceHandle(manager)
 
 
+def _folders(setting: str, own: str) -> list[Path]:
+    """Shared folder first, then the game's own (the game account writes only there)."""
+    return [_setting(setting), _setting('HEIMDALL_VALHEIM_DIR') / own]
+
+
 def _run_record(name: str) -> dict:
     """What launcher-windows.py wrote when this service last started."""
-    try:
-        return json.loads((_setting('HEIMDALL_RUN_DIR') / f'{name}.run.json').read_text(encoding='utf-8'))
-    except (OSError, ValueError):
-        return {}
+    for folder in _folders('HEIMDALL_RUN_DIR', 'run'):
+        try:
+            return json.loads((folder / f'{name}.run.json').read_text(encoding='utf-8'))
+        except (OSError, ValueError):
+            continue
+    return {}
 
 
 def _process_tree(pid: int):
@@ -207,10 +214,11 @@ def service_active_seconds(name: str) -> float | None:
 
 def _log_files(name: str) -> list[Path]:
     """The launcher's timestamped log, or WinSW's output and error logs."""
+    for logs in _folders('HEIMDALL_LOG_DIR', 'logs'):
+        own = logs / f'{name}.log'
+        if own.is_file():
+            return [own]
     logs = _setting('HEIMDALL_LOG_DIR')
-    own = logs / f'{name}.log'
-    if own.is_file():
-        return [own]
     return [path for path in (logs / f'{name}.out.log', logs / f'{name}.err.log') if path.is_file()]
 
 
@@ -248,8 +256,8 @@ def service_logged_since_start(name: str, text: str, invocation: str | None = No
 
 
 def service_log_text(name: str, lines: int) -> str:
-    logs = _setting('HEIMDALL_LOG_DIR')
-    older = sorted(logs.glob(f'{name}.*.log'), key=lambda path: path.stat().st_mtime)
+    older = sorted((path for logs in _folders('HEIMDALL_LOG_DIR', 'logs')
+                    for path in logs.glob(f'{name}.*.log')), key=lambda path: path.stat().st_mtime)
     text = []
     for path in [*older, *_log_files(name)]:
         try:
