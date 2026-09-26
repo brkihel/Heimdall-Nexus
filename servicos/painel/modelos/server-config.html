@@ -22,9 +22,18 @@
 <div class="cartao" style="max-width:850px" id="cartao-endereco">
   <h2>Endereço</h2>
   <p>Onde o site e o painel abrem, e o endereço que o site mostra aos jogadores para entrar no Valheim. Mudar aqui não reinicia o jogo.</p>
+  <div class="erro-caixa" role="note">
+    <strong>Cuidado: uma configuração errada aqui pode deixar o site e o painel fora do ar.</strong>
+    Um endereço que não chega a este computador, ou o HTTPS ligado sem o domínio apontar para cá e sem as portas 80 e 443 liberadas no roteador, faz o site parar de abrir.
+    <span id="end-volta"></span>
+  </div>
+  <label class="alavanca"><input id="end-https" type="checkbox" role="switch"> HTTPS (o cadeado do navegador)</label>
+  <p class="nota-cfg" id="end-https-nota"></p>
   <div class="grade-cfg">
-    <label>Endereço do site e do painel<input id="end-site" maxlength="253" spellcheck="false" autocomplete="off" placeholder="meuservidor.com.br ou 192.168.0.25"></label>
+    <label>Endereço do site e do painel
+      <span class="com-prefixo"><span id="end-esquema">http://</span><input id="end-site" maxlength="253" spellcheck="false" autocomplete="off" placeholder="meuservidor.com.br ou 192.168.0.25"></span></label>
     <label>Endereço de conexão do jogo<input id="end-jogo" maxlength="253" spellcheck="false" autocomplete="off" placeholder="Em branco: o mesmo do site"></label>
+    <label id="end-email-linha" hidden>E-mail para o certificado<input id="end-email" type="email" maxlength="120" autocomplete="email" placeholder="voce@exemplo.com"></label>
   </div>
   <p class="nota-cfg" id="end-nota"></p>
   <div class="acoes"><button id="end-salvar" class="btn principal" type="button">Salvar endereço</button></div>
@@ -135,6 +144,8 @@
 .adicionar{display:grid;grid-template-columns:1fr 1.3fr auto;gap:.5rem}
 .adicionar input{background:#101b23;color:#f0e5cf;border:1px solid var(--borda-viva);border-radius:3px;padding:.55rem .65rem;min-width:0}
 @media(max-width:620px){.adicionar{grid-template-columns:1fr}}
+.com-prefixo{display:flex;align-items:stretch} .com-prefixo>span{display:grid;place-items:center;padding:0 .6rem;border:1px solid var(--borda);border-right:0;border-radius:3px 0 0 3px;color:var(--fraco);font-family:ui-monospace,monospace;font-size:.9rem;background:rgba(255,255,255,.03)} .com-prefixo input{border-radius:0 3px 3px 0;min-width:0}
+#cartao-endereco .erro-caixa strong{display:block;margin-bottom:.25rem} #cartao-endereco .alavanca{display:flex;align-items:center;gap:.6rem;margin-top:.4rem}
 .grade-cfg{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin:1rem 0}
 .grade-cfg label:not(.alavanca),.cartao>label{display:grid;gap:.3rem} .grade-cfg .alavanca{align-self:center} .grade-cfg input:not([type=checkbox]),.cartao textarea{width:100%;box-sizing:border-box;background:#101b23;color:#f0e5cf;border:1px solid #755c39;border-radius:3px;padding:.6rem;font:inherit}
 </style>
@@ -271,25 +282,43 @@ $('acesso-salvar').onclick=async()=>{
   }catch(e){avisoErro(e,'Não foi possível salvar o acesso');}
 };
 let endereco=null;
+function esquema(){const https=$('end-https').checked;$('end-esquema').textContent=https?'https://':'http://';
+  $('end-email-linha').hidden=!(https&&endereco&&endereco.windows);
+  if(endereco)$('end-nota').textContent=[endereco.pode_mudar_site?'':endereco.motivo_site,
+    https?'':'Sem HTTPS, o site também abre por qualquer outro endereço deste computador; este é o que os links e o aplicativo usam.',
+    'O endereço de conexão aparece no site em alguns minutos, na próxima atualização do status.'].filter(Boolean).join(' ');}
+$('end-https').onchange=esquema;
+// Pasting a whole address sets the switch and leaves only the name in the field.
+$('end-site').addEventListener('input',()=>{const v=$('end-site').value,m=/^\s*(https?):\/\//i.exec(v);
+  if(!m)return;$('end-site').value=v.slice(m[0].length).replace(/\/.*$/,'');
+  if(!$('end-https').disabled)$('end-https').checked=m[1].toLowerCase()==='https';esquema();});
 async function carregaEndereco(){
   try{endereco=await api('site.endereco');
     $('end-site').value=endereco.site||'';$('end-jogo').value=endereco.jogo&&endereco.jogo!==endereco.site?endereco.jogo:'';
-    $('end-site').disabled=!endereco.pode_mudar_site;
-    $('end-nota').textContent=[endereco.pode_mudar_site?'':endereco.motivo_site,
-      endereco.https?'O site usa HTTPS: o endereço do site precisa ser um domínio.':'Sem HTTPS, o site também abre por qualquer outro endereço deste computador; este é o que os links e o aplicativo usam.',
-      'O endereço de conexão aparece no site em alguns minutos, na próxima atualização do status.'].filter(Boolean).join(' ');
+    $('end-https').checked=!!endereco.https;$('end-email').value=endereco.email||'';
+    $('end-site').disabled=!endereco.pode_mudar_site;$('end-https').disabled=!endereco.pode_mudar_https;
+    $('end-https-nota').textContent=endereco.pode_mudar_https
+      ?'Ligado, o endereço do site precisa ser um domínio que aponte para este computador, e o certificado é pedido e renovado sozinho. Desligado, o site abre com http://.'
+      :endereco.motivo_https;
+    $('end-volta').textContent=endereco.windows
+      ?'Se isso acontecer, abra o painel neste mesmo computador em http://localhost:8791/jarl/ e volte a configuração anterior.'
+      :'Se isso acontecer, abra um túnel SSH (ssh -L 8791:127.0.0.1:8791 usuario@servidor), entre em http://localhost:8791/jarl/ e volte a configuração anterior.';
+    esquema();
   }catch(e){$('end-nota').textContent=e.message}
 }
 $('end-salvar').onclick=async()=>{
   if(!endereco)return;
-  const site=$('end-site').value.trim(),jogo=$('end-jogo').value.trim();
-  if(site!==endereco.site&&!await confirmar(`Mudar o endereço do site e do painel para ${site}? Depois de salvar, o painel passa a abrir por ele.`,{titulo:'Mudar o endereço',acao:'Mudar'}))return;
-  try{const d=await api('site.endereco.gravar',{site,jogo});
-    const novo=d.url+ROOT+'/';
-    const partes=[d.mudou.site?`O site e o painel agora abrem em ${d.url}.`:'',d.mudou.jogo?'O site mostra o novo endereço de conexão em alguns minutos.':'',d.aviso||''].filter(Boolean);
-    avisar({tipo:d.aviso?'info':'ok',titulo:d.mudou.site||d.mudou.jogo?'Endereço salvo':'Nada mudou',texto:partes.join(' ')||'Os endereços já eram esses.'});
-    await carregaEndereco();
-    if(d.mudou.site&&endereco.https&&location.host!==d.site)setTimeout(()=>{location.href=novo},2500);
+  const site=$('end-site').value.trim(),jogo=$('end-jogo').value.trim(),https=$('end-https').checked,email=$('end-email').value.trim();
+  const novo=(https?'https://':'http://')+site;
+  if(site!==endereco.site||https!==endereco.https){
+    const texto=`O site e o painel vão passar a abrir em ${novo}.`+(https&&!endereco.https?' Confira antes: o domínio já aponta para este computador e as portas 80 e 443 estão liberadas no roteador? Sem isso, o site sai do ar.':'')+' O painel reinicia em seguida, se o HTTPS mudar.';
+    if(!await confirmar(texto,{titulo:'Mudar o endereço do site',acao:'Mudar',perigo:true}))return;}
+  try{const d=await api('site.endereco.gravar',{site,jogo,https,email});
+    const partes=[d.mudou.site||d.mudou.https?`O site e o painel agora abrem em ${d.url}.`:'',d.mudou.jogo?'O site mostra o novo endereço de conexão em alguns minutos.':'',d.aviso||''].filter(Boolean);
+    avisar({tipo:d.aviso?'info':'ok',titulo:partes.length?'Endereço salvo':'Nada mudou',texto:partes.join(' ')||'Os endereços já eram esses.'});
+    if(d.url!==location.protocol+'//'+location.host&&(d.mudou.site||d.mudou.https)&&(https||endereco.https))
+      setTimeout(()=>{location.href=d.url+ROOT+'/'},5000);
+    else await carregaEndereco();
   }catch(e){avisoErro(e,'Não foi possível mudar o endereço');}
 };
 montaModificadores();carregaAcesso();carregaEndereco();

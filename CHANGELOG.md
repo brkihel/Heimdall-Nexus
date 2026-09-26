@@ -7,7 +7,14 @@
   o site mostra aos jogadores. Antes, eles só mudavam reinstalando. Salvar
   atualiza tudo o que depende deles, inclusive os botões do aplicativo do
   Windows, e o servidor do site só recebe o novo nome depois de aceitá-lo.
-  O jogo não reinicia. No Linux, um site com HTTPS mantém o domínio por
+  O jogo não reinicia. Um aviso em vermelho lembra que um endereço errado
+  tira o site do ar e diz como voltar: pelo painel direto no computador
+  (`http://localhost:8791/jarl/`, ou por um túnel SSH no Linux).
+- **HTTP ou HTTPS numa chave.** O mesmo cartão tem a chave do HTTPS, que
+  preenche `http://` ou `https://` na frente do endereço. No Windows ela liga e
+  desliga o HTTPS de verdade: o Caddy pede o certificado sozinho, com o domínio
+  e o e-mail informados, e o painel reinicia para trocar os cookies. No Linux a
+  chave mostra o estado da instalação, e um site com HTTPS mantém o domínio por
   enquanto, porque o certificado vale só para ele.
 - **Aplicativo Windows 1.1: escolha onde instalar.** A tela inicial mostra
   onde o Heimdall vai ficar e deixa escolher outro disco. Nele, tudo fica numa
