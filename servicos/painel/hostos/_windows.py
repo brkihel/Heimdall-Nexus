@@ -218,7 +218,7 @@ def _log_files(name: str) -> list[Path]:
         own = logs / f'{name}.log'
         if own.is_file():
             return [own]
-    logs = _setting('HEIMDALL_LOG_DIR')
+    logs = _setting('HEIMDALL_LOG_DIR') / name  # WinSW writes each service's logs in its own folder
     return [path for path in (logs / f'{name}.out.log', logs / f'{name}.err.log') if path.is_file()]
 
 
@@ -275,7 +275,7 @@ def service_launcher(name: str) -> Path | None:
 
 def service_file(name: str) -> Path:
     """Where the service is defined (its WinSW file), for backups."""
-    return Path(os.environ.get('HEIMDALL_GAME_SERVICE_FILE') or BASE / 'services' / f'{name}.xml')
+    return Path(os.environ.get('HEIMDALL_GAME_SERVICE_FILE') or APP_BASE / 'services' / f'{name}.xml')
 
 
 def _enabled_jobs() -> set[str]:

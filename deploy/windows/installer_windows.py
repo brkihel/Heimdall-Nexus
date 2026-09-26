@@ -92,7 +92,8 @@ class Layout:
         self.run = base / 'run'
         self.backups = base / 'backups'
         self.caddy = base / 'caddy'
-        self.service_files = base / 'services'
+        # Service accounts must read their own wrapper: Program Files, readable by services.
+        self.service_files = app_base / 'services'
         self.cache = base / 'cache'
         self.installed = self.state / 'installed.json'
 
@@ -455,13 +456,12 @@ class WindowsInstaller:
     def _register_caddy(self, service, winsw: Path) -> None:
         paths = self.paths
         wrapper, definition = paths.service_files / 'heimdall-web.exe', paths.service_files / 'heimdall-web.xml'
-        if subprocess.run(['sc.exe', 'query', 'heimdall-web'], capture_output=True).returncode == 0:
-            subprocess.run([str(wrapper), 'stop'], capture_output=True, timeout=60)
-            subprocess.run([str(wrapper), 'uninstall'], capture_output=True, timeout=60)
+        services.remove('heimdall-web', wrapper, 20)
         shutil.copyfile(winsw, wrapper)
         sys.path.insert(0, str(HERE))
         import web
-        definition.write_text(web.service_xml(paths.tools / 'caddy.exe', paths.caddy, paths.logs), encoding='utf-8')
+        definition.write_text(web.service_xml(paths.tools / 'caddy.exe', paths.caddy, paths.logs / 'heimdall-web'),
+                              encoding='utf-8')
         self.command('services', [str(wrapper), 'install'], timeout=120)
         self.command('services', ['sc.exe', 'config', 'heimdall-web', 'obj=', WEB], timeout=60)
 
@@ -478,6 +478,12 @@ class WindowsInstaller:
             (p.env_file, GAME, read), (p.web, WEB, read), (p.caddy, WEB, modify),
         ):
             self.grant(path, account, rights)
+        # Each service writes only its own log folder.
+        for name, account in (('heimdall-panel', PANEL), ('heimdall-valheim', GAME),
+                              ('heimdall-sagas-jobs', SAGAS), ('heimdall-web', WEB)):
+            folder = p.logs / name
+            folder.mkdir(parents=True, exist_ok=True)
+            self.grant(folder, account, modify)
         # The game reads its settings but must not rewrite them.
         server_env = p.valheim / 'server.env'
         self.icacls(server_env, '/inheritance:r', '/grant:r', f'{SYSTEM_SID}:F', f'{ADMINS_SID}:F',

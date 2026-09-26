@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import shutil
 import subprocess
+import time
 import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -79,7 +80,7 @@ def xml(service: Service, *, python: Path, root: Path, logs: Path, valheim: Path
              f'  <startmode>{service.start}</startmode>',
              f'  <stoptimeout>{service.stop_seconds} sec</stoptimeout>',
              '  <stopparentprocessfirst>true</stopparentprocessfirst>',
-             f'  <logpath>{escape(str(logs))}</logpath>']
+             f'  <logpath>{escape(str(logs / service.name))}</logpath>']
     if service.own_log:
         lines.append('  <log mode="none"/>')
     else:
@@ -119,10 +120,7 @@ def install(service: Service, *, winsw: Path, folder: Path, python: Path, root: 
     folder.mkdir(parents=True, exist_ok=True)
     wrapper = folder / f'{service.name}.exe'
     definition = folder / f'{service.name}.xml'
-    registered = _run(['sc.exe', 'query', service.name]).returncode == 0
-    if registered:
-        _run([str(wrapper), 'stop'], timeout=service.stop_seconds + 30)
-        _run([str(wrapper), 'uninstall'])
+    remove(service.name, wrapper, service.stop_seconds)
     shutil.copyfile(winsw, wrapper)
     definition.write_text(xml(service, python=python, root=root, logs=logs, valheim=valheim),
                           encoding='utf-8')
@@ -135,8 +133,23 @@ def install(service: Service, *, winsw: Path, folder: Path, python: Path, root: 
             raise RuntimeError(f'could not set the account of {service.name}: {done.stdout.strip()[-300:]}')
 
 
-def uninstall(name: str, folder: Path) -> None:
-    wrapper = folder / f'{name}.exe'
+def remove(name: str, wrapper: Path, stop_seconds: int = 150) -> None:
+    """Stop and unregister a service, even if its wrapper moved or is gone."""
+    if _run(['sc.exe', 'query', name]).returncode != 0:
+        return
     if wrapper.is_file():
-        _run([str(wrapper), 'stop'], timeout=180)
+        _run([str(wrapper), 'stop'], timeout=stop_seconds + 30)
         _run([str(wrapper), 'uninstall'])
+    else:
+        _run(['sc.exe', 'stop', name])
+        deadline = time.monotonic() + stop_seconds
+        while time.monotonic() < deadline and 'STOPPED' not in _run(['sc.exe', 'query', name]).stdout:
+            time.sleep(1)
+        _run(['sc.exe', 'delete', name])
+    deadline = time.monotonic() + 30  # deletion completes once handles close
+    while time.monotonic() < deadline and _run(['sc.exe', 'query', name]).returncode == 0:
+        time.sleep(1)
+
+
+def uninstall(name: str, folder: Path) -> None:
+    remove(name, folder / f'{name}.exe')
