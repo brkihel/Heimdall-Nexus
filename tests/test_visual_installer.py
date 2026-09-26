@@ -82,6 +82,7 @@ class VisualInstallerTests(unittest.TestCase):
                          'https://bright-saga.trycloudflare.com')
         self.assertIsNone(quick_tunnel.find_url('https://bright-saga.trycloudflare.com.evil.test'))
 
+    @unittest.skipIf(sys.platform == 'win32', 'Linux installer behavior (POSIX shell and permissions)')
     def test_temporary_tunnel_process_reports_link(self):
         with tempfile.TemporaryDirectory() as directory:
             fake = Path(directory) / 'cloudflared'
@@ -106,6 +107,7 @@ class VisualInstallerTests(unittest.TestCase):
             with self.assertRaises(installer.InstallError):
                 installer.extract_steamcmd(memory.getvalue(), Path(directory))
 
+    @unittest.skipIf(sys.platform == 'win32', 'Linux installer behavior (POSIX shell and permissions)')
     def test_steamcmd_native_binary_keeps_executable_bit(self):
         memory = io.BytesIO()
         with tarfile.open(fileobj=memory, mode='w:gz') as archive:
@@ -166,6 +168,7 @@ if __name__ == '__main__':
 
 
 class SteamCmdRetryTests(unittest.TestCase):
+    @unittest.skipIf(sys.platform == 'win32', 'Linux installer behavior (POSIX shell and permissions)')
     def test_game_download_retries_missing_configuration(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -246,6 +249,7 @@ class SetupAccessTests(unittest.TestCase):
 
 
 class CommandRunnerTests(unittest.TestCase):
+    @unittest.skipIf(sys.platform == 'win32', 'Linux installer behavior (POSIX shell and permissions)')
     def test_process_that_exits_after_closing_output_is_not_a_timeout(self):
         engine = installer.Installer(choices(), lambda step, line: None)
         started = __import__('time').monotonic()
@@ -254,6 +258,7 @@ class CommandRunnerTests(unittest.TestCase):
         engine.command('services', ['sh', '-c', 'echo done; exec 1>&- 2>&-; sleep 1'], timeout=10)
         self.assertLess(__import__('time').monotonic() - started, 5)
 
+    @unittest.skipIf(sys.platform == 'win32', 'Linux installer behavior (POSIX shell and permissions)')
     def test_failure_after_closing_output_still_reports(self):
         engine = installer.Installer(choices(), lambda step, line: None)
         with self.assertRaises(installer.InstallError) as caught:

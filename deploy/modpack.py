@@ -114,7 +114,8 @@ def normalize_package(value: str) -> str:
 
 
 def is_local_pack(package: str) -> bool:
-    return package.startswith('/') and package.lower().endswith('.zip')
+    """An absolute path to a .zip on this machine (/root/Pack.zip or C:\\Packs\\Pack.zip)."""
+    return Path(package).is_absolute() and package.lower().endswith('.zip')
 
 
 def read_local_pack(path: Path) -> dict:
