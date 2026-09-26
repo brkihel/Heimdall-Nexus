@@ -138,7 +138,7 @@ python3 "$RUNTIME/site/web/migrar-paginas.py" "$RUNTIME/site/web" "$SITE_DIR"
 step 5 publish HN-UPD-105
 echo "Publishing the site…"
 HEIMDALL_WEB_DIR="$WEB_ROOT" HEIMDALL_WEB_USER=www-data HEIMDALL_WEB_BACKUP_DIR=/var/backups/heimdall-web \
-  HEIMDALL_SITE_DIR="$SITE_DIR" python3 "$SITE_DIR/publicar.py"
+  HEIMDALL_SITE_DIR="$SITE_DIR" HEIMDALL_ROOT="$RUNTIME" python3 "$SITE_DIR/publicar.py"
 
 step 6 bridge-and-version HN-UPD-106
 GAME_DIR="$(sed -n 's/^HEIMDALL_VALHEIM_DIR=//p' "$ENV_FILE" | tail -n1)"

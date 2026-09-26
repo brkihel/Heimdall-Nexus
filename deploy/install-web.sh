@@ -352,7 +352,7 @@ rm -f /etc/nginx/sites-enabled/default
 nginx -t
 
 HEIMDALL_WEB_DIR="$WEB_ROOT" HEIMDALL_WEB_USER=www-data HEIMDALL_WEB_BACKUP_DIR=/var/backups/heimdall-web \
-  HEIMDALL_SITE_DIR="$SITE_DIR" python3 "$SITE_DIR/publicar.py"
+  HEIMDALL_SITE_DIR="$SITE_DIR" HEIMDALL_ROOT="$ROOT" python3 "$SITE_DIR/publicar.py"
 systemctl daemon-reload
 if (( ! NO_START )); then
   systemctl enable --now heimdall-executor.service heimdall-panel.service heimdall-schedule.timer nginx.service

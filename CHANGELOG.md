@@ -1,5 +1,14 @@
 # Heimdall Nexus — versões
 
+## 1.1.1
+
+- **Correção da atualização no Linux:** a publicação do site, no passo 5 da
+  atualização (HN-UPD-105), não achava o código do Heimdall, porque roda a
+  partir da pasta do site e a atualização não informava onde o código está.
+  Agora a atualização e o instalador informam, e os scripts do site também
+  procuram nas pastas padrão de instalação. Quem ficou com a atualização para
+  1.1.0 parada no passo 5 só precisa atualizar de novo pelo Jarl.
+
 ## 1.1.0
 
 Linux e Windows com suporte completo. O mesmo Heimdall Nexus, com o mesmo

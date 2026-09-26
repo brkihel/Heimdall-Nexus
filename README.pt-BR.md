@@ -13,7 +13,7 @@ num único assistente guiado, no Linux (Ubuntu ou Debian) ou no Windows.
 [![Valheim](https://img.shields.io/badge/Valheim-servidor%20dedicado-c8a45c?style=flat-square&labelColor=0d151d)](https://valheim.com/support/a-guide-to-dedicated-servers/)
 [![Plataforma](https://img.shields.io/badge/Ubuntu%20%7C%20Debian%20%7C%20Windows-x86--64-c8a45c?style=flat-square&labelColor=0d151d)](#começo-rápido)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-c8a45c?style=flat-square&labelColor=0d151d)](https://www.python.org/)
-[![Versão](https://img.shields.io/badge/vers%C3%A3o-1.1.0-c8a45c?style=flat-square&labelColor=0d151d)](CHANGELOG.md)
+[![Versão](https://img.shields.io/badge/vers%C3%A3o-1.1.1-c8a45c?style=flat-square&labelColor=0d151d)](CHANGELOG.md)
 
 </div>
 
