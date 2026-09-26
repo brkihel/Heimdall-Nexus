@@ -2563,7 +2563,10 @@ def main():
     servidor = hostos.ExecutorServer(SOCKET, Atendente, GRUPO)
     audita('executor', 'iniciou', {}, 'feito')
     print(f'executor ouvindo em {SOCKET}', flush=True)
-    servidor.serve_forever()
+    try:
+        servidor.serve_forever()
+    except KeyboardInterrupt:  # a Windows service stop arrives as Ctrl+C
+        print('executor encerrado', flush=True)
 
 
 if __name__ == '__main__':
