@@ -14,6 +14,7 @@ num único assistente guiado, no Linux (Ubuntu ou Debian) ou no Windows.
 [![Plataforma](https://img.shields.io/badge/Ubuntu%20%7C%20Debian%20%7C%20Windows-x86--64-c8a45c?style=flat-square&labelColor=0d151d)](#começo-rápido)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-c8a45c?style=flat-square&labelColor=0d151d)](https://www.python.org/)
 [![Versão](https://img.shields.io/badge/vers%C3%A3o-1.3.0-c8a45c?style=flat-square&labelColor=0d151d)](CHANGELOG.md)
+[![Discord](https://img.shields.io/badge/Discord-GenesisMods-5865F2?style=flat-square&logo=discord&logoColor=white)](https://discord.gg/TZ785sYtgx)
 
 </div>
 
@@ -178,6 +179,10 @@ cd ~/Heimdall-Nexus && git pull --ff-only && sudo ./deploy/update.sh
 ```
 
 Atualiza o painel e as ferramentas sem mexer em mundos, mods ou conteúdo do site, e não reinicia o Valheim. Se a ponte Sagas mudou, reinicie o jogo quando for conveniente.
+
+## Comunidade e suporte
+
+Dúvidas, bugs e ideias na seção **Heimdall Nexus** do [**Discord da GenesisMods**](https://discord.gg/TZ785sYtgx): #heimdall-suporte para ajuda, #heimdall-bugs para problemas, #heimdall-novidades para versões novas. Nunca poste senhas, tokens ou chaves.
 
 ## Licença
 

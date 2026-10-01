@@ -14,6 +14,7 @@ from one guided wizard, on Linux (Ubuntu or Debian) or Windows.
 [![Platform](https://img.shields.io/badge/Ubuntu%20%7C%20Debian%20%7C%20Windows-x86--64-c8a45c?style=flat-square&labelColor=0d151d)](#quick-start)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-c8a45c?style=flat-square&labelColor=0d151d)](https://www.python.org/)
 [![Version](https://img.shields.io/badge/version-1.3.0-c8a45c?style=flat-square&labelColor=0d151d)](CHANGELOG.md)
+[![Discord](https://img.shields.io/badge/Discord-GenesisMods-5865F2?style=flat-square&logo=discord&logoColor=white)](https://discord.gg/TZ785sYtgx)
 
 </div>
 
@@ -176,6 +177,10 @@ cd ~/Heimdall-Nexus && git pull --ff-only && sudo ./deploy/update.sh
 ```
 
 It updates the panel and tools without touching worlds, mods or site content, and does not restart Valheim. If the Sagas bridge changed, restart the game when convenient.
+
+## Community and support
+
+Questions, bug reports and ideas in the **Heimdall Nexus** section of the [**GenesisMods Discord**](https://discord.gg/TZ785sYtgx): #heimdall-suporte for help, #heimdall-bugs for problems, #heimdall-novidades for new versions. Never post passwords, tokens or keys.
 
 ## License
 
