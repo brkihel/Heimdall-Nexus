@@ -35,6 +35,7 @@ FIXOS = {
     'vivo': ('assets/vivo.js', 'assets/vivo.js'),
     'modpack-ui': ('assets/modpack.js', 'assets/modpack.js'),
     'mods': ('mods.json', 'mods.json'),
+    'joias-dados': ('joias.json', 'wiki/joias/joias.json'),
     'cronicas': ('cronicas.html', 'cronicas/index.html'),
 }
 
